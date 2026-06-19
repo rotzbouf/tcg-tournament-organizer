@@ -1,0 +1,87 @@
+{
+  "app": {
+    "title": "TCG Tournament Organizer"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "newTournament": "New Tournament",
+    "export": "Export",
+    "import": "Import",
+    "language": "Language"
+  },
+  "dashboard": {
+    "title": "Tournaments",
+    "empty": "No tournaments yet",
+    "createFirst": "Create your first tournament!",
+    "players": "Players",
+    "round": "Round",
+    "of": "of"
+  },
+  "tournament": {
+    "create": "Create Tournament",
+    "name": "Tournament Name",
+    "game": "Game",
+    "roundTime": "Round Time (minutes)",
+    "status": {
+      "registration": "Registration",
+      "in_progress": "In Progress",
+      "completed": "Completed"
+    },
+    "start": "Start Tournament",
+    "delete": "Delete Tournament",
+    "complete": "Complete Tournament",
+    "minPlayers": "At least 2 players required"
+  },
+  "players": {
+    "title": "Players",
+    "add": "Add Player",
+    "name": "Player Name",
+    "remove": "Remove",
+    "count": "{{count}} Players"
+  },
+  "rounds": {
+    "title": "Current Round",
+    "generate": "Generate Next Round",
+    "complete": "Complete Round",
+    "history": "Round History",
+    "allResultsRequired": "All results must be entered",
+    "bye": "Bye"
+  },
+  "match": {
+    "vs": "vs",
+    "player1Win": "Win {{name}}",
+    "player2Win": "Win {{name}}",
+    "draw": "Draw",
+    "pending": "Pending"
+  },
+  "standings": {
+    "title": "Standings",
+    "rank": "Rank",
+    "player": "Player",
+    "points": "Points",
+    "wins": "W",
+    "losses": "L",
+    "draws": "D",
+    "buchholz": "Buchholz",
+    "medianBuchholz": "Median-BH",
+    "sonnebornBerger": "SB"
+  },
+  "timer": {
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Reset",
+    "expired": "Time expired!"
+  },
+  "fileio": {
+    "exportSuccess": "Exported successfully",
+    "importSuccess": "Imported successfully",
+    "importError": "Error importing",
+    "invalidFile": "Invalid file"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "confirm": "Confirm",
+    "close": "Close"
+  }
+}

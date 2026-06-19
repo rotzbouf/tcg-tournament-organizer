@@ -1,0 +1,87 @@
+{
+  "app": {
+    "title": "TCG Turnier Organizer"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "newTournament": "Neues Turnier",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "language": "Sprache"
+  },
+  "dashboard": {
+    "title": "Turniere",
+    "empty": "Noch keine Turniere vorhanden",
+    "createFirst": "Erstelle dein erstes Turnier!",
+    "players": "Spieler",
+    "round": "Runde",
+    "of": "von"
+  },
+  "tournament": {
+    "create": "Turnier erstellen",
+    "name": "Turniername",
+    "game": "Spiel",
+    "roundTime": "Rundenzeit (Minuten)",
+    "status": {
+      "registration": "Registrierung",
+      "in_progress": "Läuft",
+      "completed": "Beendet"
+    },
+    "start": "Turnier starten",
+    "delete": "Turnier löschen",
+    "complete": "Turnier beenden",
+    "minPlayers": "Mindestens 2 Spieler benötigt"
+  },
+  "players": {
+    "title": "Spieler",
+    "add": "Spieler hinzufügen",
+    "name": "Spielername",
+    "remove": "Entfernen",
+    "count": "{{count}} Spieler"
+  },
+  "rounds": {
+    "title": "Aktuelle Runde",
+    "generate": "Nächste Runde generieren",
+    "complete": "Runde abschliessen",
+    "history": "Rundenhistorie",
+    "allResultsRequired": "Alle Ergebnisse müssen eingetragen werden",
+    "bye": "Freilos"
+  },
+  "match": {
+    "vs": "vs",
+    "player1Win": "Sieg {{name}}",
+    "player2Win": "Sieg {{name}}",
+    "draw": "Unentschieden",
+    "pending": "Ausstehend"
+  },
+  "standings": {
+    "title": "Rangliste",
+    "rank": "Rang",
+    "player": "Spieler",
+    "points": "Punkte",
+    "wins": "S",
+    "losses": "N",
+    "draws": "U",
+    "buchholz": "Buchholz",
+    "medianBuchholz": "Median-BH",
+    "sonnebornBerger": "SB"
+  },
+  "timer": {
+    "start": "Start",
+    "pause": "Pause",
+    "reset": "Zurücksetzen",
+    "expired": "Zeit abgelaufen!"
+  },
+  "fileio": {
+    "exportSuccess": "Erfolgreich exportiert",
+    "importSuccess": "Erfolgreich importiert",
+    "importError": "Fehler beim Importieren",
+    "invalidFile": "Ungültige Datei"
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "confirm": "Bestätigen",
+    "close": "Schliessen"
+  }
+}
