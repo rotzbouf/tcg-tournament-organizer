@@ -1,0 +1,20 @@
+appId: com.tcg-tournament-organizer.app
+productName: TCG Tournament Organizer
+directories:
+  buildResources: build
+  output: out
+files:
+  - dist
+  - dist-electron
+asar: true
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
+win:
+  target:
+    - nsis
+mac:
+  target:
+    - dmg
