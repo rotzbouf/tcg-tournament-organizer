@@ -14,7 +14,10 @@
     "electron:build": "vite build && electron-builder"
   },
   "keywords": ["tcg", "tournament", "swiss-system", "electron"],
-  "author": "",
+  "author": {
+    "name": "rotzbouf",
+    "email": "rotzbouf@gmail.com"
+  },
   "license": "MIT",
   "dependencies": {
     "clsx": "^2.1.1",
