@@ -1,7 +1,7 @@
 import { Player } from '@/types/player'
 import { Round } from '@/types/round'
 import { Standing } from '@/types/standing'
-import { calculateMatchPoints, getPlayerRecord, getMatchPointsForPlayer } from './scoring'
+import { calculateMatchPoints, getPlayerRecord } from './scoring'
 
 export function calculateStandings(players: Player[], rounds: Round[]): Standing[] {
   const completedRounds = rounds.filter(r => r.isComplete)
