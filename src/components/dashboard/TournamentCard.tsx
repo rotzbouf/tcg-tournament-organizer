@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { TimerDisplay } from '@/components/tournament/TimerDisplay'
 import { Tournament } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
@@ -39,12 +40,21 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
         </Badge>
       </div>
 
-      <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
-        <span>{t('dashboard.players')}: {tournament.players.length}</span>
-        {tournament.status !== 'registration' && (
-          <span>
-            {t('dashboard.round')} {tournament.currentRound} {t('dashboard.of')} {tournament.totalRounds}
-          </span>
+      <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-4">
+          <span>{t('dashboard.players')}: {tournament.players.length}</span>
+          {tournament.status !== 'registration' && (
+            <span>
+              {t('dashboard.round')} {tournament.currentRound} {t('dashboard.of')} {tournament.totalRounds}
+            </span>
+          )}
+        </div>
+        {tournament.status === 'in_progress' && (
+          <TimerDisplay
+            tournamentId={tournament.id}
+            durationMinutes={tournament.roundTimeMinutes}
+            compact
+          />
         )}
       </div>
     </Card>

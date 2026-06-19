@@ -10,6 +10,7 @@ import { PlayerList } from './PlayerList'
 import { RoundPanel } from './RoundPanel'
 import { StandingsTable } from './StandingsTable'
 import { RoundHistory } from './RoundHistory'
+import { TimerDisplay } from './TimerDisplay'
 import { cn } from '@/lib/utils'
 
 type Tab = 'players' | 'round' | 'standings' | 'history'
@@ -74,7 +75,7 @@ export function TournamentView() {
               <p className="text-sm text-gray-500">{gameConfig.name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Badge variant={statusBadgeVariant[tournament.status]}>
               {t(`tournament.status.${tournament.status}`)}
             </Badge>
@@ -85,6 +86,14 @@ export function TournamentView() {
             )}
           </div>
         </div>
+        {tournament.status === 'in_progress' && (
+          <div className="mt-3">
+            <TimerDisplay
+              tournamentId={tournament.id}
+              durationMinutes={tournament.roundTimeMinutes}
+            />
+          </div>
+        )}
 
         <div className="mt-4 flex items-center gap-2">
           {tournament.status === 'registration' && (
