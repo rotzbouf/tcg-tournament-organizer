@@ -3,13 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { selectAllTournaments } from '@/state/selectors'
+import { useFileIO } from '@/hooks/useFileIO'
 import { GAME_CONFIG } from '@/lib/gameConfig'
+import { Button } from '@/components/ui/Button'
 
 export function Sidebar() {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const { state } = useTournamentContext()
   const tournaments = selectAllTournaments(state)
+  const { exportState, importState, error, clearError } = useFileIO()
 
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === 'de' ? 'en' : 'de')
@@ -62,7 +65,21 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t border-gray-200 p-3">
+      <div className="border-t border-gray-200 p-3 space-y-2">
+        {error && (
+          <div className="rounded-lg bg-red-50 p-2 text-xs text-red-600">
+            {error}
+            <button onClick={clearError} className="ml-2 underline">x</button>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" className="flex-1" onClick={exportState}>
+            {t('nav.export')}
+          </Button>
+          <Button variant="secondary" size="sm" className="flex-1" onClick={importState}>
+            {t('nav.import')}
+          </Button>
+        </div>
         <button
           onClick={toggleLanguage}
           className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
