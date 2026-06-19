@@ -10,16 +10,13 @@ asar: true
 linux:
   target:
     - AppImage
-    - deb
   category: Utility
 win:
   target:
-    - nsis
+    - portable
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
 mac:
   target:
-    - dmg
     - zip
   category: public.app-category.utilities
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true

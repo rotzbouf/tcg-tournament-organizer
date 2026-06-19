@@ -59,11 +59,8 @@ jobs:
           name: dist-${{ matrix.platform }}
           path: |
             out/*.AppImage
-            out/*.deb
             out/*.exe
-            out/*.dmg
             out/*.zip
-            out/*.snap
           if-no-files-found: warn
 
   release:
