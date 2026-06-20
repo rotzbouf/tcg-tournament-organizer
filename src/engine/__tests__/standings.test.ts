@@ -8,6 +8,7 @@ function makePlayers(count: number): Player[] {
     id: `p${i + 1}`,
     name: `Player ${i + 1}`,
     hasBye: false,
+    droppedInRound: null,
   }))
 }
 

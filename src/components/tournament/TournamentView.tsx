@@ -140,6 +140,7 @@ export function TournamentView() {
             tournamentId={tournament.id}
             players={tournament.players}
             editable={tournament.status === 'registration'}
+            inProgress={tournament.status === 'in_progress'}
           />
         )}
         {activeTab === 'round' && currentRound && (

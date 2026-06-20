@@ -44,6 +44,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id: generateId(),
         name: action.payload.playerName,
         hasBye: false,
+        droppedInRound: null,
       }
       return updateTournament(state, action.payload.tournamentId, {
         players: [...tournament.players, newPlayer],
@@ -55,6 +56,18 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament || tournament.status !== 'registration') return state
       return updateTournament(state, action.payload.tournamentId, {
         players: tournament.players.filter(p => p.id !== action.payload.playerId),
+      })
+    }
+
+    case 'DROP_PLAYER': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || tournament.status !== 'in_progress') return state
+      return updateTournament(state, action.payload.tournamentId, {
+        players: tournament.players.map(p =>
+          p.id === action.payload.playerId
+            ? { ...p, droppedInRound: tournament.currentRound }
+            : p
+        ),
       })
     }
 

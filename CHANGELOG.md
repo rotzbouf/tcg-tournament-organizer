@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-20
+
+### Added
+- Drop player from running tournament
+- Dropped players keep their rank in standings but are excluded from future rounds
+- Multiple byes per round when pairing constraints require it
+- Visual indicators for dropped players (strikethrough, drop round label)
+- Active/total player count display during tournament
+
 ## [0.6.0] - 2026-06-19
 
 ### Added

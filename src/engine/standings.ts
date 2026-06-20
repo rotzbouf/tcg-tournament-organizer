@@ -25,6 +25,7 @@ export function calculateStandings(players: Player[], rounds: Round[]): Standing
       buchholz,
       medianBuchholz,
       sonnebornBerger,
+      dropped: player.droppedInRound !== null,
     }
   })
 

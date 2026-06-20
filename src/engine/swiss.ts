@@ -15,9 +15,10 @@ export function generatePairings(
   rounds: Round[],
   currentRoundNumber: number
 ): Match[] {
-  if (players.length < 2) return []
+  const activePlayers = players.filter(p => p.droppedInRound === null)
+  if (activePlayers.length < 2) return []
 
-  const candidates = buildCandidates(players, rounds)
+  const candidates = buildCandidates(activePlayers, rounds)
   const matches: Match[] = []
 
   let pool = [...candidates]
@@ -102,9 +103,18 @@ function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match
   candidates.sort((a, b) => b.matchPoints - a.matchPoints)
 
   const result = backtrackingPair(candidates, [], new Set(), roundNumber, 0)
-  if (result) return result
+  if (result) {
+    const pairedIds = new Set(result.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean)))
+    const unpaired = candidates.filter(c => !pairedIds.has(c.playerId))
+    const byes = unpaired.map(c => createByeMatch(c.playerId, roundNumber))
+    return [...result, ...byes]
+  }
 
-  return greedyPairFallback(candidates, roundNumber)
+  const greedy = greedyPairFallback(candidates, roundNumber)
+  const pairedIds = new Set(greedy.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean)))
+  const unpaired = candidates.filter(c => !pairedIds.has(c.playerId))
+  const byes = unpaired.map(c => createByeMatch(c.playerId, roundNumber))
+  return [...greedy, ...byes]
 }
 
 function backtrackingPair(

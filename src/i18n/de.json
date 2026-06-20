@@ -37,6 +37,10 @@
     "add": "Spieler hinzufügen",
     "name": "Spielername",
     "remove": "Entfernen",
+    "drop": "Droppen",
+    "dropped": "Gedroppt",
+    "droppedInRound": "Gedroppt in Runde {{round}}",
+    "activeCount": "{{active}} / {{total}} Spieler aktiv",
     "count": "{{count}} Spieler"
   },
   "rounds": {

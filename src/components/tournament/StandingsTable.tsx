@@ -28,9 +28,12 @@ export function StandingsTable({ standings }: StandingsTableProps) {
         </thead>
         <tbody>
           {standings.map(standing => (
-            <tr key={standing.playerId} className="border-b border-gray-100 last:border-0">
+            <tr key={standing.playerId} className={`border-b border-gray-100 last:border-0${standing.dropped ? ' opacity-50' : ''}`}>
               <td className="px-3 py-2 font-medium text-gray-900">{standing.rank}</td>
-              <td className="px-3 py-2 text-gray-900">{standing.playerName}</td>
+              <td className="px-3 py-2 text-gray-900">
+                {standing.dropped ? <span className="line-through">{standing.playerName}</span> : standing.playerName}
+                {standing.dropped && <span className="ml-2 text-xs text-red-500">{t('players.dropped')}</span>}
+              </td>
               <td className="px-3 py-2 text-center font-semibold text-gray-900">{standing.matchPoints}</td>
               <td className="px-3 py-2 text-center text-green-600">{standing.wins}</td>
               <td className="px-3 py-2 text-center text-red-600">{standing.losses}</td>
