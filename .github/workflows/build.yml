@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install
       - run: npm test
 
   build:
@@ -43,7 +43,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      - run: npm install
 
       - name: Build Vite + Electron
         run: npx vite build
