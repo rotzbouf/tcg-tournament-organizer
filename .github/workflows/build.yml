@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - run: npm install
+      - run: rm package-lock.json && npm install
       - run: npm test
 
   build:
@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install
+      - run: rm package-lock.json && npm install
 
       - name: Build Vite + Electron
         run: npx vite build
