@@ -53,15 +53,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Zip Linux build
-        if: matrix.platform == 'linux'
-        run: cd out/linux-unpacked && zip -r ../TCG-Tournament-Organizer-linux-x64.zip . && cd ../..
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.platform }}
           path: |
+            out/*.AppImage
             out/*.zip
             out/*.exe
           if-no-files-found: warn
