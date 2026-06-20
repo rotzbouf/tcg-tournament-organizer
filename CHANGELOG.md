@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-06-21
+
+### Added
+- CI pipeline with typecheck, lint, and tests
+- CodeQL security scanning
+- Dependabot config for npm and GitHub Actions
+- ESLint with TypeScript and React plugins
+- Security policy with vulnerability reporting guidelines
+
+### Changed
+- Bump dependencies: react 19, react-dom 19, i18next 26, react-i18next 17, electron 42, vite-plugin-electron 1.0, tailwindcss 4, jsdom 29
+- Bump GitHub Actions: checkout v7, setup-node v6, upload-artifact v7, action-gh-release v3, codeql-action v4
+
 ## [0.7.0] - 2026-06-20
 
 ### Added
