@@ -143,7 +143,7 @@ describe('generatePairings', () => {
 
   it('handles 8 players through multiple rounds', () => {
     const players = makePlayers(8)
-    let rounds: Round[] = []
+    const rounds: Round[] = []
 
     const r1Matches = generatePairings(players, rounds, 1)
     expect(r1Matches).toHaveLength(4)

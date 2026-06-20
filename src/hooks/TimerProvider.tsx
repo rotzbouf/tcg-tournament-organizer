@@ -4,7 +4,7 @@ import { TimerContext, TimerState } from './useTimerManager'
 export function TimerProvider({ children }: { children: ReactNode }) {
   const [timers, setTimers] = useState<Record<string, TimerState>>({})
   const timersRef = useRef(timers)
-  timersRef.current = timers
+  useEffect(() => { timersRef.current = timers }, [timers])
 
   useEffect(() => {
     const interval = setInterval(() => {

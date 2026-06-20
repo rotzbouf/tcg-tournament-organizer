@@ -56,12 +56,10 @@ describe('calculateStandings', () => {
         isComplete: true,
         matches: [
           { id: 'm1', roundNumber: 1, player1Id: 'p1', player2Id: 'p2', result: 'player1_win', isBye: false },
-          { id: 'm2', roundNumber: 1, player1Id: 'p3', player2Id: 'p4', result: 'player3_win' as any, isBye: false },
+          { id: 'm2', roundNumber: 1, player1Id: 'p3', player2Id: 'p4', result: 'player1_win', isBye: false },
         ],
       },
     ]
-    // Fix: use correct result values
-    rounds[0].matches[1].result = 'player1_win'
 
     const standings = calculateStandings(players, rounds)
 
