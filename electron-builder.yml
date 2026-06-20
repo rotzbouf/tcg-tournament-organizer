@@ -9,7 +9,7 @@ files:
 asar: true
 linux:
   target:
-    - dir
+    - AppImage
   category: Utility
 win:
   target:
