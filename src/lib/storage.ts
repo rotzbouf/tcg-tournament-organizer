@@ -32,6 +32,9 @@ export function loadState(): AppState | null {
           if (typeof r.phaseIndex !== 'number') r.phaseIndex = 0
         }
       }
+      if (t.discordWebhookUrl === undefined) {
+        t.discordWebhookUrl = null
+      }
       if (Array.isArray(t.players)) {
         for (const p of t.players as Record<string, unknown>[]) {
           if (p.decklist === undefined) p.decklist = null

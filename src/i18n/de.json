@@ -151,6 +151,13 @@
     "dropPlayer": "Spieler droppen",
     "dropPlayerMessage": "Möchtest du {{name}} wirklich aus dem Turnier droppen?"
   },
+  "discord": {
+    "webhookUrl": "Discord Webhook-URL",
+    "test": "Testen",
+    "testSuccess": "Nachricht gesendet!",
+    "testFailed": "Senden fehlgeschlagen",
+    "testMessage": "Webhook-Verbindung erfolgreich!"
+  },
   "common": {
     "cancel": "Abbrechen",
     "save": "Speichern",

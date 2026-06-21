@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-21
+
+### Added
+- **Tournament Formats:** Double Elimination (winners/losers bracket, grand final) and Round Robin (circle algorithm)
+- **Format Selection:** Choose between Swiss, Swiss + Top Cut, Double Elimination, and Round Robin when creating a tournament
+- **Penalty System:** Issue warnings, game losses, match losses, and disqualifications; auto-applies match results and drops
+- **Multi-Phase Tournaments:** Configure sequential phases (e.g., Round Robin → Swiss → Top Cut) with player advancement between phases
+- **Decklist Submission:** Players can submit full card lists (parsed from "3x Card Name" format) with card count stats
+- **Elo Rankings:** Persistent player database with Elo ratings across tournaments (K=32 new, K=16 established)
+- **Rankings Page:** Searchable player rankings with tournament history and Elo progression
+- **Discord Webhook:** Post pairings, standings, and results to Discord channels automatically
+- **Discord Settings Tab:** Configure and test webhook URL per tournament
+- Round Robin engine tests
+- Double Elimination engine tests
+- Elo calculation engine tests
+- Decklist parser tests
+
+### Changed
+- Standings calculation supports Round Robin and Double Elimination bracket phases
+- Serialization version bumped to 1.2.0 with backward-compatible migration
+- UPDATE_TOURNAMENT allows changing Discord webhook URL at any tournament stage
+
 ## [0.9.0] - 2026-06-21
 
 ### Added

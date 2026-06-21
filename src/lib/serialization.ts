@@ -108,4 +108,7 @@ function migrateTournament(t: Record<string, unknown> & { format?: unknown; pena
   if (typeof t.currentPhaseIndex !== 'number') {
     t.currentPhaseIndex = 0
   }
+  if (t.discordWebhookUrl === undefined) {
+    t.discordWebhookUrl = null
+  }
 }

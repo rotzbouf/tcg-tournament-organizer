@@ -41,6 +41,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds: 0,
         currentRound: 0,
         topCut: action.payload.topCut,
+        discordWebhookUrl: null,
         createdAt: now,
         updatedAt: now,
       }
@@ -301,12 +302,16 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
     case 'UPDATE_TOURNAMENT': {
       const tournament = state.tournaments[action.payload.tournamentId]
-      if (!tournament || tournament.status !== 'registration') return state
+      if (!tournament) return state
       const updates: Partial<Tournament> = {}
-      if (action.payload.name !== undefined) updates.name = action.payload.name
-      if (action.payload.roundTimeMinutes !== undefined) updates.roundTimeMinutes = action.payload.roundTimeMinutes
-      if (action.payload.topCut !== undefined) updates.topCut = action.payload.topCut
-      if (action.payload.format !== undefined) updates.format = action.payload.format
+      if (action.payload.discordWebhookUrl !== undefined) updates.discordWebhookUrl = action.payload.discordWebhookUrl
+      if (tournament.status === 'registration') {
+        if (action.payload.name !== undefined) updates.name = action.payload.name
+        if (action.payload.roundTimeMinutes !== undefined) updates.roundTimeMinutes = action.payload.roundTimeMinutes
+        if (action.payload.topCut !== undefined) updates.topCut = action.payload.topCut
+        if (action.payload.format !== undefined) updates.format = action.payload.format
+      }
+      if (Object.keys(updates).length === 0) return state
       return updateTournament(state, action.payload.tournamentId, updates)
     }
 

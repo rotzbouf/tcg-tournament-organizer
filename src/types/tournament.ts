@@ -26,6 +26,7 @@ export interface Tournament {
   totalRounds: number
   currentRound: number
   topCut: TopCutSize
+  discordWebhookUrl: string | null
   createdAt: string
   updatedAt: string
 }
