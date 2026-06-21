@@ -15,6 +15,7 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
   return {
     id: 'm1',
     roundNumber: 1,
+    tableNumber: 0,
     player1Id: 'p1',
     player2Id: 'p2',
     result: 'pending',

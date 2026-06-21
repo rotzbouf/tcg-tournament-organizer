@@ -13,6 +13,9 @@ export type TournamentAction =
   | { type: 'COMPLETE_ROUND'; payload: { tournamentId: string } }
   | { type: 'START_TOP_CUT'; payload: { tournamentId: string } }
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }
+  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize } }
+  | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
+  | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName: string | null } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {

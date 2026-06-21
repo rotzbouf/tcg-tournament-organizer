@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Player } from '@/types/player'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { AddPlayerForm } from './AddPlayerForm'
+import { BulkImportDialog } from './BulkImportDialog'
 import { cn } from '@/lib/utils'
 
 interface PlayerListProps {
@@ -15,12 +18,31 @@ interface PlayerListProps {
 export function PlayerList({ tournamentId, players, editable, inProgress }: PlayerListProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
+  const [dropPlayerId, setDropPlayerId] = useState<string | null>(null)
+  const [showBulkImport, setShowBulkImport] = useState(false)
 
   const activePlayers = players.filter(p => p.droppedInRound === null)
+  const dropPlayer = players.find(p => p.id === dropPlayerId)
+
+  const handleConfirmDrop = () => {
+    if (dropPlayerId) {
+      dispatch({ type: 'DROP_PLAYER', payload: { tournamentId, playerId: dropPlayerId } })
+      setDropPlayerId(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
-      {editable && <AddPlayerForm tournamentId={tournamentId} />}
+      {editable && (
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <AddPlayerForm tournamentId={tournamentId} />
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setShowBulkImport(true)}>
+            {t('players.bulkImport')}
+          </Button>
+        </div>
+      )}
 
       <p className="text-sm text-gray-500">
         {inProgress
@@ -48,6 +70,9 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
                 )}>
                   {player.name}
                 </span>
+                {player.deckName && (
+                  <span className="text-xs text-gray-400">({player.deckName})</span>
+                )}
                 {player.droppedInRound !== null && (
                   <span className="text-xs text-red-500">
                     {t('players.droppedInRound', { round: player.droppedInRound })}
@@ -55,30 +80,37 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
                 )}
               </div>
               {editable && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    dispatch({
-                      type: 'REMOVE_PLAYER',
-                      payload: { tournamentId, playerId: player.id },
-                    })
-                  }
-                >
-                  {t('players.remove')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder={t('players.deckName')}
+                    value={player.deckName ?? ''}
+                    onChange={e => dispatch({
+                      type: 'UPDATE_PLAYER',
+                      payload: { tournamentId, playerId: player.id, deckName: e.target.value || null },
+                    })}
+                    className="w-28 rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:border-blue-500 focus:outline-none"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      dispatch({
+                        type: 'REMOVE_PLAYER',
+                        payload: { tournamentId, playerId: player.id },
+                      })
+                    }
+                  >
+                    {t('players.remove')}
+                  </Button>
+                </div>
               )}
               {inProgress && player.droppedInRound === null && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-red-600 hover:text-red-700"
-                  onClick={() =>
-                    dispatch({
-                      type: 'DROP_PLAYER',
-                      payload: { tournamentId, playerId: player.id },
-                    })
-                  }
+                  onClick={() => setDropPlayerId(player.id)}
                 >
                   {t('players.drop')}
                 </Button>
@@ -87,6 +119,20 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
           ))
         )}
       </div>
+
+      <BulkImportDialog
+        open={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        tournamentId={tournamentId}
+      />
+
+      <ConfirmDialog
+        open={dropPlayerId !== null}
+        onClose={() => setDropPlayerId(null)}
+        onConfirm={handleConfirmDrop}
+        title={t('confirm.dropPlayer')}
+        message={t('confirm.dropPlayerMessage', { name: dropPlayer?.name })}
+      />
     </div>
   )
 }

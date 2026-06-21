@@ -6,6 +6,8 @@ import { selectTournament, selectCurrentRound, selectStandings } from '@/state/s
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { EditTournamentDialog } from './EditTournamentDialog'
 import { PlayerList } from './PlayerList'
 import { RoundPanel } from './RoundPanel'
 import { StandingsTable } from './StandingsTable'
@@ -26,10 +28,12 @@ export function TournamentView() {
   const { id } = useParams<{ id: string }>()
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { state, dispatch } = useTournamentContext()
+  const { state, dispatch, undo, canUndo } = useTournamentContext()
   const tournament = id ? selectTournament(state, id) : undefined
 
   const [activeTab, setActiveTab] = useState<Tab>('players')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   if (!tournament) {
     return (
@@ -128,6 +132,9 @@ export function TournamentView() {
               >
                 {t('tournament.start')}
               </Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowEditDialog(true)}>
+                {t('tournament.edit')}
+              </Button>
               {tournament.players.length < 2 && (
                 <span className="text-sm text-amber-600">{t('tournament.minPlayers')}</span>
               )}
@@ -138,11 +145,32 @@ export function TournamentView() {
               {t('tournament.startTopCut')}
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={handleDelete}>
+          {canUndo && (
+            <Button variant="secondary" size="sm" onClick={undo}>
+              {t('common.undo')}
+            </Button>
+          )}
+          <Button variant="destructive" size="sm" onClick={() => setShowDeleteConfirm(true)}>
             {t('tournament.delete')}
           </Button>
         </div>
       </div>
+
+      {showEditDialog && (
+        <EditTournamentDialog
+          open={showEditDialog}
+          onClose={() => setShowEditDialog(false)}
+          tournament={tournament}
+        />
+      )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title={t('confirm.deleteTournament')}
+        message={t('confirm.deleteTournamentMessage')}
+      />
 
       <div className="mb-4 flex gap-1 border-b border-gray-200">
         {tabs

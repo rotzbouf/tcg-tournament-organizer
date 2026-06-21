@@ -12,10 +12,6 @@ export function selectAllTournaments(state: AppState): Tournament[] {
   return Object.values(state.tournaments)
 }
 
-export function selectActiveTournaments(state: AppState): Tournament[] {
-  return Object.values(state.tournaments).filter(t => t.status !== 'completed')
-}
-
 export function selectCurrentRound(tournament: Tournament): Round | undefined {
   return tournament.rounds[tournament.rounds.length - 1]
 }

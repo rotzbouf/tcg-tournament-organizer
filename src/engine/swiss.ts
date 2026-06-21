@@ -34,7 +34,7 @@ export function generatePairings(
   const paired = pairPlayers(pool, currentRoundNumber)
   matches.push(...paired)
 
-  return matches
+  return assignTableNumbers(matches)
 }
 
 function buildCandidates(players: Player[], rounds: Round[]): PairingCandidate[] {
@@ -80,6 +80,7 @@ function createByeMatch(playerId: string, roundNumber: number): Match {
   return {
     id: generateId(),
     roundNumber,
+    tableNumber: 0,
     player1Id: playerId,
     player2Id: null,
     result: 'player1_win',
@@ -189,11 +190,17 @@ function createMatch(player1Id: string, player2Id: string, roundNumber: number):
   return {
     id: generateId(),
     roundNumber,
+    tableNumber: 0,
     player1Id,
     player2Id,
     result: 'pending',
     isBye: false,
   }
+}
+
+function assignTableNumbers(matches: Match[]): Match[] {
+  let table = 1
+  return matches.map(m => ({ ...m, tableNumber: m.isBye ? 0 : table++ }))
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -223,5 +230,5 @@ export function generateFirstRoundPairings(players: Player[]): Match[] {
     matches.push(createMatch(pool[i].id, pool[i + 1].id, 1))
   }
 
-  return matches
+  return assignTableNumbers(matches)
 }

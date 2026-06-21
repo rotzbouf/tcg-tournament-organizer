@@ -54,7 +54,10 @@ export function RoundPanel({
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 print:hidden">
+        <Button variant="secondary" size="sm" onClick={() => window.print()}>
+          {t('rounds.print')}
+        </Button>
         {!round.isComplete && (
           <Button onClick={handleComplete} disabled={!allResultsIn}>
             {t('rounds.complete')}

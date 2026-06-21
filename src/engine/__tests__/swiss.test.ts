@@ -7,7 +7,7 @@ function makePlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `p${i + 1}`,
     name: `Player ${i + 1}`,
-    hasBye: false,
+    deckName: null, hasBye: false,
     droppedInRound: null,
   }))
 }
@@ -20,6 +20,7 @@ function makeCompletedRound(matches: Partial<Match>[], roundNumber: number): Rou
     matches: matches.map((m, i) => ({
       id: `r${roundNumber}m${i + 1}`,
       roundNumber,
+      tableNumber: 0,
       player1Id: '',
       player2Id: null,
       result: 'pending' as const,

@@ -46,6 +46,9 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
+            {match.tableNumber > 0 && (
+              <span className="text-xs font-semibold text-gray-400">{t('match.table', { number: match.tableNumber })}</span>
+            )}
             <span
               className={cn(
                 'font-medium',

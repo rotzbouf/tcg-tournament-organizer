@@ -1,6 +1,6 @@
 {
   "name": "tcg-tournament-organizer",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "Desktop app for organizing TCG tournaments using the Swiss system",
   "main": "dist-electron/main.js",
   "scripts": {

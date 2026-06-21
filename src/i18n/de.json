@@ -38,6 +38,7 @@
     "startTopCut": "Top Cut starten",
     "topCutLabel": "Top Cut",
     "topCutRound": "Runde {{current}}/{{total}}",
+    "edit": "Turnier bearbeiten",
     "minPlayers": "Mindestens 2 Spieler benötigt"
   },
   "players": {
@@ -49,7 +50,10 @@
     "dropped": "Gedroppt",
     "droppedInRound": "Gedroppt in Runde {{round}}",
     "activeCount": "{{active}} / {{total}} Spieler aktiv",
-    "count": "{{count}} Spieler"
+    "count": "{{count}} Spieler",
+    "bulkImport": "Massenimport",
+    "bulkImportHint": "Ein Spielername pro Zeile",
+    "deckName": "Deck"
   },
   "rounds": {
     "title": "Aktuelle Runde",
@@ -57,14 +61,16 @@
     "complete": "Runde abschliessen",
     "history": "Rundenhistorie",
     "allResultsRequired": "Alle Ergebnisse müssen eingetragen werden",
-    "bye": "Freilos"
+    "bye": "Freilos",
+    "print": "Drucken"
   },
   "match": {
     "vs": "vs",
     "player1Win": "Sieg {{name}}",
     "player2Win": "Sieg {{name}}",
     "draw": "Unentschieden",
-    "pending": "Ausstehend"
+    "pending": "Ausstehend",
+    "table": "Tisch {{number}}"
   },
   "standings": {
     "title": "Rangliste",
@@ -90,10 +96,17 @@
     "importError": "Fehler beim Importieren",
     "invalidFile": "Ungültige Datei"
   },
+  "confirm": {
+    "deleteTournament": "Turnier löschen",
+    "deleteTournamentMessage": "Möchtest du dieses Turnier wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "dropPlayer": "Spieler droppen",
+    "dropPlayerMessage": "Möchtest du {{name}} wirklich aus dem Turnier droppen?"
+  },
   "common": {
     "cancel": "Abbrechen",
     "save": "Speichern",
     "confirm": "Bestätigen",
-    "close": "Schliessen"
+    "close": "Schliessen",
+    "undo": "Rückgängig"
   }
 }

@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-21
+
+### Added
+- Auto-save via localStorage — tournament data persists across sessions
+- Error boundary — catches React errors with reload fallback
+- Confirmation dialogs for delete tournament and drop player
+- Undo system with history stack (Ctrl+Z)
+- Tournament editing during registration (name, round time, top cut)
+- Bulk player import via textarea (one name per line)
+- Print pairings button with print-optimized CSS
+- Table numbers on match cards
+- Deck name tracking per player
+- Keyboard shortcuts: Ctrl+E export, Ctrl+I import, Ctrl+Z undo
+- Reducer test suite (20 test cases)
+- Top cut engine tests
+- `nearestPowerOfTwo` utility function
+
+### Fixed
+- Top cut validates player count and clamps to nearest power of 2
+- Top cut rejects non-power-of-2 player counts
+- Match results can only be submitted in the active (non-complete) round
+- Dialog component now traps focus and has proper ARIA attributes
+- RoundHistory accordion has aria-expanded and aria-controls
+
+### Changed
+- Standings calculated from Swiss rounds only (excluding top cut matches)
+- Dialog uses role="dialog", aria-modal, aria-labelledby, and focus restoration
+
+### Removed
+- Unused `selectActiveTournaments` selector
+
 ## [0.8.2] - 2026-06-21
 
 ### Added

@@ -28,6 +28,8 @@ export function RoundHistory({ rounds, players, tournamentId }: RoundHistoryProp
               'flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium',
               expandedRound === round.roundNumber ? 'bg-gray-50' : 'hover:bg-gray-50'
             )}
+            aria-expanded={expandedRound === round.roundNumber}
+            aria-controls={`round-${round.roundNumber}-panel`}
             onClick={() =>
               setExpandedRound(
                 expandedRound === round.roundNumber ? null : round.roundNumber
@@ -36,13 +38,14 @@ export function RoundHistory({ rounds, players, tournamentId }: RoundHistoryProp
           >
             <span>
               {t('dashboard.round')} {round.roundNumber}
+              {round.phase === 'top_cut' && ` (${t('tournament.topCutLabel')})`}
             </span>
             <span className="text-gray-400">
               {expandedRound === round.roundNumber ? '▲' : '▼'}
             </span>
           </button>
           {expandedRound === round.roundNumber && (
-            <div className="space-y-2 border-t border-gray-200 p-3">
+            <div id={`round-${round.roundNumber}-panel`} className="space-y-2 border-t border-gray-200 p-3">
               {round.matches.map(match => (
                 <MatchCard
                   key={match.id}

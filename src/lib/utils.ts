@@ -14,3 +14,10 @@ export function formatTime(totalSeconds: number): string {
 export function generateId(): string {
   return crypto.randomUUID()
 }
+
+export function nearestPowerOfTwo(n: number): number {
+  if (n < 2) return 0
+  let p = 1
+  while (p * 2 <= n) p *= 2
+  return p
+}
