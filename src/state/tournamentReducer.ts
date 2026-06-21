@@ -9,9 +9,12 @@ import { generateTopCutRound } from '@/engine/topcut'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
+import { calculateEloChanges } from '@/engine/elo'
+import { EloHistoryEntry } from '@/types/database'
 
 export const initialState: AppState = {
   tournaments: {},
+  playerDatabase: {},
 }
 
 function makeRound(partial: Omit<Round, 'phaseIndex'>, phaseIndex: number): Round {
@@ -412,6 +415,66 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         roundTimeMinutes: nextPhase.roundTimeMinutes,
         rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase }, nextIndex)],
       })
+    }
+
+    case 'UPDATE_ELO_RATINGS': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || tournament.status !== 'completed') return state
+
+      const playerIds = tournament.players.map(p => p.id)
+      const playerNameMap: Record<string, string> = {}
+      tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
+
+      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, state.playerDatabase, playerNameMap)
+      const standings = calculateStandings(tournament.players, tournament.rounds)
+      const now = new Date().toISOString()
+
+      const updatedDb = { ...state.playerDatabase }
+      for (const update of eloUpdates) {
+        const player = tournament.players.find(p => p.id === update.playerId)
+        if (!player) continue
+        const nameKey = player.name.toLowerCase()
+        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey)
+        const standing = standings.find(s => s.playerId === update.playerId)
+
+        const historyEntry: EloHistoryEntry = {
+          tournamentId: tournament.id,
+          tournamentName: tournament.name,
+          date: now,
+          eloBefore: update.eloBefore,
+          eloAfter: update.eloAfter,
+          placement: standing?.rank ?? 0,
+        }
+
+        if (existing) {
+          updatedDb[existing.id] = {
+            ...existing,
+            elo: update.eloAfter,
+            matchesPlayed: existing.matchesPlayed + standings.find(s => s.playerId === update.playerId)!.wins + standings.find(s => s.playerId === update.playerId)!.losses + standings.find(s => s.playerId === update.playerId)!.draws,
+            tournamentsPlayed: existing.tournamentsPlayed + 1,
+            history: [...existing.history, historyEntry],
+            lastUpdated: now,
+          }
+        } else {
+          const id = generateId()
+          const s = standings.find(s => s.playerId === update.playerId)!
+          updatedDb[id] = {
+            id,
+            name: player.name,
+            elo: update.eloAfter,
+            matchesPlayed: s.wins + s.losses + s.draws,
+            tournamentsPlayed: 1,
+            history: [historyEntry],
+            lastUpdated: now,
+          }
+        }
+      }
+
+      return { ...state, playerDatabase: updatedDb }
+    }
+
+    case 'RESET_PLAYER_DATABASE': {
+      return { ...state, playerDatabase: {} }
     }
 
     case 'LOAD_STATE': {

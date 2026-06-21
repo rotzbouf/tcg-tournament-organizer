@@ -38,6 +38,18 @@ export function Sidebar() {
           {t('nav.dashboard')}
         </Link>
 
+        <Link
+          to="/rankings"
+          className={cn(
+            'mt-1 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            location.pathname === '/rankings'
+              ? 'bg-gray-100 text-gray-900'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+          )}
+        >
+          {t('rankings.title')}
+        </Link>
+
         {tournaments.length > 0 && (
           <div className="mt-4">
             <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">

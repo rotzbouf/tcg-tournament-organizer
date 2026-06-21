@@ -16,9 +16,10 @@ import { RoundPanel } from './RoundPanel'
 import { StandingsTable } from './StandingsTable'
 import { RoundHistory } from './RoundHistory'
 import { TimerDisplay } from './TimerDisplay'
+import { EloChangesPanel } from './EloChangesPanel'
 import { cn } from '@/lib/utils'
 
-type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties'
+type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties' | 'elo'
 
 const statusBadgeVariant = {
   registration: 'info' as const,
@@ -115,6 +116,7 @@ export function TournamentView() {
     { key: 'standings', label: t('standings.title'), show: tournament.status !== 'registration' },
     { key: 'history', label: t('rounds.history'), show: tournament.rounds.some(r => r.isComplete) },
     { key: 'penalties', label: `${t('penalties.title')}${tournament.penalties.length > 0 ? ` (${tournament.penalties.length})` : ''}`, show: tournament.status !== 'registration' },
+    { key: 'elo', label: t('elo.title'), show: tournament.status === 'completed' },
   ]
 
   return (
@@ -181,6 +183,11 @@ export function TournamentView() {
           {(tournament.status === 'in_progress' || tournament.status === 'top_cut') && (
             <Button variant="secondary" size="sm" onClick={() => setShowPenaltyDialog(true)}>
               {t('penalties.issue')}
+            </Button>
+          )}
+          {tournament.status === 'completed' && (
+            <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'UPDATE_ELO_RATINGS', payload: { tournamentId: tournament.id } }); setActiveTab('elo') }}>
+              {t('elo.update')}
             </Button>
           )}
           {canUndo && (
@@ -262,6 +269,9 @@ export function TournamentView() {
             players={tournament.players}
             tournamentId={tournament.id}
           />
+        )}
+        {activeTab === 'elo' && (
+          <EloChangesPanel tournament={tournament} />
         )}
         {activeTab === 'penalties' && (
           <PenaltyList

@@ -4,6 +4,7 @@ import { TimerProvider } from './hooks/TimerProvider'
 import { AppShell } from './components/layout/AppShell'
 import { Dashboard } from './components/dashboard/Dashboard'
 import { TournamentView } from './components/tournament/TournamentView'
+import { RankingsView } from './components/rankings/RankingsView'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/tournament/:id" element={<TournamentView />} />
+            <Route path="/rankings" element={<RankingsView />} />
           </Routes>
         </AppShell>
       </TimerProvider>

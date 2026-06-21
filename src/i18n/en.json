@@ -129,6 +129,22 @@
     "noPenalties": "No penalties issued",
     "issuedInRound": "Issued in round {{round}}"
   },
+  "rankings": {
+    "title": "Rankings",
+    "elo": "Elo",
+    "matches": "Matches",
+    "tournaments": "Tournaments",
+    "search": "Search players...",
+    "noPlayers": "No players in database yet",
+    "noHistory": "No tournament history"
+  },
+  "elo": {
+    "title": "Elo Changes",
+    "before": "Before",
+    "after": "After",
+    "change": "+/-",
+    "update": "Update Elo"
+  },
   "confirm": {
     "deleteTournament": "Delete Tournament",
     "deleteTournamentMessage": "Are you sure you want to delete this tournament? This action cannot be undone.",

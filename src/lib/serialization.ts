@@ -8,7 +8,7 @@ interface ExportData {
   data: AppState
 }
 
-const CURRENT_VERSION = '1.1.0'
+const CURRENT_VERSION = '1.2.0'
 const APP_NAME = 'TCG Tournament Organizer'
 
 const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound']
@@ -56,6 +56,10 @@ export function deserializeState(json: string): AppState {
   for (const [id, value] of Object.entries(tournaments)) {
     validateTournament(id, value)
     migrateTournament(value as unknown as Record<string, unknown>)
+  }
+
+  if (!appState.playerDatabase || typeof appState.playerDatabase !== 'object') {
+    appState.playerDatabase = {}
   }
 
   return appState as unknown as AppState
