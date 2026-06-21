@@ -391,7 +391,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
       const nextRoundNumber = tournament.currentRound + 1
       let matches
-      let phase: Round['phase'] = 'swiss'
+      let phase: Round['phase']
       let totalRounds: number
 
       if (nextPhase.format === 'round_robin') {
