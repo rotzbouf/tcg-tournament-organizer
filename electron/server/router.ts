@@ -1,8 +1,8 @@
 import http from 'node:http'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer } from '../ipc/stateSync'
 import { addClient } from './sse'
-import { calculateStandings } from '@/engine/standings'
-import { parseDecklistText } from '@/lib/decklistParser'
+import { calculateStandings } from '../../src/engine/standings'
+import { parseDecklistText } from '../../src/lib/decklistParser'
 
 // @ts-expect-error -- raw import handled by vite-plugin-electron
 import mobileHtml from './mobile.html?raw'
