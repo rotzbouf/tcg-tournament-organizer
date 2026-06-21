@@ -3,15 +3,24 @@ import os from 'node:os'
 import { handleRequest } from './router'
 import { closeAll, getClientCount } from './sse'
 
-let server: http.Server | null = null
-let serverAddress = ''
-let serverPort = 0
+interface ServerInstance {
+  server: http.Server
+  address: string
+  port: number
+  tournamentId: string
+}
 
-export async function startServer(): Promise<{ address: string; port: number }> {
-  if (server) return { address: serverAddress, port: serverPort }
+const servers = new Map<string, ServerInstance>()
+let nextPort = 8080
+
+export async function startServer(tournamentId: string): Promise<{ address: string; port: number }> {
+  const existing = servers.get(tournamentId)
+  if (existing) return { address: existing.address, port: existing.port }
+
+  const port = nextPort++
 
   return new Promise((resolve, reject) => {
-    const srv = http.createServer(handleRequest)
+    const srv = http.createServer((req, res) => handleRequest(req, res, tournamentId))
 
     srv.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
@@ -24,33 +33,41 @@ export async function startServer(): Promise<{ address: string; port: number }> 
     srv.on('listening', () => {
       const addr = srv.address()
       if (addr && typeof addr === 'object') {
-        serverPort = addr.port
-        serverAddress = getLocalIP()
-        server = srv
-        resolve({ address: serverAddress, port: serverPort })
+        const address = getLocalIP()
+        servers.set(tournamentId, { server: srv, address, port: addr.port, tournamentId })
+        resolve({ address, port: addr.port })
       }
     })
 
-    srv.listen(8080)
+    srv.listen(port)
   })
 }
 
-export async function stopServer(): Promise<void> {
+export async function stopServer(tournamentId: string): Promise<void> {
+  const instance = servers.get(tournamentId)
+  if (!instance) return
   closeAll()
   return new Promise((resolve) => {
-    if (!server) { resolve(); return }
-    server.close(() => {
-      server = null
-      serverAddress = ''
-      serverPort = 0
+    instance.server.close(() => {
+      servers.delete(tournamentId)
       resolve()
     })
   })
 }
 
-export function getServerInfo(): { running: boolean; address?: string; port?: number; clientCount?: number } {
-  if (!server) return { running: false }
-  return { running: true, address: serverAddress, port: serverPort, clientCount: getClientCount() }
+export async function stopAllServers(): Promise<void> {
+  closeAll()
+  const promises = [...servers.values()].map(inst =>
+    new Promise<void>(resolve => inst.server.close(() => resolve()))
+  )
+  await Promise.all(promises)
+  servers.clear()
+}
+
+export function getServerInfo(tournamentId: string): { running: boolean; address?: string; port?: number; clientCount?: number } {
+  const instance = servers.get(tournamentId)
+  if (!instance) return { running: false }
+  return { running: true, address: instance.address, port: instance.port, clientCount: getClientCount() }
 }
 
 function getLocalIP(): string {

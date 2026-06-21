@@ -1,7 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import { startServer, stopServer, getServerInfo } from '../server/index'
+import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
 import { broadcast, getClientCount } from '../server/sse'
-import QRCode from 'qrcode'
 
 let currentState: string | null = null
 let currentTimers: string | null = null
@@ -14,29 +13,41 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
   ipcMain.on('state:sync', (_event, state: string) => {
     currentState = state
     stateListeners.forEach(fn => fn())
-    broadcast({ type: 'state', state: JSON.parse(state), timers: currentTimers ? JSON.parse(currentTimers) : null })
+    try {
+      broadcast({ type: 'state', state: JSON.parse(state), timers: currentTimers ? JSON.parse(currentTimers) : null })
+    } catch { /* ignore */ }
   })
 
   ipcMain.on('timer:sync', (_event, timers: string) => {
     currentTimers = timers
-    broadcast({ type: 'timers', timers: JSON.parse(timers) })
+    try {
+      broadcast({ type: 'timers', timers: JSON.parse(timers) })
+    } catch { /* ignore */ }
   })
 
-  ipcMain.handle('server:start', async () => {
-    const { address, port } = await startServer()
+  ipcMain.handle('server:start', async (_event, tournamentId: string) => {
+    const { address, port } = await startServer(tournamentId)
     const url = `http://${address}:${port}`
-    const qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
+    let qrCodeSvg = ''
+    try {
+      const QRCode = await import('qrcode')
+      qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
+    } catch { /* qrcode not available */ }
     return { address, port, qrCodeSvg }
   })
 
-  ipcMain.handle('server:stop', async () => {
-    await stopServer()
+  ipcMain.handle('server:stop', async (_event, tournamentId: string) => {
+    await stopServer(tournamentId)
   })
 
-  ipcMain.handle('server:getInfo', () => {
-    const info = getServerInfo()
+  ipcMain.handle('server:getInfo', (_event, tournamentId: string) => {
+    const info = getServerInfo(tournamentId)
     return { ...info, clientCount: getClientCount() }
   })
+}
+
+export function registerCleanup() {
+  stopAllServers()
 }
 
 export function getCurrentState(): unknown | null {

@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onDispatchAction: (callback: (action: string) => void) => {
     ipcRenderer.on('action:dispatch', (_event, action: string) => callback(action))
   },
-  startServer: () => ipcRenderer.invoke('server:start'),
-  stopServer: () => ipcRenderer.invoke('server:stop'),
-  getServerInfo: () => ipcRenderer.invoke('server:getInfo'),
+  startServer: (tournamentId: string) => ipcRenderer.invoke('server:start', tournamentId),
+  stopServer: (tournamentId: string) => ipcRenderer.invoke('server:stop', tournamentId),
+  getServerInfo: (tournamentId: string) => ipcRenderer.invoke('server:getInfo', tournamentId),
 })

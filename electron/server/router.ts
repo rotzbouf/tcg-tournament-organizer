@@ -1,11 +1,30 @@
 import http from 'node:http'
+import fs from 'node:fs'
+import path from 'node:path'
+import { app } from 'electron'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer } from '../ipc/stateSync'
 import { addClient } from './sse'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
 
-// @ts-expect-error -- raw import handled by vite-plugin-electron
-import mobileHtml from './mobile.html?raw'
+let mobileHtmlCache: string | null = null
+
+function getMobileHtml(): string {
+  if (mobileHtmlCache) return mobileHtmlCache
+  const candidates = [
+    path.join(process.resourcesPath || '', 'mobile.html'),
+    path.join(__dirname, 'mobile.html'),
+    path.join(__dirname, '../electron/server/mobile.html'),
+    path.join(app?.getAppPath?.() || '', 'electron/server/mobile.html'),
+  ]
+  for (const p of candidates) {
+    try {
+      mobileHtmlCache = fs.readFileSync(p, 'utf-8')
+      return mobileHtmlCache
+    } catch { /* try next */ }
+  }
+  return '<html><body><h1>Mobile page not found</h1></body></html>'
+}
 
 interface Tournament {
   id: string
@@ -20,9 +39,9 @@ interface Tournament {
   totalRounds: number
 }
 
-export function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+export function handleRequest(req: http.IncomingMessage, res: http.ServerResponse, boundTournamentId: string): void {
   const url = new URL(req.url || '/', `http://${req.headers.host}`)
-  const path = url.pathname
+  const reqPath = url.pathname
 
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -34,58 +53,45 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return
   }
 
-  if (path === '/' && req.method === 'GET') {
+  if (reqPath === '/' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    res.end(mobileHtml)
+    res.end(getMobileHtml())
     return
   }
 
-  if (path === '/api/events' && req.method === 'GET') {
+  if (reqPath === '/api/events' && req.method === 'GET') {
     addClient(res)
     return
   }
 
-  if (path === '/api/state' && req.method === 'GET') {
-    jsonResponse(res, { state: getCurrentState(), timers: getCurrentTimers() })
+  if (reqPath === '/api/state' && req.method === 'GET') {
+    jsonResponse(res, { state: getCurrentState(), timers: getCurrentTimers(), tournamentId: boundTournamentId })
     return
   }
 
-  if (path === '/api/tournaments' && req.method === 'GET') {
+  if (reqPath === '/api/tournament' && req.method === 'GET') {
     const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
-    if (!state) { jsonResponse(res, [], 200); return }
-    const list = Object.values(state.tournaments).map(t => ({
-      id: t.id, name: t.name, game: t.game, format: t.format, status: t.status,
-      playerCount: t.players.length, currentRound: t.currentRound, totalRounds: t.totalRounds,
-    }))
-    jsonResponse(res, list)
-    return
-  }
-
-  const tournamentMatch = path.match(/^\/api\/tournaments\/([^/]+)$/)
-  if (tournamentMatch && req.method === 'GET') {
-    const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
-    const tournament = state?.tournaments[tournamentMatch[1]]
+    const tournament = state?.tournaments[boundTournamentId]
     if (!tournament) { jsonResponse(res, { error: 'not found' }, 404); return }
     const standings = calculateStandings(tournament.players as never[], tournament.rounds as never[], tournament.game as never)
     jsonResponse(res, { tournament, standings, timers: getCurrentTimers() })
     return
   }
 
-  const registerMatch = path.match(/^\/api\/tournaments\/([^/]+)\/register$/)
-  if (registerMatch && req.method === 'POST') {
+  if (reqPath === '/api/register' && req.method === 'POST') {
     readBody(req, (body) => {
       const { playerName } = body as { playerName?: string }
       if (!playerName?.trim()) { jsonResponse(res, { error: 'name required' }, 400); return }
       dispatchToRenderer({
         type: 'ADD_PLAYER',
-        payload: { tournamentId: registerMatch[1], playerName: playerName.trim() },
+        payload: { tournamentId: boundTournamentId, playerName: playerName.trim() },
       })
       jsonResponse(res, { ok: true })
     })
     return
   }
 
-  const decklistMatch = path.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/decklist$/)
+  const decklistMatch = reqPath.match(/^\/api\/players\/([^/]+)\/decklist$/)
   if (decklistMatch && req.method === 'POST') {
     readBody(req, (body) => {
       const { decklistText } = body as { decklistText?: string }
@@ -93,14 +99,14 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       const entries = parseDecklistText(decklistText)
       dispatchToRenderer({
         type: 'UPDATE_PLAYER',
-        payload: { tournamentId: decklistMatch[1], playerId: decklistMatch[2], decklist: entries.length > 0 ? entries : null },
+        payload: { tournamentId: boundTournamentId, playerId: decklistMatch[1], decklist: entries.length > 0 ? entries : null },
       })
       jsonResponse(res, { ok: true })
     })
     return
   }
 
-  const resultMatch = path.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/result$/)
+  const resultMatch = reqPath.match(/^\/api\/matches\/([^/]+)\/result$/)
   if (resultMatch && req.method === 'POST') {
     readBody(req, (body) => {
       const { result, player1Games, player2Games } = body as { result?: string; player1Games?: number; player2Games?: number }
@@ -108,7 +114,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         jsonResponse(res, { error: 'invalid result' }, 400); return
       }
       const payload: Record<string, unknown> = {
-        tournamentId: resultMatch[1], matchId: resultMatch[2], result,
+        tournamentId: boundTournamentId, matchId: resultMatch[1], result,
       }
       if (player1Games !== undefined) payload.player1Games = player1Games
       if (player2Games !== undefined) payload.player2Games = player2Games

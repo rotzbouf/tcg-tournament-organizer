@@ -6,6 +6,9 @@ directories:
 files:
   - dist
   - dist-electron
+extraResources:
+  - from: electron/server/mobile.html
+    to: mobile.html
 asar: true
 linux:
   target:
