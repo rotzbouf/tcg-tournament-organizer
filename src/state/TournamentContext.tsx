@@ -82,11 +82,23 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
-    saveTimeout.current = setTimeout(() => saveState(state), 500)
+    saveTimeout.current = setTimeout(() => {
+      saveState(state)
+      window.electronAPI?.syncState(JSON.stringify(state))
+    }, 500)
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current)
     }
   }, [state])
+
+  useEffect(() => {
+    window.electronAPI?.onDispatchAction((actionJson: string) => {
+      try {
+        const action = JSON.parse(actionJson) as TournamentAction
+        rawDispatch(action)
+      } catch { /* ignore malformed actions */ }
+    })
+  }, [])
 
   return (
     <TournamentContext.Provider value={{ state, dispatch, undo, canUndo }}>

@@ -4,7 +4,10 @@ import { TimerContext, TimerState } from './useTimerManager'
 export function TimerProvider({ children }: { children: ReactNode }) {
   const [timers, setTimers] = useState<Record<string, TimerState>>({})
   const timersRef = useRef(timers)
-  useEffect(() => { timersRef.current = timers }, [timers])
+  useEffect(() => {
+    timersRef.current = timers
+    window.electronAPI?.syncTimerState(JSON.stringify(timers))
+  }, [timers])
 
   useEffect(() => {
     const interval = setInterval(() => {
