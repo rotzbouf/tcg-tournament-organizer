@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EditTournamentDialog } from './EditTournamentDialog'
+import { PenaltyDialog } from './PenaltyDialog'
+import { PenaltyList } from './PenaltyList'
 import { PlayerList } from './PlayerList'
 import { RoundPanel } from './RoundPanel'
 import { StandingsTable } from './StandingsTable'
@@ -15,7 +17,7 @@ import { RoundHistory } from './RoundHistory'
 import { TimerDisplay } from './TimerDisplay'
 import { cn } from '@/lib/utils'
 
-type Tab = 'players' | 'round' | 'standings' | 'history'
+type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties'
 
 const statusBadgeVariant = {
   registration: 'info' as const,
@@ -34,6 +36,7 @@ export function TournamentView() {
   const [activeTab, setActiveTab] = useState<Tab>('players')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showPenaltyDialog, setShowPenaltyDialog] = useState(false)
 
   if (!tournament) {
     return (
@@ -53,18 +56,28 @@ export function TournamentView() {
   const topCutRounds = tournament.rounds.filter(r => r.phase === 'top_cut')
   const isInSwiss = tournament.status === 'in_progress'
   const isInTopCut = tournament.status === 'top_cut'
-  const swissComplete = isInSwiss && tournament.currentRound >= tournament.totalRounds && currentRound?.isComplete === true
-  const hasTopCut = tournament.topCut > 0
+  const hasTopCut = tournament.format === 'swiss_topcut' && tournament.topCut > 0
+  const isDoubleElim = tournament.format === 'double_elimination'
+  const isRoundRobin = tournament.format === 'round_robin'
+  const isElimFormat = isInTopCut || isDoubleElim
 
-  const isLastSwissRound = isInSwiss && tournament.currentRound >= tournament.totalRounds
-  const canGenerateSwiss = isInSwiss && currentRound?.isComplete === true && !isLastSwissRound
+  const swissComplete = isInSwiss && !isDoubleElim && !isRoundRobin &&
+    tournament.currentRound >= tournament.totalRounds && currentRound?.isComplete === true
 
+  const isGrandFinalComplete = currentRound?.phase === 'grand_final' && currentRound?.isComplete
+  const isLastSwissRound = isInSwiss && !isDoubleElim && !isRoundRobin &&
+    tournament.currentRound >= tournament.totalRounds
   const isLastTopCutRound = isInTopCut && topCutRounds.length > 0 &&
     topCutRounds[topCutRounds.length - 1]?.matches.length === 1
-  const canGenerateTopCut = isInTopCut && currentRound?.isComplete === true && !isLastTopCutRound
+  const isLastRoundRobin = isRoundRobin && tournament.currentRound >= tournament.totalRounds
 
-  const canGenerate = canGenerateSwiss || canGenerateTopCut
-  const isLastRound = isInTopCut ? isLastTopCutRound : (isLastSwissRound && !hasTopCut)
+  const canGenerate = currentRound?.isComplete === true && !isGrandFinalComplete &&
+    !(isLastSwissRound && !hasTopCut) && !isLastTopCutRound && !isLastRoundRobin
+
+  const isLastRound = isInTopCut ? isLastTopCutRound :
+    isGrandFinalComplete ? true :
+    isLastRoundRobin ? true :
+    (isLastSwissRound && !hasTopCut)
 
   const handleStart = () => {
     dispatch({ type: 'START_TOURNAMENT', payload: { tournamentId: tournament.id } })
@@ -81,15 +94,22 @@ export function TournamentView() {
     setActiveTab('round')
   }
 
+  const currentPhaseLabel = currentRound?.phase === 'winners_bracket' ? t('tournament.winnersBracket') :
+    currentRound?.phase === 'losers_bracket' ? t('tournament.losersBracket') :
+    currentRound?.phase === 'grand_final' ? t('tournament.grandFinal') : null
+
   const roundLabel = isInTopCut
     ? `${t('tournament.topCutLabel')} — ${t('tournament.topCutRound', { current: topCutRounds.length, total: Math.log2(tournament.topCut) })}`
-    : `${t('dashboard.round')} ${tournament.currentRound}/${tournament.totalRounds}`
+    : currentPhaseLabel
+      ? `${currentPhaseLabel} — ${t('dashboard.round')} ${tournament.currentRound}`
+      : `${t('dashboard.round')} ${tournament.currentRound}/${tournament.totalRounds}`
 
   const tabs: { key: Tab; label: string; show: boolean }[] = [
     { key: 'players', label: t('players.title'), show: true },
     { key: 'round', label: t('rounds.title'), show: tournament.status !== 'registration' },
     { key: 'standings', label: t('standings.title'), show: tournament.status !== 'registration' },
     { key: 'history', label: t('rounds.history'), show: tournament.rounds.some(r => r.isComplete) },
+    { key: 'penalties', label: `${t('penalties.title')}${tournament.penalties.length > 0 ? ` (${tournament.penalties.length})` : ''}`, show: tournament.status !== 'registration' },
   ]
 
   return (
@@ -145,6 +165,11 @@ export function TournamentView() {
               {t('tournament.startTopCut')}
             </Button>
           )}
+          {(tournament.status === 'in_progress' || tournament.status === 'top_cut') && (
+            <Button variant="secondary" size="sm" onClick={() => setShowPenaltyDialog(true)}>
+              {t('penalties.issue')}
+            </Button>
+          )}
           {canUndo && (
             <Button variant="secondary" size="sm" onClick={undo}>
               {t('common.undo')}
@@ -155,6 +180,13 @@ export function TournamentView() {
           </Button>
         </div>
       </div>
+
+      <PenaltyDialog
+        open={showPenaltyDialog}
+        onClose={() => setShowPenaltyDialog(false)}
+        tournamentId={tournament.id}
+        players={tournament.players}
+      />
 
       {showEditDialog && (
         <EditTournamentDialog
@@ -207,7 +239,7 @@ export function TournamentView() {
             tournamentId={tournament.id}
             canGenerate={canGenerate}
             isLastRound={isLastRound}
-            isTopCut={isInTopCut}
+            isTopCut={isElimFormat}
           />
         )}
         {activeTab === 'standings' && <StandingsTable standings={standings} />}
@@ -216,6 +248,13 @@ export function TournamentView() {
             rounds={tournament.rounds}
             players={tournament.players}
             tournamentId={tournament.id}
+          />
+        )}
+        {activeTab === 'penalties' && (
+          <PenaltyList
+            tournamentId={tournament.id}
+            penalties={tournament.penalties}
+            players={tournament.players}
           />
         )}
       </div>

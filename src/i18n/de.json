@@ -23,8 +23,14 @@
     "game": "Spiel",
     "roundTime": "Rundenzeit",
     "minutesValue": "{{count}} Minuten",
-    "topCut": "Turniermodus",
-    "swissOnly": "Nur Swiss-Runden",
+    "format": "Format",
+    "formatOptions": {
+      "swiss": "Swiss",
+      "swiss_topcut": "Swiss + Top Cut",
+      "double_elimination": "Doppelte Eliminierung",
+      "round_robin": "Rundenturnier"
+    },
+    "topCut": "Top Cut Größe",
     "topCutValue": "Top {{count}}",
     "status": {
       "registration": "Registrierung",
@@ -38,6 +44,9 @@
     "startTopCut": "Top Cut starten",
     "topCutLabel": "Top Cut",
     "topCutRound": "Runde {{current}}/{{total}}",
+    "winnersBracket": "Winners Bracket",
+    "losersBracket": "Losers Bracket",
+    "grandFinal": "Grand Final",
     "edit": "Turnier bearbeiten",
     "minPlayers": "Mindestens 2 Spieler benötigt"
   },
@@ -95,6 +104,21 @@
     "importSuccess": "Erfolgreich importiert",
     "importError": "Fehler beim Importieren",
     "invalidFile": "Ungültige Datei"
+  },
+  "penalties": {
+    "title": "Strafen",
+    "issue": "Strafe vergeben",
+    "type": {
+      "label": "Strafart",
+      "warning": "Verwarnung",
+      "game_loss": "Spielverlust",
+      "match_loss": "Matchverlust",
+      "disqualification": "Disqualifikation"
+    },
+    "reason": "Grund",
+    "remove": "Entfernen",
+    "noPenalties": "Keine Strafen vergeben",
+    "issuedInRound": "Vergeben in Runde {{round}}"
   },
   "confirm": {
     "deleteTournament": "Turnier löschen",

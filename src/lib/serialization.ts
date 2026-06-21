@@ -1,5 +1,5 @@
 import { AppState } from '@/state/actions'
-import { Tournament, GameType, TournamentStatus } from '@/types/tournament'
+import { Tournament, GameType, TournamentStatus, TournamentFormat } from '@/types/tournament'
 
 interface ExportData {
   version: string
@@ -8,11 +8,12 @@ interface ExportData {
   data: AppState
 }
 
-const CURRENT_VERSION = '1.0.0'
+const CURRENT_VERSION = '1.1.0'
 const APP_NAME = 'TCG Tournament Organizer'
 
 const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound']
 const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'top_cut', 'completed']
+const VALID_FORMATS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
 
 export function serializeState(state: AppState): string {
   const exportData: ExportData = {
@@ -54,6 +55,7 @@ export function deserializeState(json: string): AppState {
   const tournaments = appState.tournaments as Record<string, unknown>
   for (const [id, value] of Object.entries(tournaments)) {
     validateTournament(id, value)
+    migrateTournament(value as unknown as Record<string, unknown>)
   }
 
   return appState as unknown as AppState
@@ -84,5 +86,16 @@ function validateTournament(id: string, value: unknown): asserts value is Tourna
 
   if (!Array.isArray(t.rounds)) {
     throw new Error(`Tournament ${id}: rounds must be an array`)
+  }
+}
+
+function migrateTournament(t: Record<string, unknown> & { format?: unknown; penalties?: unknown; topCut?: unknown }): void {
+  if (!t.format || !VALID_FORMATS.includes(t.format as TournamentFormat)) {
+    const topCut = typeof t.topCut === 'number' ? t.topCut : 0
+    t.format = topCut > 0 ? 'swiss_topcut' : 'swiss'
+  }
+
+  if (!Array.isArray(t.penalties)) {
+    t.penalties = []
   }
 }

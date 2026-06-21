@@ -10,7 +10,7 @@ export interface Match {
   isBye: boolean
 }
 
-export type RoundPhase = 'swiss' | 'top_cut'
+export type RoundPhase = 'swiss' | 'top_cut' | 'winners_bracket' | 'losers_bracket' | 'grand_final' | 'round_robin'
 
 export interface Round {
   roundNumber: number

@@ -1,9 +1,12 @@
 import { AppState, TournamentAction } from './actions'
 import { Tournament } from '@/types/tournament'
+import { Penalty } from '@/types/penalty'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds } from '@/engine/scoring'
 import { generatePairings, generateFirstRoundPairings } from '@/engine/swiss'
 import { generateTopCutRound } from '@/engine/topcut'
+import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
+import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
 
 export const initialState: AppState = {
@@ -19,9 +22,11 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id,
         name: action.payload.name,
         game: action.payload.game,
+        format: action.payload.format,
         status: 'registration',
         players: [],
         rounds: [],
+        penalties: [],
         roundTimeMinutes: action.payload.roundTimeMinutes,
         totalRounds: 0,
         currentRound: 0,
@@ -80,6 +85,33 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament || tournament.status !== 'registration' || tournament.players.length < 2) {
         return state
       }
+
+      if (tournament.format === 'round_robin') {
+        const playerIds = tournament.players.map(p => p.id)
+        const totalRounds = getRoundRobinTotalRounds(playerIds.length)
+        const matches = generateRoundRobinRound(playerIds, 0, 1)
+        return updateTournament(state, action.payload.tournamentId, {
+          status: 'in_progress',
+          totalRounds,
+          currentRound: 1,
+          rounds: [{ roundNumber: 1, matches, isComplete: false, phase: 'round_robin' }],
+        })
+      }
+
+      if (tournament.format === 'double_elimination') {
+        const playerIds = tournament.players.map(p => p.id)
+        const clamped = nearestPowerOfTwo(playerIds.length)
+        const seeded = playerIds.slice(0, clamped)
+        const totalRounds = calculateDoubleElimTotalRounds(seeded.length)
+        const matches = generateDoubleElimFirstRound(seeded, 1)
+        return updateTournament(state, action.payload.tournamentId, {
+          status: 'in_progress',
+          totalRounds,
+          currentRound: 1,
+          rounds: [{ roundNumber: 1, matches, isComplete: false, phase: 'winners_bracket' }],
+        })
+      }
+
       const totalRounds = calculateTotalRounds(tournament.players.length)
       const matches = generateFirstRoundPairings(tournament.players)
       const updatedPlayers = tournament.players.map(p => {
@@ -98,12 +130,32 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'GENERATE_ROUND': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
+      const lastRound = tournament.rounds[tournament.rounds.length - 1]
+      if (lastRound && !lastRound.isComplete) return state
+
+      if (tournament.format === 'round_robin' && tournament.status === 'in_progress') {
+        if (tournament.currentRound >= tournament.totalRounds) return state
+        const nextRoundNumber = tournament.currentRound + 1
+        const playerIds = tournament.players.map(p => p.id)
+        const matches = generateRoundRobinRound(playerIds, tournament.currentRound, nextRoundNumber)
+        return updateTournament(state, action.payload.tournamentId, {
+          currentRound: nextRoundNumber,
+          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'round_robin' }],
+        })
+      }
+
+      if (tournament.format === 'double_elimination' && tournament.status === 'in_progress') {
+        const advance = advanceDoubleElimBracket(tournament)
+        if (!advance || advance.matches.length === 0) return state
+        const nextRoundNumber = tournament.currentRound + 1
+        return updateTournament(state, action.payload.tournamentId, {
+          currentRound: nextRoundNumber,
+          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches: advance.matches, isComplete: false, phase: advance.phase }],
+        })
+      }
 
       if (tournament.status === 'in_progress') {
-        const currentRound = tournament.rounds[tournament.rounds.length - 1]
-        if (currentRound && !currentRound.isComplete) return state
         if (tournament.currentRound >= tournament.totalRounds) return state
-
         const nextRoundNumber = tournament.currentRound + 1
         const matches = generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
         const updatedPlayers = tournament.players.map(p => {
@@ -118,9 +170,6 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       }
 
       if (tournament.status === 'top_cut') {
-        const currentRound = tournament.rounds[tournament.rounds.length - 1]
-        if (currentRound && !currentRound.isComplete) return state
-
         const topCutRounds = tournament.rounds.filter(r => r.phase === 'top_cut')
         const lastTopCutRound = topCutRounds[topCutRounds.length - 1]
         if (!lastTopCutRound) return state
@@ -239,7 +288,61 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (action.payload.name !== undefined) updates.name = action.payload.name
       if (action.payload.roundTimeMinutes !== undefined) updates.roundTimeMinutes = action.payload.roundTimeMinutes
       if (action.payload.topCut !== undefined) updates.topCut = action.payload.topCut
+      if (action.payload.format !== undefined) updates.format = action.payload.format
       return updateTournament(state, action.payload.tournamentId, updates)
+    }
+
+    case 'ISSUE_PENALTY': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || (tournament.status !== 'in_progress' && tournament.status !== 'top_cut')) return state
+
+      const penalty: Penalty = {
+        id: generateId(),
+        playerId: action.payload.playerId,
+        roundNumber: tournament.currentRound,
+        type: action.payload.type,
+        reason: action.payload.reason,
+        issuedAt: new Date().toISOString(),
+      }
+
+      const updates: Partial<Tournament> = {
+        penalties: [...tournament.penalties, penalty],
+      }
+
+      if (action.payload.type === 'disqualification') {
+        updates.players = tournament.players.map(p =>
+          p.id === action.payload.playerId
+            ? { ...p, droppedInRound: tournament.currentRound }
+            : p
+        )
+      }
+
+      if (action.payload.type === 'match_loss') {
+        const currentRound = tournament.rounds[tournament.rounds.length - 1]
+        if (currentRound && !currentRound.isComplete) {
+          const match = currentRound.matches.find(
+            m => !m.isBye && (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
+          )
+          if (match) {
+            const result = match.player1Id === action.payload.playerId ? 'player2_win' as const : 'player1_win' as const
+            updates.rounds = tournament.rounds.map(round =>
+              round.roundNumber === currentRound.roundNumber
+                ? { ...round, matches: round.matches.map(m => m.id === match.id ? { ...m, result } : m) }
+                : round
+            )
+          }
+        }
+      }
+
+      return updateTournament(state, action.payload.tournamentId, updates)
+    }
+
+    case 'REMOVE_PENALTY': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament) return state
+      return updateTournament(state, action.payload.tournamentId, {
+        penalties: tournament.penalties.filter(p => p.id !== action.payload.penaltyId),
+      })
     }
 
     case 'LOAD_STATE': {

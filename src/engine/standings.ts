@@ -6,8 +6,9 @@ import { calculateMatchPoints, getPlayerRecord } from './scoring'
 export function calculateStandings(players: Player[], rounds: Round[]): Standing[] {
   const completedRounds = rounds.filter(r => r.isComplete)
 
-  const swissRounds = completedRounds.filter(r => r.phase === 'swiss')
-  const topCutRounds = completedRounds.filter(r => r.phase === 'top_cut')
+  const swissRounds = completedRounds.filter(r => r.phase === 'swiss' || r.phase === 'round_robin')
+  const bracketPhases = new Set(['top_cut', 'winners_bracket', 'losers_bracket', 'grand_final'])
+  const topCutRounds = completedRounds.filter(r => bracketPhases.has(r.phase))
 
   const standings: Standing[] = players.map(player => {
     const matchPoints = calculateMatchPoints(player.id, swissRounds)

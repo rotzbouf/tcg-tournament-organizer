@@ -10,6 +10,15 @@ export function loadState(): AppState | null {
     if (!parsed || typeof parsed !== 'object' || !parsed.tournaments || typeof parsed.tournaments !== 'object') {
       return null
     }
+    for (const t of Object.values(parsed.tournaments) as Record<string, unknown>[]) {
+      if (!t.format) {
+        const topCut = typeof t.topCut === 'number' ? t.topCut : 0
+        t.format = topCut > 0 ? 'swiss_topcut' : 'swiss'
+      }
+      if (!Array.isArray(t.penalties)) {
+        t.penalties = []
+      }
+    }
     return parsed as AppState
   } catch {
     return null

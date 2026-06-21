@@ -23,8 +23,14 @@
     "game": "Game",
     "roundTime": "Round Time",
     "minutesValue": "{{count}} minutes",
-    "topCut": "Tournament Mode",
-    "swissOnly": "Swiss rounds only",
+    "format": "Format",
+    "formatOptions": {
+      "swiss": "Swiss",
+      "swiss_topcut": "Swiss + Top Cut",
+      "double_elimination": "Double Elimination",
+      "round_robin": "Round Robin"
+    },
+    "topCut": "Top Cut Size",
     "topCutValue": "Top {{count}}",
     "status": {
       "registration": "Registration",
@@ -38,6 +44,9 @@
     "startTopCut": "Start Top Cut",
     "topCutLabel": "Top Cut",
     "topCutRound": "Round {{current}}/{{total}}",
+    "winnersBracket": "Winners Bracket",
+    "losersBracket": "Losers Bracket",
+    "grandFinal": "Grand Final",
     "edit": "Edit Tournament",
     "minPlayers": "At least 2 players required"
   },
@@ -95,6 +104,21 @@
     "importSuccess": "Imported successfully",
     "importError": "Error importing",
     "invalidFile": "Invalid file"
+  },
+  "penalties": {
+    "title": "Penalties",
+    "issue": "Issue Penalty",
+    "type": {
+      "label": "Penalty Type",
+      "warning": "Warning",
+      "game_loss": "Game Loss",
+      "match_loss": "Match Loss",
+      "disqualification": "Disqualification"
+    },
+    "reason": "Reason",
+    "remove": "Remove",
+    "noPenalties": "No penalties issued",
+    "issuedInRound": "Issued in round {{round}}"
   },
   "confirm": {
     "deleteTournament": "Delete Tournament",

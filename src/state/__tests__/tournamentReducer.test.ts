@@ -24,7 +24,7 @@ function dispatch(state: AppState, action: TournamentAction): AppState {
 function createTournament(state: AppState = initialState): AppState {
   return dispatch(state, {
     type: 'CREATE_TOURNAMENT',
-    payload: { name: 'Test', game: 'yugioh', roundTimeMinutes: 50, topCut: 0 },
+    payload: { name: 'Test', game: 'yugioh', format: 'swiss', roundTimeMinutes: 50, topCut: 0 },
   })
 }
 
