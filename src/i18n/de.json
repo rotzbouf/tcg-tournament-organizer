@@ -105,6 +105,15 @@
     "importError": "Fehler beim Importieren",
     "invalidFile": "Ungültige Datei"
   },
+  "phase": {
+    "advance": "Nächste Phase"
+  },
+  "decklist": {
+    "title": "Deckliste",
+    "paste": "Deckliste einfügen (z.B. 3x Kartenname)",
+    "totalCards": "Karten gesamt",
+    "uniqueCards": "Verschiedene Karten"
+  },
   "penalties": {
     "title": "Strafen",
     "issue": "Strafe vergeben",

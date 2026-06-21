@@ -1,6 +1,7 @@
 import { Player } from './player'
 import { Round } from './round'
 import { Penalty } from './penalty'
+import { TournamentPhase } from './phase'
 
 export type GameType = 'yugioh' | 'pokemon' | 'star_wars_unlimited' | 'riftbound'
 
@@ -19,6 +20,8 @@ export interface Tournament {
   players: Player[]
   rounds: Round[]
   penalties: Penalty[]
+  phases: TournamentPhase[]
+  currentPhaseIndex: number
   roundTimeMinutes: number
   totalRounds: number
   currentRound: number

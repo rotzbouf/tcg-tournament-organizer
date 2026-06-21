@@ -7,7 +7,7 @@ function makePlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `p${i + 1}`,
     name: `Player ${i + 1}`,
-    deckName: null, hasBye: false,
+    deckName: null, decklist: null, hasBye: false,
     droppedInRound: null,
   }))
 }
@@ -17,6 +17,7 @@ function makeCompletedRound(matches: Partial<Match>[], roundNumber: number): Rou
     roundNumber,
     isComplete: true,
     phase: 'swiss',
+    phaseIndex: 0,
     matches: matches.map((m, i) => ({
       id: `r${roundNumber}m${i + 1}`,
       roundNumber,
@@ -154,6 +155,7 @@ describe('generatePairings', () => {
       roundNumber: 1,
       isComplete: true,
       phase: 'swiss',
+      phaseIndex: 0,
       matches: r1Matches.map(m => ({
         ...m,
         result: 'player1_win' as const,

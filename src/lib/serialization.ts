@@ -98,4 +98,10 @@ function migrateTournament(t: Record<string, unknown> & { format?: unknown; pena
   if (!Array.isArray(t.penalties)) {
     t.penalties = []
   }
+  if (!Array.isArray(t.phases)) {
+    t.phases = []
+  }
+  if (typeof t.currentPhaseIndex !== 'number') {
+    t.currentPhaseIndex = 0
+  }
 }

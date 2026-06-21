@@ -1,6 +1,7 @@
 import { AppState, TournamentAction } from './actions'
 import { Tournament } from '@/types/tournament'
 import { Penalty } from '@/types/penalty'
+import { Round } from '@/types/round'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds } from '@/engine/scoring'
 import { generatePairings, generateFirstRoundPairings } from '@/engine/swiss'
@@ -11,6 +12,10 @@ import { calculateStandings } from '@/engine/standings'
 
 export const initialState: AppState = {
   tournaments: {},
+}
+
+function makeRound(partial: Omit<Round, 'phaseIndex'>, phaseIndex: number): Round {
+  return { ...partial, phaseIndex }
 }
 
 export function tournamentReducer(state: AppState, action: TournamentAction): AppState {
@@ -27,6 +32,8 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         players: [],
         rounds: [],
         penalties: [],
+        phases: action.payload.phases ?? [],
+        currentPhaseIndex: 0,
         roundTimeMinutes: action.payload.roundTimeMinutes,
         totalRounds: 0,
         currentRound: 0,
@@ -52,6 +59,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id: generateId(),
         name: action.payload.playerName,
         deckName: null,
+        decklist: null,
         hasBye: false,
         droppedInRound: null,
       }
@@ -85,6 +93,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament || tournament.status !== 'registration' || tournament.players.length < 2) {
         return state
       }
+      const pi = tournament.currentPhaseIndex
 
       if (tournament.format === 'round_robin') {
         const playerIds = tournament.players.map(p => p.id)
@@ -94,7 +103,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           status: 'in_progress',
           totalRounds,
           currentRound: 1,
-          rounds: [{ roundNumber: 1, matches, isComplete: false, phase: 'round_robin' }],
+          rounds: [makeRound({ roundNumber: 1, matches, isComplete: false, phase: 'round_robin' }, pi)],
         })
       }
 
@@ -108,7 +117,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           status: 'in_progress',
           totalRounds,
           currentRound: 1,
-          rounds: [{ roundNumber: 1, matches, isComplete: false, phase: 'winners_bracket' }],
+          rounds: [makeRound({ roundNumber: 1, matches, isComplete: false, phase: 'winners_bracket' }, pi)],
         })
       }
 
@@ -123,7 +132,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds,
         currentRound: 1,
         players: updatedPlayers,
-        rounds: [{ roundNumber: 1, matches, isComplete: false, phase: 'swiss' }],
+        rounds: [makeRound({ roundNumber: 1, matches, isComplete: false, phase: 'swiss' }, pi)],
       })
     }
 
@@ -132,6 +141,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament) return state
       const lastRound = tournament.rounds[tournament.rounds.length - 1]
       if (lastRound && !lastRound.isComplete) return state
+      const pi = tournament.currentPhaseIndex
 
       if (tournament.format === 'round_robin' && tournament.status === 'in_progress') {
         if (tournament.currentRound >= tournament.totalRounds) return state
@@ -140,7 +150,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const matches = generateRoundRobinRound(playerIds, tournament.currentRound, nextRoundNumber)
         return updateTournament(state, action.payload.tournamentId, {
           currentRound: nextRoundNumber,
-          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'round_robin' }],
+          rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'round_robin' }, pi)],
         })
       }
 
@@ -150,7 +160,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const nextRoundNumber = tournament.currentRound + 1
         return updateTournament(state, action.payload.tournamentId, {
           currentRound: nextRoundNumber,
-          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches: advance.matches, isComplete: false, phase: advance.phase }],
+          rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches: advance.matches, isComplete: false, phase: advance.phase }, pi)],
         })
       }
 
@@ -165,7 +175,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         return updateTournament(state, action.payload.tournamentId, {
           currentRound: nextRoundNumber,
           players: updatedPlayers,
-          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'swiss' }],
+          rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'swiss' }, pi)],
         })
       }
 
@@ -184,7 +194,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const matches = generateTopCutRound(winners, nextRoundNumber)
         return updateTournament(state, action.payload.tournamentId, {
           currentRound: nextRoundNumber,
-          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }],
+          rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }, pi)],
         })
       }
 
@@ -212,7 +222,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         status: 'top_cut',
         currentRound: nextRoundNumber,
         totalRounds: tournament.totalRounds + topCutTotalRounds,
-        rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }],
+        rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }, tournament.currentPhaseIndex)],
       })
     }
 
@@ -260,9 +270,13 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
       return updateTournament(state, action.payload.tournamentId, {
-        players: tournament.players.map(p =>
-          p.id === action.payload.playerId ? { ...p, deckName: action.payload.deckName } : p
-        ),
+        players: tournament.players.map(p => {
+          if (p.id !== action.payload.playerId) return p
+          const updates: Partial<typeof p> = {}
+          if (action.payload.deckName !== undefined) updates.deckName = action.payload.deckName
+          if (action.payload.decklist !== undefined) updates.decklist = action.payload.decklist
+          return { ...p, ...updates }
+        }),
       })
     }
 
@@ -273,6 +287,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id: generateId(),
         name,
         deckName: null,
+        decklist: null,
         hasBye: false,
         droppedInRound: null,
       }))
@@ -342,6 +357,60 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament) return state
       return updateTournament(state, action.payload.tournamentId, {
         penalties: tournament.penalties.filter(p => p.id !== action.payload.penaltyId),
+      })
+    }
+
+    case 'ADVANCE_PHASE': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || tournament.status !== 'in_progress') return state
+      if (tournament.phases.length === 0) return state
+      const nextIndex = tournament.currentPhaseIndex + 1
+      if (nextIndex >= tournament.phases.length) return state
+
+      const currentPhaseRounds = tournament.rounds.filter(r => r.phaseIndex === tournament.currentPhaseIndex)
+      const standings = calculateStandings(tournament.players, currentPhaseRounds)
+      const nextPhase = tournament.phases[nextIndex]
+      const advanceCount = nextPhase.advanceCount > 0 ? nextPhase.advanceCount : standings.length
+      const advancingIds = new Set(
+        standings.filter(s => !s.dropped).slice(0, advanceCount).map(s => s.playerId)
+      )
+
+      const updatedPlayers = tournament.players.map(p => {
+        if (p.droppedInRound !== null) return p
+        if (!advancingIds.has(p.id)) return { ...p, droppedInRound: tournament.currentRound }
+        return { ...p, hasBye: false }
+      })
+
+      const nextRoundNumber = tournament.currentRound + 1
+      let matches
+      let phase: Round['phase'] = 'swiss'
+      let totalRounds: number
+
+      if (nextPhase.format === 'round_robin') {
+        const activeIds = updatedPlayers.filter(p => p.droppedInRound === null).map(p => p.id)
+        matches = generateRoundRobinRound(activeIds, 0, nextRoundNumber)
+        phase = 'round_robin'
+        totalRounds = tournament.currentRound + getRoundRobinTotalRounds(activeIds.length)
+      } else if (nextPhase.format === 'swiss' || nextPhase.format === 'swiss_topcut') {
+        const activePlayers = updatedPlayers.filter(p => p.droppedInRound === null)
+        matches = generateFirstRoundPairings(activePlayers)
+        phase = 'swiss'
+        totalRounds = tournament.currentRound + calculateTotalRounds(activePlayers.length)
+      } else {
+        const activeIds = updatedPlayers.filter(p => p.droppedInRound === null).map(p => p.id)
+        const clamped = nearestPowerOfTwo(activeIds.length)
+        matches = generateDoubleElimFirstRound(activeIds.slice(0, clamped), nextRoundNumber)
+        phase = 'winners_bracket'
+        totalRounds = tournament.currentRound + calculateDoubleElimTotalRounds(clamped)
+      }
+
+      return updateTournament(state, action.payload.tournamentId, {
+        currentPhaseIndex: nextIndex,
+        currentRound: nextRoundNumber,
+        totalRounds,
+        players: updatedPlayers,
+        roundTimeMinutes: nextPhase.roundTimeMinutes,
+        rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase }, nextIndex)],
       })
     }
 

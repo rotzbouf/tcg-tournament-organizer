@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { AddPlayerForm } from './AddPlayerForm'
 import { BulkImportDialog } from './BulkImportDialog'
+import { DecklistDialog } from './DecklistDialog'
 import { cn } from '@/lib/utils'
 
 interface PlayerListProps {
@@ -20,6 +21,7 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
   const { dispatch } = useTournamentContext()
   const [dropPlayerId, setDropPlayerId] = useState<string | null>(null)
   const [showBulkImport, setShowBulkImport] = useState(false)
+  const [decklistPlayerId, setDecklistPlayerId] = useState<string | null>(null)
 
   const activePlayers = players.filter(p => p.droppedInRound === null)
   const dropPlayer = players.find(p => p.id === dropPlayerId)
@@ -94,6 +96,13 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => setDecklistPlayerId(player.id)}
+                  >
+                    {t('decklist.title')}{player.decklist ? ` (${player.decklist.reduce((s, e) => s + e.quantity, 0)})` : ''}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() =>
                       dispatch({
                         type: 'REMOVE_PLAYER',
@@ -119,6 +128,16 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
           ))
         )}
       </div>
+
+      {decklistPlayerId && (
+        <DecklistDialog
+          open={true}
+          onClose={() => setDecklistPlayerId(null)}
+          tournamentId={tournamentId}
+          player={players.find(p => p.id === decklistPlayerId)!}
+          readonly={!editable}
+        />
+      )}
 
       <BulkImportDialog
         open={showBulkImport}

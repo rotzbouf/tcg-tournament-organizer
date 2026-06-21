@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EditTournamentDialog } from './EditTournamentDialog'
+import { PhaseIndicator } from './PhaseIndicator'
 import { PenaltyDialog } from './PenaltyDialog'
 import { PenaltyList } from './PenaltyList'
 import { PlayerList } from './PlayerList'
@@ -94,6 +95,10 @@ export function TournamentView() {
     setActiveTab('round')
   }
 
+  const hasMultiPhase = tournament.phases.length > 0
+  const hasNextPhase = hasMultiPhase && tournament.currentPhaseIndex < tournament.phases.length - 1
+  const canAdvancePhase = hasNextPhase && isLastRound && currentRound?.isComplete === true
+
   const currentPhaseLabel = currentRound?.phase === 'winners_bracket' ? t('tournament.winnersBracket') :
     currentRound?.phase === 'losers_bracket' ? t('tournament.losersBracket') :
     currentRound?.phase === 'grand_final' ? t('tournament.grandFinal') : null
@@ -121,6 +126,9 @@ export function TournamentView() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{tournament.name}</h2>
               <p className="text-sm text-gray-500">{gameConfig.name}</p>
+              {hasMultiPhase && (
+                <PhaseIndicator phases={tournament.phases} currentPhaseIndex={tournament.currentPhaseIndex} />
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -163,6 +171,11 @@ export function TournamentView() {
           {swissComplete && hasTopCut && (
             <Button onClick={handleStartTopCut}>
               {t('tournament.startTopCut')}
+            </Button>
+          )}
+          {canAdvancePhase && (
+            <Button onClick={() => { dispatch({ type: 'ADVANCE_PHASE', payload: { tournamentId: tournament.id } }); setActiveTab('round') }}>
+              {t('phase.advance')}
             </Button>
           )}
           {(tournament.status === 'in_progress' || tournament.status === 'top_cut') && (

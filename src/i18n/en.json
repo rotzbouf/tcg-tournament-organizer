@@ -105,6 +105,15 @@
     "importError": "Error importing",
     "invalidFile": "Invalid file"
   },
+  "phase": {
+    "advance": "Next Phase"
+  },
+  "decklist": {
+    "title": "Decklist",
+    "paste": "Paste decklist (e.g. 3x Card Name)",
+    "totalCards": "Total cards",
+    "uniqueCards": "Unique cards"
+  },
   "penalties": {
     "title": "Penalties",
     "issue": "Issue Penalty",

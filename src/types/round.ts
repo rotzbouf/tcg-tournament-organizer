@@ -17,4 +17,5 @@ export interface Round {
   matches: Match[]
   isComplete: boolean
   phase: RoundPhase
+  phaseIndex: number
 }
