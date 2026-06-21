@@ -68,13 +68,7 @@ function assignBye(
   const sorted = [...candidates].sort((a, b) => a.matchPoints - b.matchPoints)
   const byeCandidate = sorted.find(c => !c.hasBye)
 
-  if (!byeCandidate) {
-    const fallback = sorted[0]
-    return {
-      match: createByeMatch(fallback.playerId, roundNumber),
-      byePlayerId: fallback.playerId,
-    }
-  }
+  if (!byeCandidate) return null
 
   return {
     match: createByeMatch(byeCandidate.playerId, roundNumber),
@@ -104,17 +98,18 @@ function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match
 
   const result = backtrackingPair(candidates, [], new Set(), roundNumber, 0)
   if (result) {
-    const pairedIds = new Set(result.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean)))
-    const unpaired = candidates.filter(c => !pairedIds.has(c.playerId))
-    const byes = unpaired.map(c => createByeMatch(c.playerId, roundNumber))
-    return [...result, ...byes]
+    return [...result, ...byesForUnpaired(candidates, result, roundNumber)]
   }
 
   const greedy = greedyPairFallback(candidates, roundNumber)
-  const pairedIds = new Set(greedy.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean)))
-  const unpaired = candidates.filter(c => !pairedIds.has(c.playerId))
-  const byes = unpaired.map(c => createByeMatch(c.playerId, roundNumber))
-  return [...greedy, ...byes]
+  return [...greedy, ...byesForUnpaired(candidates, greedy, roundNumber)]
+}
+
+function byesForUnpaired(candidates: PairingCandidate[], matches: Match[], roundNumber: number): Match[] {
+  const pairedIds = new Set(matches.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean)))
+  return candidates
+    .filter(c => !pairedIds.has(c.playerId) && !c.hasBye)
+    .map(c => createByeMatch(c.playerId, roundNumber))
 }
 
 function backtrackingPair(

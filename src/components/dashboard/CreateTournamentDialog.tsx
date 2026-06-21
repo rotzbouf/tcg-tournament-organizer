@@ -15,7 +15,7 @@ interface CreateTournamentDialogProps {
 
 const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 80, 90]
 
-const TOP_CUT_OPTIONS: TopCutSize[] = [0, 4, 8, 16]
+const TOP_CUT_OPTIONS: TopCutSize[] = [0, 4, 8, 16, 32]
 
 export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialogProps) {
   const { t } = useTranslation()

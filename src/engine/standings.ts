@@ -6,13 +6,16 @@ import { calculateMatchPoints, getPlayerRecord } from './scoring'
 export function calculateStandings(players: Player[], rounds: Round[]): Standing[] {
   const completedRounds = rounds.filter(r => r.isComplete)
 
+  const swissRounds = completedRounds.filter(r => r.phase === 'swiss')
+  const topCutRounds = completedRounds.filter(r => r.phase === 'top_cut')
+
   const standings: Standing[] = players.map(player => {
-    const matchPoints = calculateMatchPoints(player.id, completedRounds)
-    const record = getPlayerRecord(player.id, completedRounds)
-    const opponents = getOpponentIds(player.id, completedRounds)
-    const buchholz = calculateBuchholz(opponents, completedRounds)
-    const medianBuchholz = calculateMedianBuchholz(opponents, completedRounds)
-    const sonnebornBerger = calculateSonnebornBerger(player.id, completedRounds)
+    const matchPoints = calculateMatchPoints(player.id, swissRounds)
+    const record = getPlayerRecord(player.id, swissRounds)
+    const opponents = getOpponentIds(player.id, swissRounds)
+    const buchholz = calculateBuchholz(opponents, swissRounds)
+    const medianBuchholz = calculateMedianBuchholz(opponents, swissRounds)
+    const sonnebornBerger = calculateSonnebornBerger(player.id, swissRounds)
 
     return {
       playerId: player.id,
@@ -37,9 +40,90 @@ export function calculateStandings(players: Player[], rounds: Round[]): Standing
     return 0
   })
 
+  if (topCutRounds.length > 0) {
+    const bracketRanking = calculateBracketRanking(topCutRounds)
+    const topCutPlayerIds = new Set(bracketRanking.map(r => r.playerId))
+
+    const nonTopCutStandings = standings.filter(s => !topCutPlayerIds.has(s.playerId))
+    const topCutStandings = bracketRanking.map(({ playerId, rank }) => {
+      const s = standings.find(s => s.playerId === playerId)!
+      return { ...s, rank }
+    })
+
+    let nextRank = topCutStandings.length + 1
+    nonTopCutStandings.forEach(s => { s.rank = nextRank++ })
+
+    return [...topCutStandings, ...nonTopCutStandings]
+  }
+
   standings.forEach((s, i) => { s.rank = i + 1 })
 
   return standings
+}
+
+function calculateBracketRanking(topCutRounds: Round[]): { playerId: string; rank: number }[] {
+  const allTopCutPlayerIds = new Set<string>()
+  for (const round of topCutRounds) {
+    for (const match of round.matches) {
+      allTopCutPlayerIds.add(match.player1Id)
+      if (match.player2Id) allTopCutPlayerIds.add(match.player2Id)
+    }
+  }
+
+  const eliminatedInRound = new Map<string, number>()
+
+  for (const round of topCutRounds) {
+    for (const match of round.matches) {
+      if (match.result === 'pending') continue
+      const loserId = match.result === 'player1_win' ? match.player2Id : match.player1Id
+      if (loserId) {
+        eliminatedInRound.set(loserId, round.roundNumber)
+      }
+    }
+  }
+
+  const lastRound = topCutRounds[topCutRounds.length - 1]
+  const lastRoundComplete = lastRound?.isComplete && lastRound.matches.length === 1
+  let winnerId: string | null = null
+  if (lastRoundComplete) {
+    const finalMatch = lastRound.matches[0]
+    winnerId = finalMatch.result === 'player1_win' ? finalMatch.player1Id :
+               finalMatch.result === 'player2_win' ? finalMatch.player2Id : null
+  }
+
+  const ranking: { playerId: string; rank: number }[] = []
+  let currentRank = 1
+
+  if (winnerId) {
+    ranking.push({ playerId: winnerId, rank: currentRank++ })
+    const finalistId = lastRound.matches[0].result === 'player1_win'
+      ? lastRound.matches[0].player2Id!
+      : lastRound.matches[0].player1Id
+    ranking.push({ playerId: finalistId, rank: currentRank++ })
+    eliminatedInRound.delete(finalistId)
+  }
+
+  const roundNumbers = [...new Set(eliminatedInRound.values())].sort((a, b) => b - a)
+
+  for (const roundNum of roundNumbers) {
+    const eliminatedThisRound = [...eliminatedInRound.entries()]
+      .filter(([, r]) => r === roundNum)
+      .map(([id]) => id)
+
+    for (const playerId of eliminatedThisRound) {
+      if (ranking.some(r => r.playerId === playerId)) continue
+      ranking.push({ playerId, rank: currentRank })
+    }
+    currentRank += eliminatedThisRound.length
+  }
+
+  for (const playerId of allTopCutPlayerIds) {
+    if (!ranking.some(r => r.playerId === playerId)) {
+      ranking.push({ playerId, rank: currentRank++ })
+    }
+  }
+
+  return ranking
 }
 
 function getOpponentIds(playerId: string, rounds: Round[]): string[] {

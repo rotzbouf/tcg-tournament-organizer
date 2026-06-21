@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-06-21
+
+### Added
+- Top 32 option for Top Cut tournament mode
+
+### Fixed
+- Top Cut standings now rank players by bracket placement (winner = 1st, finalist = 2nd, etc.) instead of Swiss tiebreakers
+- Swiss points and tiebreakers are calculated from Swiss rounds only, excluding Top Cut matches
+- Players can no longer receive more than one bye in a tournament
+
 ## [0.8.0] - 2026-06-21
 
 ### Added
