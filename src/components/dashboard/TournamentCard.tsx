@@ -13,6 +13,7 @@ interface TournamentCardProps {
 const statusBadgeVariant = {
   registration: 'info' as const,
   in_progress: 'warning' as const,
+  top_cut: 'warning' as const,
   completed: 'success' as const,
 }
 
@@ -49,7 +50,7 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
             </span>
           )}
         </div>
-        {tournament.status === 'in_progress' && (
+        {(tournament.status === 'in_progress' || tournament.status === 'top_cut') && (
           <TimerDisplay
             tournamentId={tournament.id}
             durationMinutes={tournament.roundTimeMinutes}

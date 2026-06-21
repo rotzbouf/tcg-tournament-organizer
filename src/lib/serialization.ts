@@ -12,7 +12,7 @@ const CURRENT_VERSION = '1.0.0'
 const APP_NAME = 'TCG Tournament Organizer'
 
 const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound']
-const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'completed']
+const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'top_cut', 'completed']
 
 export function serializeState(state: AppState): string {
   const exportData: ExportData = {

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-21
+
+### Added
+- Round time selection via dropdown menu (20–90 minutes in 10-minute steps)
+- Tournament mode selection: Swiss-only or with Top Cut (Top 4, Top 8, Top 16)
+- Top Cut single-elimination bracket phase after Swiss rounds
+- Top Cut status badge and round counter in tournament view
+- Draw option hidden in Top Cut matches (single elimination requires a winner)
+
+### Changed
+- Migrated Tailwind CSS configuration to v4 syntax (@import, @theme)
+- Replaced PostCSS plugin `tailwindcss` with `@tailwindcss/postcss`
+
 ## [0.7.1] - 2026-06-21
 
 ### Added

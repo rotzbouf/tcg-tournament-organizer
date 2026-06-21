@@ -18,6 +18,7 @@ type Tab = 'players' | 'round' | 'standings' | 'history'
 const statusBadgeVariant = {
   registration: 'info' as const,
   in_progress: 'warning' as const,
+  top_cut: 'warning' as const,
   completed: 'success' as const,
 }
 
@@ -44,8 +45,22 @@ export function TournamentView() {
   const gameConfig = GAME_CONFIG[tournament.game]
   const currentRound = selectCurrentRound(tournament)
   const standings = selectStandings(tournament)
-  const isLastRound = tournament.currentRound >= tournament.totalRounds
-  const canGenerate = currentRound?.isComplete === true && !isLastRound
+
+  const topCutRounds = tournament.rounds.filter(r => r.phase === 'top_cut')
+  const isInSwiss = tournament.status === 'in_progress'
+  const isInTopCut = tournament.status === 'top_cut'
+  const swissComplete = isInSwiss && tournament.currentRound >= tournament.totalRounds && currentRound?.isComplete === true
+  const hasTopCut = tournament.topCut > 0
+
+  const isLastSwissRound = isInSwiss && tournament.currentRound >= tournament.totalRounds
+  const canGenerateSwiss = isInSwiss && currentRound?.isComplete === true && !isLastSwissRound
+
+  const isLastTopCutRound = isInTopCut && topCutRounds.length > 0 &&
+    topCutRounds[topCutRounds.length - 1]?.matches.length === 1
+  const canGenerateTopCut = isInTopCut && currentRound?.isComplete === true && !isLastTopCutRound
+
+  const canGenerate = canGenerateSwiss || canGenerateTopCut
+  const isLastRound = isInTopCut ? isLastTopCutRound : (isLastSwissRound && !hasTopCut)
 
   const handleStart = () => {
     dispatch({ type: 'START_TOURNAMENT', payload: { tournamentId: tournament.id } })
@@ -56,6 +71,15 @@ export function TournamentView() {
     dispatch({ type: 'DELETE_TOURNAMENT', payload: { tournamentId: tournament.id } })
     navigate('/')
   }
+
+  const handleStartTopCut = () => {
+    dispatch({ type: 'START_TOP_CUT', payload: { tournamentId: tournament.id } })
+    setActiveTab('round')
+  }
+
+  const roundLabel = isInTopCut
+    ? `${t('tournament.topCutLabel')} — ${t('tournament.topCutRound', { current: topCutRounds.length, total: Math.log2(tournament.topCut) })}`
+    : `${t('dashboard.round')} ${tournament.currentRound}/${tournament.totalRounds}`
 
   const tabs: { key: Tab; label: string; show: boolean }[] = [
     { key: 'players', label: t('players.title'), show: true },
@@ -81,12 +105,12 @@ export function TournamentView() {
             </Badge>
             {tournament.status !== 'registration' && (
               <Badge variant="default">
-                {t('dashboard.round')} {tournament.currentRound}/{tournament.totalRounds}
+                {roundLabel}
               </Badge>
             )}
           </div>
         </div>
-        {tournament.status === 'in_progress' && (
+        {(tournament.status === 'in_progress' || tournament.status === 'top_cut') && (
           <div className="mt-3">
             <TimerDisplay
               tournamentId={tournament.id}
@@ -108,6 +132,11 @@ export function TournamentView() {
                 <span className="text-sm text-amber-600">{t('tournament.minPlayers')}</span>
               )}
             </>
+          )}
+          {swissComplete && hasTopCut && (
+            <Button onClick={handleStartTopCut}>
+              {t('tournament.startTopCut')}
+            </Button>
           )}
           <Button variant="destructive" size="sm" onClick={handleDelete}>
             {t('tournament.delete')}
@@ -140,7 +169,7 @@ export function TournamentView() {
             tournamentId={tournament.id}
             players={tournament.players}
             editable={tournament.status === 'registration'}
-            inProgress={tournament.status === 'in_progress'}
+            inProgress={tournament.status === 'in_progress' || tournament.status === 'top_cut'}
           />
         )}
         {activeTab === 'round' && currentRound && (
@@ -150,6 +179,7 @@ export function TournamentView() {
             tournamentId={tournament.id}
             canGenerate={canGenerate}
             isLastRound={isLastRound}
+            isTopCut={isInTopCut}
           />
         )}
         {activeTab === 'standings' && <StandingsTable standings={standings} />}

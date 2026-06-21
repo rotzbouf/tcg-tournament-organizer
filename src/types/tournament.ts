@@ -3,7 +3,9 @@ import { Round } from './round'
 
 export type GameType = 'yugioh' | 'pokemon' | 'star_wars_unlimited' | 'riftbound'
 
-export type TournamentStatus = 'registration' | 'in_progress' | 'completed'
+export type TournamentStatus = 'registration' | 'in_progress' | 'top_cut' | 'completed'
+
+export type TopCutSize = 0 | 4 | 8 | 16
 
 export interface Tournament {
   id: string
@@ -15,6 +17,7 @@ export interface Tournament {
   roundTimeMinutes: number
   totalRounds: number
   currentRound: number
+  topCut: TopCutSize
   createdAt: string
   updatedAt: string
 }

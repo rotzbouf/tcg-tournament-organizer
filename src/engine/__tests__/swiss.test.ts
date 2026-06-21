@@ -16,6 +16,7 @@ function makeCompletedRound(matches: Partial<Match>[], roundNumber: number): Rou
   return {
     roundNumber,
     isComplete: true,
+    phase: 'swiss',
     matches: matches.map((m, i) => ({
       id: `r${roundNumber}m${i + 1}`,
       roundNumber,
@@ -151,6 +152,7 @@ describe('generatePairings', () => {
     rounds.push({
       roundNumber: 1,
       isComplete: true,
+      phase: 'swiss',
       matches: r1Matches.map(m => ({
         ...m,
         result: 'player1_win' as const,

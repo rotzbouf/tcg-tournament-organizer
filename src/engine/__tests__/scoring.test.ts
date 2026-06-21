@@ -24,7 +24,7 @@ function makeMatch(overrides: Partial<Match> = {}): Match {
 }
 
 function makeRound(matches: Match[], roundNumber = 1, isComplete = true): Round {
-  return { roundNumber, matches, isComplete }
+  return { roundNumber, matches, isComplete, phase: 'swiss' }
 }
 
 describe('scoring constants', () => {

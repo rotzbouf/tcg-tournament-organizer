@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useTournamentContext } from '@/state/TournamentContext'
-import { GameType } from '@/types/tournament'
+import { GameType, TopCutSize } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
 interface CreateTournamentDialogProps {
@@ -13,16 +13,31 @@ interface CreateTournamentDialogProps {
   onClose: () => void
 }
 
+const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 80, 90]
+
+const TOP_CUT_OPTIONS: TopCutSize[] = [0, 4, 8, 16]
+
 export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialogProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
   const [name, setName] = useState('')
   const [game, setGame] = useState<GameType>('yugioh')
   const [roundTime, setRoundTime] = useState(50)
+  const [topCut, setTopCut] = useState<TopCutSize>(0)
 
   const gameOptions = (Object.keys(GAME_CONFIG) as GameType[]).map(key => ({
     value: key,
     label: GAME_CONFIG[key].name,
+  }))
+
+  const roundTimeOptions = ROUND_TIME_OPTIONS.map(min => ({
+    value: String(min),
+    label: t('tournament.minutesValue', { count: min }),
+  }))
+
+  const topCutOptions = TOP_CUT_OPTIONS.map(size => ({
+    value: String(size),
+    label: size === 0 ? t('tournament.swissOnly') : t('tournament.topCutValue', { count: size }),
   }))
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -30,11 +45,12 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     if (!name.trim()) return
     dispatch({
       type: 'CREATE_TOURNAMENT',
-      payload: { name: name.trim(), game, roundTimeMinutes: roundTime },
+      payload: { name: name.trim(), game, roundTimeMinutes: roundTime, topCut },
     })
     setName('')
     setGame('yugioh')
     setRoundTime(50)
+    setTopCut(0)
     onClose()
   }
 
@@ -55,14 +71,19 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           value={game}
           onChange={e => setGame(e.target.value as GameType)}
         />
-        <Input
+        <Select
           id="tournament-round-time"
           label={t('tournament.roundTime')}
-          type="number"
-          min={1}
-          max={120}
-          value={roundTime}
+          options={roundTimeOptions}
+          value={String(roundTime)}
           onChange={e => setRoundTime(Number(e.target.value))}
+        />
+        <Select
+          id="tournament-top-cut"
+          label={t('tournament.topCut')}
+          options={topCutOptions}
+          value={String(topCut)}
+          onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
         />
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

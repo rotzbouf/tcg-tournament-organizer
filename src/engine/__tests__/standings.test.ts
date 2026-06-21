@@ -22,7 +22,7 @@ describe('calculateStandings', () => {
     const rounds: Round[] = [
       {
         roundNumber: 1,
-        isComplete: true,
+        isComplete: true, phase: 'swiss',
         matches: [
           { id: 'm1', roundNumber: 1, player1Id: 'p1', player2Id: 'p2', result: 'player1_win', isBye: false },
           { id: 'm2', roundNumber: 1, player1Id: 'p3', player2Id: null, result: 'player1_win', isBye: true },
@@ -30,7 +30,7 @@ describe('calculateStandings', () => {
       },
       {
         roundNumber: 2,
-        isComplete: true,
+        isComplete: true, phase: 'swiss',
         matches: [
           { id: 'm3', roundNumber: 2, player1Id: 'p1', player2Id: 'p3', result: 'player1_win', isBye: false },
           { id: 'm4', roundNumber: 2, player1Id: 'p2', player2Id: null, result: 'player1_win', isBye: true },
@@ -53,7 +53,7 @@ describe('calculateStandings', () => {
     const rounds: Round[] = [
       {
         roundNumber: 1,
-        isComplete: true,
+        isComplete: true, phase: 'swiss',
         matches: [
           { id: 'm1', roundNumber: 1, player1Id: 'p1', player2Id: 'p2', result: 'player1_win', isBye: false },
           { id: 'm2', roundNumber: 1, player1Id: 'p3', player2Id: 'p4', result: 'player1_win', isBye: false },
@@ -78,14 +78,14 @@ describe('calculateStandings', () => {
     const rounds: Round[] = [
       {
         roundNumber: 1,
-        isComplete: true,
+        isComplete: true, phase: 'swiss',
         matches: [
           { id: 'm1', roundNumber: 1, player1Id: 'p1', player2Id: 'p2', result: 'player1_win', isBye: false },
         ],
       },
       {
         roundNumber: 2,
-        isComplete: true,
+        isComplete: true, phase: 'swiss',
         matches: [
           { id: 'm2', roundNumber: 2, player1Id: 'p1', player2Id: 'p2', result: 'draw', isBye: false },
         ],
@@ -110,7 +110,7 @@ describe('calculateStandings', () => {
     const rounds: Round[] = [
       {
         roundNumber: 1,
-        isComplete: true,
+        isComplete: true, phase: 'swiss',
         matches: [
           { id: 'm1', roundNumber: 1, player1Id: 'p1', player2Id: 'p2', result: 'player1_win', isBye: false },
           { id: 'm2', roundNumber: 1, player1Id: 'p3', player2Id: 'p4', result: 'player1_win', isBye: false },
@@ -127,7 +127,7 @@ describe('calculateStandings', () => {
     const rounds: Round[] = [
       {
         roundNumber: 1,
-        isComplete: false,
+        isComplete: false, phase: 'swiss',
         matches: [
           { id: 'm1', roundNumber: 1, player1Id: 'p1', player2Id: 'p2', result: 'player1_win', isBye: false },
         ],

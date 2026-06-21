@@ -21,15 +21,23 @@
     "create": "Turnier erstellen",
     "name": "Turniername",
     "game": "Spiel",
-    "roundTime": "Rundenzeit (Minuten)",
+    "roundTime": "Rundenzeit",
+    "minutesValue": "{{count}} Minuten",
+    "topCut": "Turniermodus",
+    "swissOnly": "Nur Swiss-Runden",
+    "topCutValue": "Top {{count}}",
     "status": {
       "registration": "Registrierung",
       "in_progress": "Läuft",
+      "top_cut": "Top Cut",
       "completed": "Beendet"
     },
     "start": "Turnier starten",
     "delete": "Turnier löschen",
     "complete": "Turnier beenden",
+    "startTopCut": "Top Cut starten",
+    "topCutLabel": "Top Cut",
+    "topCutRound": "Runde {{current}}/{{total}}",
     "minPlayers": "Mindestens 2 Spieler benötigt"
   },
   "players": {

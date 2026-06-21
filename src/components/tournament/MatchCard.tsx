@@ -12,9 +12,10 @@ interface MatchCardProps {
   players: Player[]
   tournamentId: string
   readonly?: boolean
+  hideDrawOption?: boolean
 }
 
-export function MatchCard({ match, players, tournamentId, readonly }: MatchCardProps) {
+export function MatchCard({ match, players, tournamentId, readonly, hideDrawOption }: MatchCardProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
 
@@ -88,13 +89,15 @@ export function MatchCard({ match, players, tournamentId, readonly }: MatchCardP
           >
             {player1?.name}
           </Button>
-          <Button
-            size="sm"
-            variant={match.result === 'draw' ? 'primary' : 'secondary'}
-            onClick={() => submitResult('draw')}
-          >
-            {t('match.draw')}
-          </Button>
+          {!hideDrawOption && (
+            <Button
+              size="sm"
+              variant={match.result === 'draw' ? 'primary' : 'secondary'}
+              onClick={() => submitResult('draw')}
+            >
+              {t('match.draw')}
+            </Button>
+          )}
           <Button
             size="sm"
             variant={match.result === 'player2_win' ? 'primary' : 'secondary'}

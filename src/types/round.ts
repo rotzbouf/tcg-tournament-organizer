@@ -9,8 +9,11 @@ export interface Match {
   isBye: boolean
 }
 
+export type RoundPhase = 'swiss' | 'top_cut'
+
 export interface Round {
   roundNumber: number
   matches: Match[]
   isComplete: boolean
+  phase: RoundPhase
 }

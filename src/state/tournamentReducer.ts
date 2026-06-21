@@ -3,6 +3,8 @@ import { Tournament } from '@/types/tournament'
 import { generateId } from '@/lib/utils'
 import { calculateTotalRounds } from '@/engine/scoring'
 import { generatePairings, generateFirstRoundPairings } from '@/engine/swiss'
+import { generateTopCutRound } from '@/engine/topcut'
+import { calculateStandings } from '@/engine/standings'
 
 export const initialState: AppState = {
   tournaments: {},
@@ -23,6 +25,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         roundTimeMinutes: action.payload.roundTimeMinutes,
         totalRounds: 0,
         currentRound: 0,
+        topCut: action.payload.topCut,
         createdAt: now,
         updatedAt: now,
       }
@@ -61,7 +64,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
     case 'DROP_PLAYER': {
       const tournament = state.tournaments[action.payload.tournamentId]
-      if (!tournament || tournament.status !== 'in_progress') return state
+      if (!tournament || tournament.status === 'registration' || tournament.status === 'completed') return state
       return updateTournament(state, action.payload.tournamentId, {
         players: tournament.players.map(p =>
           p.id === action.payload.playerId
@@ -87,27 +90,80 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds,
         currentRound: 1,
         players: updatedPlayers,
-        rounds: [{ roundNumber: 1, matches, isComplete: false }],
+        rounds: [{ roundNumber: 1, matches, isComplete: false, phase: 'swiss' }],
       })
     }
 
     case 'GENERATE_ROUND': {
       const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament) return state
+
+      if (tournament.status === 'in_progress') {
+        const currentRound = tournament.rounds[tournament.rounds.length - 1]
+        if (currentRound && !currentRound.isComplete) return state
+        if (tournament.currentRound >= tournament.totalRounds) return state
+
+        const nextRoundNumber = tournament.currentRound + 1
+        const matches = generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
+        const updatedPlayers = tournament.players.map(p => {
+          const hasBye = p.hasBye || matches.some(m => m.isBye && m.player1Id === p.id)
+          return hasBye ? { ...p, hasBye: true } : p
+        })
+        return updateTournament(state, action.payload.tournamentId, {
+          currentRound: nextRoundNumber,
+          players: updatedPlayers,
+          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'swiss' }],
+        })
+      }
+
+      if (tournament.status === 'top_cut') {
+        const currentRound = tournament.rounds[tournament.rounds.length - 1]
+        if (currentRound && !currentRound.isComplete) return state
+
+        const topCutRounds = tournament.rounds.filter(r => r.phase === 'top_cut')
+        const lastTopCutRound = topCutRounds[topCutRounds.length - 1]
+        if (!lastTopCutRound) return state
+
+        const winners = lastTopCutRound.matches
+          .map(m => m.result === 'player1_win' ? m.player1Id : m.player2Id!)
+          .filter(Boolean)
+
+        if (winners.length < 2) return state
+
+        const nextRoundNumber = tournament.currentRound + 1
+        const matches = generateTopCutRound(winners, nextRoundNumber)
+        return updateTournament(state, action.payload.tournamentId, {
+          currentRound: nextRoundNumber,
+          rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }],
+        })
+      }
+
+      return state
+    }
+
+    case 'START_TOP_CUT': {
+      const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament || tournament.status !== 'in_progress') return state
-      const currentRound = tournament.rounds[tournament.rounds.length - 1]
-      if (currentRound && !currentRound.isComplete) return state
-      if (tournament.currentRound >= tournament.totalRounds) return state
+      if (tournament.topCut === 0) return state
+
+      const swissRounds = tournament.rounds.filter(r => r.phase === 'swiss')
+      const standings = calculateStandings(tournament.players, swissRounds)
+      const topPlayerIds = standings
+        .filter(s => !s.dropped)
+        .slice(0, tournament.topCut)
+        .map(s => s.playerId)
+
+      if (topPlayerIds.length < 2) return state
 
       const nextRoundNumber = tournament.currentRound + 1
-      const matches = generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
-      const updatedPlayers = tournament.players.map(p => {
-        const hasBye = p.hasBye || matches.some(m => m.isBye && m.player1Id === p.id)
-        return hasBye ? { ...p, hasBye: true } : p
-      })
+      const matches = generateTopCutRound(topPlayerIds, nextRoundNumber)
+      const topCutTotalRounds = Math.log2(topPlayerIds.length)
+
       return updateTournament(state, action.payload.tournamentId, {
+        status: 'top_cut',
         currentRound: nextRoundNumber,
-        players: updatedPlayers,
-        rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false }],
+        totalRounds: tournament.totalRounds + topCutTotalRounds,
+        rounds: [...tournament.rounds, { roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }],
       })
     }
 

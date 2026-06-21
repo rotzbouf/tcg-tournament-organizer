@@ -21,15 +21,23 @@
     "create": "Create Tournament",
     "name": "Tournament Name",
     "game": "Game",
-    "roundTime": "Round Time (minutes)",
+    "roundTime": "Round Time",
+    "minutesValue": "{{count}} minutes",
+    "topCut": "Tournament Mode",
+    "swissOnly": "Swiss rounds only",
+    "topCutValue": "Top {{count}}",
     "status": {
       "registration": "Registration",
       "in_progress": "In Progress",
+      "top_cut": "Top Cut",
       "completed": "Completed"
     },
     "start": "Start Tournament",
     "delete": "Delete Tournament",
     "complete": "Complete Tournament",
+    "startTopCut": "Start Top Cut",
+    "topCutLabel": "Top Cut",
+    "topCutRound": "Round {{current}}/{{total}}",
     "minPlayers": "At least 2 players required"
   },
   "players": {
