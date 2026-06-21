@@ -1,6 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-yugioh: #7B2D8B;
+  --color-yugioh-light: #F5E6FF;
+  --color-pokemon: #FFCB05;
+  --color-pokemon-light: #FFF8E1;
+  --color-starwars: #1A1A2E;
+  --color-starwars-light: #E8E8F0;
+  --color-riftbound: #2E7D32;
+  --color-riftbound-light: #E8F5E9;
+}
 
 body {
   @apply bg-gray-50 text-gray-900 antialiased;
