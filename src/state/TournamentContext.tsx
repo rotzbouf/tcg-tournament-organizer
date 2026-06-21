@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useRef, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import { AppState, TournamentAction } from './actions'
 import { tournamentReducer, initialState } from './tournamentReducer'
 import { loadState, saveState } from '@/lib/storage'
@@ -16,23 +16,25 @@ const TournamentContext = createContext<TournamentContextType | null>(null)
 
 export function TournamentProvider({ children }: { children: ReactNode }) {
   const [state, rawDispatch] = useReducer(tournamentReducer, initialState, () => loadState() ?? initialState)
-  const historyRef = useRef<AppState[]>([])
+  const [history, setHistory] = useState<AppState[]>([])
 
   const dispatch = useCallback((action: TournamentAction) => {
     if (action.type !== 'LOAD_STATE') {
-      historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY - 1)), state]
+      setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), state])
     }
     rawDispatch(action)
   }, [state])
 
   const undo = useCallback(() => {
-    const prev = historyRef.current.pop()
-    if (prev) {
-      rawDispatch({ type: 'LOAD_STATE', payload: prev })
-    }
+    setHistory(prev => {
+      const next = [...prev]
+      const last = next.pop()
+      if (last) rawDispatch({ type: 'LOAD_STATE', payload: last })
+      return next
+    })
   }, [])
 
-  const canUndo = historyRef.current.length > 0
+  const canUndo = history.length > 0
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
