@@ -13,6 +13,9 @@ export function loadState(): AppState | null {
     if (!parsed.playerDatabase || typeof parsed.playerDatabase !== 'object') {
       parsed.playerDatabase = {}
     }
+    for (const p of Object.values(parsed.playerDatabase) as Record<string, unknown>[]) {
+      if (!p.game) p.game = 'yugioh'
+    }
     for (const t of Object.values(parsed.tournaments) as Record<string, unknown>[]) {
       if (!t.format) {
         const topCut = typeof t.topCut === 'number' ? t.topCut : 0

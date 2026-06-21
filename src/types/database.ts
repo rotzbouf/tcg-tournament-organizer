@@ -10,6 +10,7 @@ export interface EloHistoryEntry {
 export interface DatabasePlayer {
   id: string
   name: string
+  game: string
   elo: number
   matchesPlayed: number
   tournamentsPlayed: number

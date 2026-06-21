@@ -2,19 +2,43 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { GameType } from '@/types/tournament'
+import { GAME_CONFIG } from '@/lib/gameConfig'
 import { PlayerHistory } from './PlayerHistory'
+
+const GAME_OPTIONS: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound']
 
 export function RankingsView() {
   const { t } = useTranslation()
-  const { state } = useTournamentContext()
+  const { state, dispatch } = useTournamentContext()
   const [search, setSearch] = useState('')
+  const [gameFilter, setGameFilter] = useState<GameType>('yugioh')
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+  const [showResetConfirm, setShowResetConfirm] = useState<'full' | 'points' | null>(null)
 
   const players = Object.values(state.playerDatabase)
+    .filter(p => p.game === gameFilter)
     .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => b.elo - a.elo)
 
   const selectedPlayer = selectedPlayerId ? state.playerDatabase[selectedPlayerId] : null
+
+  const gameOptions = GAME_OPTIONS.map(g => ({
+    value: g,
+    label: GAME_CONFIG[g].name,
+  }))
+
+  const handleReset = () => {
+    if (showResetConfirm === 'full') {
+      dispatch({ type: 'RESET_PLAYER_DATABASE', payload: { game: gameFilter } })
+    } else if (showResetConfirm === 'points') {
+      dispatch({ type: 'RESET_PLAYER_DATABASE', payload: { game: gameFilter, keepNames: true } })
+    }
+    setShowResetConfirm(null)
+  }
 
   if (selectedPlayer) {
     return <PlayerHistory player={selectedPlayer} onBack={() => setSelectedPlayerId(null)} />
@@ -24,12 +48,21 @@ export function RankingsView() {
     <div>
       <h2 className="mb-4 text-2xl font-bold text-gray-900">{t('rankings.title')}</h2>
 
-      <div className="mb-4">
+      <div className="mb-4 flex gap-2">
+        <div className="flex-1">
+          <Select
+            id="rankings-game"
+            options={gameOptions}
+            value={gameFilter}
+            onChange={e => setGameFilter(e.target.value as GameType)}
+          />
+        </div>
         <Input
           id="rankings-search"
           placeholder={t('rankings.search')}
           value={search}
           onChange={e => setSearch(e.target.value)}
+          className="flex-1"
         />
       </div>
 
@@ -65,6 +98,23 @@ export function RankingsView() {
           </table>
         </div>
       )}
+
+      <div className="mt-4 flex gap-2">
+        <Button variant="secondary" size="sm" onClick={() => setShowResetConfirm('points')}>
+          {t('rankings.resetPoints')}
+        </Button>
+        <Button variant="destructive" size="sm" onClick={() => setShowResetConfirm('full')}>
+          {t('rankings.resetFull')}
+        </Button>
+      </div>
+
+      <ConfirmDialog
+        open={showResetConfirm !== null}
+        onClose={() => setShowResetConfirm(null)}
+        onConfirm={handleReset}
+        title={showResetConfirm === 'full' ? t('rankings.resetFull') : t('rankings.resetPoints')}
+        message={showResetConfirm === 'full' ? t('rankings.resetFullMessage') : t('rankings.resetPointsMessage')}
+      />
     </div>
   )
 }

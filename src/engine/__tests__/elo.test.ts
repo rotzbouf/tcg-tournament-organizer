@@ -52,7 +52,7 @@ describe('calculateEloChanges', () => {
 
   it('uses database elo for known players', () => {
     const db = {
-      'db1': { id: 'db1', name: 'Alice', elo: 1800, matchesPlayed: 50, tournamentsPlayed: 5, history: [], lastUpdated: '' },
+      'db1': { id: 'db1', name: 'Alice', game: 'yugioh', elo: 1800, matchesPlayed: 50, tournamentsPlayed: 5, history: [], lastUpdated: '' },
     }
     const rounds = [makeRound([{ p1: 'a', p2: 'b', result: 'player1_win' }])]
     const updates = calculateEloChanges(['a', 'b'], rounds, db, { a: 'Alice', b: 'Bob' })

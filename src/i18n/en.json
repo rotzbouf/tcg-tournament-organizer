@@ -64,7 +64,8 @@
     "count": "{{count}} Players",
     "bulkImport": "Bulk Import",
     "bulkImportHint": "One player name per line",
-    "deckName": "Deck"
+    "deckName": "Deck",
+    "addFromDatabase": "Add player from database..."
   },
   "rounds": {
     "title": "Current Round",
@@ -143,7 +144,11 @@
     "tournaments": "Tournaments",
     "search": "Search players...",
     "noPlayers": "No players in database yet",
-    "noHistory": "No tournament history"
+    "noHistory": "No tournament history",
+    "resetPoints": "Reset Points",
+    "resetFull": "Clear All",
+    "resetPointsMessage": "All Elo ratings and statistics for this game will be reset, but player names will be kept.",
+    "resetFullMessage": "All players and their data for this game will be permanently deleted."
   },
   "elo": {
     "title": "Elo Changes",

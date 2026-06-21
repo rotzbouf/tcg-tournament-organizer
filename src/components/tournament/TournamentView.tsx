@@ -254,6 +254,7 @@ export function TournamentView() {
             players={tournament.players}
             editable={tournament.status === 'registration'}
             inProgress={tournament.status === 'in_progress' || tournament.status === 'top_cut'}
+            game={tournament.game}
           />
         )}
         {activeTab === 'round' && currentRound && (

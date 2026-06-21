@@ -458,7 +458,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const playerNameMap: Record<string, string> = {}
       tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
 
-      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, state.playerDatabase, playerNameMap)
+      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, state.playerDatabase, playerNameMap, tournament.game)
       const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
       const now = new Date().toISOString()
 
@@ -467,7 +467,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const player = tournament.players.find(p => p.id === update.playerId)
         if (!player) continue
         const nameKey = player.name.toLowerCase()
-        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey)
+        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
         const standing = standings.find(s => s.playerId === update.playerId)
 
         const historyEntry: EloHistoryEntry = {
@@ -480,10 +480,11 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         }
 
         if (existing) {
+          const s = standings.find(s => s.playerId === update.playerId)!
           updatedDb[existing.id] = {
             ...existing,
             elo: update.eloAfter,
-            matchesPlayed: existing.matchesPlayed + standings.find(s => s.playerId === update.playerId)!.wins + standings.find(s => s.playerId === update.playerId)!.losses + standings.find(s => s.playerId === update.playerId)!.draws,
+            matchesPlayed: existing.matchesPlayed + s.wins + s.losses + s.draws,
             tournamentsPlayed: existing.tournamentsPlayed + 1,
             history: [...existing.history, historyEntry],
             lastUpdated: now,
@@ -494,6 +495,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           updatedDb[id] = {
             id,
             name: player.name,
+            game: tournament.game,
             elo: update.eloAfter,
             matchesPlayed: s.wins + s.losses + s.draws,
             tournamentsPlayed: 1,
@@ -507,7 +509,44 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     }
 
     case 'RESET_PLAYER_DATABASE': {
-      return { ...state, playerDatabase: {} }
+      const gameFilter = action.payload?.game
+      const keepNames = action.payload?.keepNames ?? false
+
+      if (!gameFilter && !keepNames) {
+        return { ...state, playerDatabase: {} }
+      }
+
+      const updatedDb: Record<string, typeof state.playerDatabase[string]> = {}
+      for (const [id, player] of Object.entries(state.playerDatabase)) {
+        if (gameFilter && player.game !== gameFilter) {
+          updatedDb[id] = player
+          continue
+        }
+        if (keepNames) {
+          updatedDb[id] = { ...player, elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [] }
+        }
+      }
+      return { ...state, playerDatabase: updatedDb }
+    }
+
+    case 'ADD_FROM_DATABASE': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || tournament.status !== 'registration') return state
+      const dbPlayer = state.playerDatabase[action.payload.databasePlayerId]
+      if (!dbPlayer) return state
+      const alreadyAdded = tournament.players.some(p => p.name.toLowerCase() === dbPlayer.name.toLowerCase())
+      if (alreadyAdded) return state
+      const newPlayer = {
+        id: generateId(),
+        name: dbPlayer.name,
+        deckName: null,
+        decklist: null,
+        hasBye: false,
+        droppedInRound: null,
+      }
+      return updateTournament(state, action.payload.tournamentId, {
+        players: [...tournament.players, newPlayer],
+      })
     }
 
     case 'LOAD_STATE': {

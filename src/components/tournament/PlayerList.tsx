@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Player } from '@/types/player'
+import { GameType } from '@/types/tournament'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { AddPlayerForm } from './AddPlayerForm'
@@ -14,11 +16,12 @@ interface PlayerListProps {
   players: Player[]
   editable: boolean
   inProgress?: boolean
+  game?: GameType
 }
 
-export function PlayerList({ tournamentId, players, editable, inProgress }: PlayerListProps) {
+export function PlayerList({ tournamentId, players, editable, inProgress, game }: PlayerListProps) {
   const { t } = useTranslation()
-  const { dispatch } = useTournamentContext()
+  const { state, dispatch } = useTournamentContext()
   const [dropPlayerId, setDropPlayerId] = useState<string | null>(null)
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [decklistPlayerId, setDecklistPlayerId] = useState<string | null>(null)
@@ -36,13 +39,29 @@ export function PlayerList({ tournamentId, players, editable, inProgress }: Play
   return (
     <div className="space-y-4">
       {editable && (
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <AddPlayerForm tournamentId={tournamentId} />
+        <div className="space-y-2">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <AddPlayerForm tournamentId={tournamentId} />
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setShowBulkImport(true)}>
+              {t('players.bulkImport')}
+            </Button>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => setShowBulkImport(true)}>
-            {t('players.bulkImport')}
-          </Button>
+          {game && (() => {
+            const dbPlayers = Object.values(state.playerDatabase)
+              .filter(p => p.game === game && !players.some(tp => tp.name.toLowerCase() === p.name.toLowerCase()))
+            if (dbPlayers.length === 0) return null
+            const options = [{ value: '', label: t('players.addFromDatabase') }, ...dbPlayers.map(p => ({ value: p.id, label: `${p.name} (${p.elo} Elo)` }))]
+            return (
+              <Select
+                id="add-from-db"
+                options={options}
+                value=""
+                onChange={e => { if (e.target.value) dispatch({ type: 'ADD_FROM_DATABASE', payload: { tournamentId, databasePlayerId: e.target.value } }) }}
+              />
+            )
+          })()}
         </div>
       )}
 

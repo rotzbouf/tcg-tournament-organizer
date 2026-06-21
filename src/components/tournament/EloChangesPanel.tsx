@@ -19,7 +19,8 @@ export function EloChangesPanel({ tournament }: EloChangesPanelProps) {
     tournament.players.map(p => p.id),
     tournament.rounds,
     state.playerDatabase,
-    playerNameMap
+    playerNameMap,
+    tournament.game
   ).sort((a, b) => b.eloAfter - a.eloAfter)
 
   return (

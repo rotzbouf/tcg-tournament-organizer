@@ -24,7 +24,8 @@ export type TournamentAction =
   | { type: 'REMOVE_PENALTY'; payload: { tournamentId: string; penaltyId: string } }
   | { type: 'ADVANCE_PHASE'; payload: { tournamentId: string } }
   | { type: 'UPDATE_ELO_RATINGS'; payload: { tournamentId: string } }
-  | { type: 'RESET_PLAYER_DATABASE' }
+  | { type: 'RESET_PLAYER_DATABASE'; payload?: { game?: GameType; keepNames?: boolean } }
+  | { type: 'ADD_FROM_DATABASE'; payload: { tournamentId: string; databasePlayerId: string } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {
