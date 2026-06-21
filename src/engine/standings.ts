@@ -1,14 +1,18 @@
 import { Player } from '@/types/player'
 import { Round } from '@/types/round'
 import { Standing } from '@/types/standing'
+import { GameType } from '@/types/tournament'
 import { calculateMatchPoints, getPlayerRecord } from './scoring'
+import { GAME_CONFIG, TiebreakerConfig } from '@/lib/gameConfig'
 
-export function calculateStandings(players: Player[], rounds: Round[]): Standing[] {
+export function calculateStandings(players: Player[], rounds: Round[], game?: GameType): Standing[] {
   const completedRounds = rounds.filter(r => r.isComplete)
 
   const swissRounds = completedRounds.filter(r => r.phase === 'swiss' || r.phase === 'round_robin')
   const bracketPhases = new Set(['top_cut', 'winners_bracket', 'losers_bracket', 'grand_final'])
   const topCutRounds = completedRounds.filter(r => bracketPhases.has(r.phase))
+
+  const config: TiebreakerConfig = game ? GAME_CONFIG[game].tiebreakers : { system: 'chess', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false }
 
   const standings: Standing[] = players.map(player => {
     const matchPoints = calculateMatchPoints(player.id, swissRounds)
@@ -17,6 +21,9 @@ export function calculateStandings(players: Player[], rounds: Round[]): Standing
     const buchholz = calculateBuchholz(opponents, swissRounds)
     const medianBuchholz = calculateMedianBuchholz(opponents, swissRounds)
     const sonnebornBerger = calculateSonnebornBerger(player.id, swissRounds)
+    const opponentMatchWinPct = calculateOpponentMatchWinPct(player.id, swissRounds, config.opponentWinFloor)
+    const gameWinPct = calculateGameWinPct(player.id, swissRounds, config.opponentWinFloor)
+    const opponentGameWinPct = calculateOpponentGameWinPct(player.id, swissRounds, config.opponentWinFloor)
 
     return {
       playerId: player.id,
@@ -29,17 +36,36 @@ export function calculateStandings(players: Player[], rounds: Round[]): Standing
       buchholz,
       medianBuchholz,
       sonnebornBerger,
+      opponentMatchWinPct,
+      gameWinPct,
+      opponentGameWinPct,
       dropped: player.droppedInRound !== null,
     }
   })
 
-  standings.sort((a, b) => {
-    if (b.matchPoints !== a.matchPoints) return b.matchPoints - a.matchPoints
-    if (b.buchholz !== a.buchholz) return b.buchholz - a.buchholz
-    if (b.medianBuchholz !== a.medianBuchholz) return b.medianBuchholz - a.medianBuchholz
-    if (b.sonnebornBerger !== a.sonnebornBerger) return b.sonnebornBerger - a.sonnebornBerger
-    return 0
-  })
+  if (config.system === 'tcg') {
+    standings.sort((a, b) => {
+      if (b.matchPoints !== a.matchPoints) return b.matchPoints - a.matchPoints
+      if (b.opponentMatchWinPct !== a.opponentMatchWinPct) return b.opponentMatchWinPct - a.opponentMatchWinPct
+      if (config.useGameWinPct) {
+        if (b.gameWinPct !== a.gameWinPct) return b.gameWinPct - a.gameWinPct
+        if (b.opponentGameWinPct !== a.opponentGameWinPct) return b.opponentGameWinPct - a.opponentGameWinPct
+      }
+      if (config.useHeadToHead) {
+        const h2h = checkHeadToHead(a.playerId, b.playerId, swissRounds)
+        if (h2h !== 0) return h2h
+      }
+      return 0
+    })
+  } else {
+    standings.sort((a, b) => {
+      if (b.matchPoints !== a.matchPoints) return b.matchPoints - a.matchPoints
+      if (b.buchholz !== a.buchholz) return b.buchholz - a.buchholz
+      if (b.medianBuchholz !== a.medianBuchholz) return b.medianBuchholz - a.medianBuchholz
+      if (b.sonnebornBerger !== a.sonnebornBerger) return b.sonnebornBerger - a.sonnebornBerger
+      return 0
+    })
+  }
 
   if (topCutRounds.length > 0) {
     const bracketRanking = calculateBracketRanking(topCutRounds)
@@ -60,6 +86,77 @@ export function calculateStandings(players: Player[], rounds: Round[]): Standing
   standings.forEach((s, i) => { s.rank = i + 1 })
 
   return standings
+}
+
+function calculateOpponentMatchWinPct(playerId: string, rounds: Round[], floor: number): number {
+  const opponents = getOpponentIds(playerId, rounds)
+  if (opponents.length === 0) return 0
+
+  const pcts = opponents.map(oppId => {
+    const record = getPlayerRecord(oppId, rounds)
+    const total = record.wins + record.losses + record.draws
+    if (total === 0) return floor
+    return Math.max(floor, record.wins / total)
+  })
+
+  return pcts.reduce((sum, p) => sum + p, 0) / pcts.length
+}
+
+function calculateGameWinPct(playerId: string, rounds: Round[], floor: number): number {
+  let gameWins = 0
+  let totalGames = 0
+
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      if (match.isBye || match.result === 'pending') continue
+
+      if (match.player1Id === playerId) {
+        if (match.player1Games !== undefined && match.player2Games !== undefined) {
+          gameWins += match.player1Games
+          totalGames += match.player1Games + match.player2Games
+        } else {
+          gameWins += match.result === 'player1_win' ? 1 : match.result === 'draw' ? 0.5 : 0
+          totalGames += 1
+        }
+      } else if (match.player2Id === playerId) {
+        if (match.player1Games !== undefined && match.player2Games !== undefined) {
+          gameWins += match.player2Games
+          totalGames += match.player1Games + match.player2Games
+        } else {
+          gameWins += match.result === 'player2_win' ? 1 : match.result === 'draw' ? 0.5 : 0
+          totalGames += 1
+        }
+      }
+    }
+  }
+
+  if (totalGames === 0) return floor
+  return Math.max(floor, gameWins / totalGames)
+}
+
+function calculateOpponentGameWinPct(playerId: string, rounds: Round[], floor: number): number {
+  const opponents = getOpponentIds(playerId, rounds)
+  if (opponents.length === 0) return 0
+
+  const pcts = opponents.map(oppId => calculateGameWinPct(oppId, rounds, floor))
+  return pcts.reduce((sum, p) => sum + p, 0) / pcts.length
+}
+
+function checkHeadToHead(playerAId: string, playerBId: string, rounds: Round[]): number {
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      if (match.isBye || match.result === 'pending') continue
+      if (match.player1Id === playerAId && match.player2Id === playerBId) {
+        if (match.result === 'player1_win') return -1
+        if (match.result === 'player2_win') return 1
+      }
+      if (match.player1Id === playerBId && match.player2Id === playerAId) {
+        if (match.result === 'player1_win') return 1
+        if (match.result === 'player2_win') return -1
+      }
+    }
+  }
+  return 0
 }
 
 function calculateBracketRanking(topCutRounds: Round[]): { playerId: string; rank: number }[] {

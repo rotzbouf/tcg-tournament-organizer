@@ -9,5 +9,8 @@ export interface Standing {
   buchholz: number
   medianBuchholz: number
   sonnebornBerger: number
+  opponentMatchWinPct: number
+  gameWinPct: number
+  opponentGameWinPct: number
   dropped: boolean
 }

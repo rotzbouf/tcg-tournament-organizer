@@ -264,7 +264,7 @@ export function TournamentView() {
             isTopCut={isElimFormat}
           />
         )}
-        {activeTab === 'standings' && <StandingsTable standings={standings} />}
+        {activeTab === 'standings' && <StandingsTable standings={standings} game={tournament.game} />}
         {activeTab === 'history' && (
           <RoundHistory
             rounds={tournament.rounds}

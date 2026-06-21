@@ -47,6 +47,8 @@
     "winnersBracket": "Winners Bracket",
     "losersBracket": "Losers Bracket",
     "grandFinal": "Grand Final",
+    "grandFinalReset": "Grand Final Bracket Reset",
+    "grandFinalResetHint": "Losers-Bracket-Sieger muss zweimal gewinnen",
     "edit": "Turnier bearbeiten",
     "minPlayers": "Mindestens 2 Spieler benötigt"
   },
@@ -79,7 +81,9 @@
     "player2Win": "Sieg {{name}}",
     "draw": "Unentschieden",
     "pending": "Ausstehend",
-    "table": "Tisch {{number}}"
+    "table": "Tisch {{number}}",
+    "gameScore": "Spielstand",
+    "games": "Spiele"
   },
   "standings": {
     "title": "Rangliste",
@@ -91,7 +95,10 @@
     "draws": "U",
     "buchholz": "Buchholz",
     "medianBuchholz": "Median-BH",
-    "sonnebornBerger": "SB"
+    "sonnebornBerger": "SB",
+    "opponentMatchWinPct": "OMW%",
+    "gameWinPct": "GW%",
+    "opponentGameWinPct": "OGW%"
   },
   "timer": {
     "start": "Start",
@@ -156,7 +163,16 @@
     "test": "Testen",
     "testSuccess": "Nachricht gesendet!",
     "testFailed": "Senden fehlgeschlagen",
-    "testMessage": "Webhook-Verbindung erfolgreich!"
+    "testMessage": "Webhook-Verbindung erfolgreich!",
+    "table": "Tisch",
+    "bye": "Freilos",
+    "round": "Runde",
+    "standings": "Rangliste",
+    "finalResult": "Endergebnis",
+    "points": "Pkt",
+    "w": "S",
+    "l": "N",
+    "d": "U"
   },
   "common": {
     "cancel": "Abbrechen",

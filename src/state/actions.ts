@@ -6,14 +6,14 @@ import { DecklistEntry } from '@/types/player'
 import { DatabasePlayer } from '@/types/database'
 
 export type TournamentAction =
-  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[] } }
+  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }
   | { type: 'DROP_PLAYER'; payload: { tournamentId: string; playerId: string } }
   | { type: 'START_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'GENERATE_ROUND'; payload: { tournamentId: string } }
-  | { type: 'SUBMIT_MATCH_RESULT'; payload: { tournamentId: string; matchId: string; result: MatchResult } }
+  | { type: 'SUBMIT_MATCH_RESULT'; payload: { tournamentId: string; matchId: string; result: MatchResult; player1Games?: number; player2Games?: number } }
   | { type: 'COMPLETE_ROUND'; payload: { tournamentId: string } }
   | { type: 'START_TOP_CUT'; payload: { tournamentId: string } }
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }

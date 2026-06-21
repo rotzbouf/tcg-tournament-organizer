@@ -32,6 +32,9 @@ export function loadState(): AppState | null {
           if (typeof r.phaseIndex !== 'number') r.phaseIndex = 0
         }
       }
+      if (typeof t.grandFinalReset !== 'boolean') {
+        t.grandFinalReset = false
+      }
       if (t.discordWebhookUrl === undefined) {
         t.discordWebhookUrl = null
       }

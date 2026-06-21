@@ -33,7 +33,28 @@ export function advanceDoubleElimBracket(tournament: Tournament): AdvanceResult 
   const lbRounds = tournament.rounds.filter(r => r.phase === 'losers_bracket')
   const gfRounds = tournament.rounds.filter(r => r.phase === 'grand_final')
 
-  if (gfRounds.length > 0) return null
+  if (gfRounds.length > 0) {
+    if (!tournament.grandFinalReset) return null
+    if (gfRounds.length >= 2) return null
+    const gf1 = gfRounds[0]
+    if (!gf1.isComplete) return null
+    const lbChampionWon = gf1.matches[0].result === 'player2_win'
+    if (!lbChampionWon) return null
+    const nextRound = tournament.currentRound + 1
+    return {
+      matches: [{
+        id: generateId(),
+        roundNumber: nextRound,
+        tableNumber: 1,
+        player1Id: gf1.matches[0].player1Id,
+        player2Id: gf1.matches[0].player2Id!,
+        result: 'pending',
+        isBye: false,
+      }],
+      phase: 'grand_final',
+      isComplete: false,
+    }
+  }
 
   const lastWb = wbRounds[wbRounds.length - 1]
   const lastLb = lbRounds[lbRounds.length - 1]
@@ -92,7 +113,7 @@ export function advanceDoubleElimBracket(tournament: Tournament): AdvanceResult 
     if (lbPool.length >= 2) {
       const nextRound = tournament.currentRound + 1
       return {
-        matches: pairSequential(lbPool, nextRound),
+        matches: pairAvoidRematches(lbPool, nextRound, tournament.rounds),
         phase: 'losers_bracket',
         isComplete: false,
       }
@@ -119,7 +140,7 @@ export function advanceDoubleElimBracket(tournament: Tournament): AdvanceResult 
   if (activeLbPlayers.length >= 2 && lbRounds.length === 0) {
     const nextRound = tournament.currentRound + 1
     return {
-      matches: pairSequential(activeLbPlayers, nextRound),
+      matches: pairAvoidRematches(activeLbPlayers, nextRound, tournament.rounds),
       phase: 'losers_bracket',
       isComplete: false,
     }
@@ -165,5 +186,46 @@ function pairSequential(playerIds: string[], roundNumber: number): Match[] {
       })
     }
   }
+  return matches
+}
+
+function pairAvoidRematches(playerIds: string[], roundNumber: number, allRounds: Round[]): Match[] {
+  const previousOpponents = new Map<string, Set<string>>()
+  for (const id of playerIds) {
+    previousOpponents.set(id, new Set())
+  }
+  for (const round of allRounds) {
+    for (const match of round.matches) {
+      if (match.isBye || !match.player2Id) continue
+      previousOpponents.get(match.player1Id)?.add(match.player2Id)
+      previousOpponents.get(match.player2Id)?.add(match.player1Id)
+    }
+  }
+
+  const paired = new Set<string>()
+  const matches: Match[] = []
+  let table = 1
+
+  for (const id of playerIds) {
+    if (paired.has(id)) continue
+    const opponent = playerIds.find(
+      opp => opp !== id && !paired.has(opp) && !previousOpponents.get(id)?.has(opp)
+    ) ?? playerIds.find(opp => opp !== id && !paired.has(opp))
+
+    if (opponent) {
+      matches.push({
+        id: generateId(),
+        roundNumber,
+        tableNumber: table++,
+        player1Id: id,
+        player2Id: opponent,
+        result: 'pending',
+        isBye: false,
+      })
+      paired.add(id)
+      paired.add(opponent)
+    }
+  }
+
   return matches
 }

@@ -47,6 +47,8 @@
     "winnersBracket": "Winners Bracket",
     "losersBracket": "Losers Bracket",
     "grandFinal": "Grand Final",
+    "grandFinalReset": "Grand Final Bracket Reset",
+    "grandFinalResetHint": "Losers bracket winner must win twice",
     "edit": "Edit Tournament",
     "minPlayers": "At least 2 players required"
   },
@@ -79,7 +81,9 @@
     "player2Win": "Win {{name}}",
     "draw": "Draw",
     "pending": "Pending",
-    "table": "Table {{number}}"
+    "table": "Table {{number}}",
+    "gameScore": "Game score",
+    "games": "Games"
   },
   "standings": {
     "title": "Standings",
@@ -91,7 +95,10 @@
     "draws": "D",
     "buchholz": "Buchholz",
     "medianBuchholz": "Median-BH",
-    "sonnebornBerger": "SB"
+    "sonnebornBerger": "SB",
+    "opponentMatchWinPct": "OMW%",
+    "gameWinPct": "GW%",
+    "opponentGameWinPct": "OGW%"
   },
   "timer": {
     "start": "Start",
@@ -156,7 +163,16 @@
     "test": "Test",
     "testSuccess": "Message sent!",
     "testFailed": "Send failed",
-    "testMessage": "Webhook connection successful!"
+    "testMessage": "Webhook connection successful!",
+    "table": "Table",
+    "bye": "Bye",
+    "round": "Round",
+    "standings": "Standings",
+    "finalResult": "Final Results",
+    "points": "Pts",
+    "w": "W",
+    "l": "L",
+    "d": "D"
   },
   "common": {
     "cancel": "Cancel",

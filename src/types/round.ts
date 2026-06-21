@@ -8,6 +8,8 @@ export interface Match {
   player2Id: string | null
   result: MatchResult
   isBye: boolean
+  player1Games?: number
+  player2Games?: number
 }
 
 export type RoundPhase = 'swiss' | 'top_cut' | 'winners_bracket' | 'losers_bracket' | 'grand_final' | 'round_robin'

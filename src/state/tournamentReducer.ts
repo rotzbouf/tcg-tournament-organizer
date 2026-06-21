@@ -41,6 +41,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds: 0,
         currentRound: 0,
         topCut: action.payload.topCut,
+        grandFinalReset: action.payload.grandFinalReset ?? false,
         discordWebhookUrl: null,
         createdAt: now,
         updatedAt: now,
@@ -211,7 +212,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (tournament.topCut === 0) return state
 
       const swissRounds = tournament.rounds.filter(r => r.phase === 'swiss')
-      const standings = calculateStandings(tournament.players, swissRounds)
+      const standings = calculateStandings(tournament.players, swissRounds, tournament.game)
       const eligible = standings.filter(s => !s.dropped)
       const clampedSize = nearestPowerOfTwo(Math.min(tournament.topCut, eligible.length))
       if (clampedSize < 2) return state
@@ -240,7 +241,12 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         ...round,
         matches: round.matches.map(match =>
           match.id === action.payload.matchId
-            ? { ...match, result: action.payload.result }
+            ? {
+                ...match,
+                result: action.payload.result,
+                ...(action.payload.player1Games !== undefined && { player1Games: action.payload.player1Games }),
+                ...(action.payload.player2Games !== undefined && { player2Games: action.payload.player2Games }),
+              }
             : match
         ),
       }))
@@ -340,6 +346,28 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         )
       }
 
+      if (action.payload.type === 'game_loss') {
+        const currentRound = tournament.rounds[tournament.rounds.length - 1]
+        if (currentRound && !currentRound.isComplete) {
+          const match = currentRound.matches.find(
+            m => !m.isBye && (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
+          )
+          if (match) {
+            const isPlayer1 = match.player1Id === action.payload.playerId
+            const updatedMatch = {
+              ...match,
+              player1Games: isPlayer1 ? (match.player1Games ?? 0) : (match.player1Games ?? 0) + 1,
+              player2Games: !isPlayer1 ? (match.player2Games ?? 0) : (match.player2Games ?? 0) + 1,
+            }
+            updates.rounds = tournament.rounds.map(round =>
+              round.roundNumber === currentRound.roundNumber
+                ? { ...round, matches: round.matches.map(m => m.id === match.id ? updatedMatch : m) }
+                : round
+            )
+          }
+        }
+      }
+
       if (action.payload.type === 'match_loss') {
         const currentRound = tournament.rounds[tournament.rounds.length - 1]
         if (currentRound && !currentRound.isComplete) {
@@ -376,7 +404,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (nextIndex >= tournament.phases.length) return state
 
       const currentPhaseRounds = tournament.rounds.filter(r => r.phaseIndex === tournament.currentPhaseIndex)
-      const standings = calculateStandings(tournament.players, currentPhaseRounds)
+      const standings = calculateStandings(tournament.players, currentPhaseRounds, tournament.game)
       const nextPhase = tournament.phases[nextIndex]
       const advanceCount = nextPhase.advanceCount > 0 ? nextPhase.advanceCount : standings.length
       const advancingIds = new Set(
@@ -431,7 +459,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
 
       const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, state.playerDatabase, playerNameMap)
-      const standings = calculateStandings(tournament.players, tournament.rounds)
+      const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
       const now = new Date().toISOString()
 
       const updatedDb = { ...state.playerDatabase }

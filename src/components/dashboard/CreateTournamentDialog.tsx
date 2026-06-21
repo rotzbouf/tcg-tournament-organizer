@@ -25,6 +25,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [format, setFormat] = useState<TournamentFormat>('swiss')
   const [roundTime, setRoundTime] = useState(50)
   const [topCut, setTopCut] = useState<TopCutSize>(8)
+  const [grandFinalReset, setGrandFinalReset] = useState(false)
 
   const gameOptions = (Object.keys(GAME_CONFIG) as GameType[]).map(key => ({
     value: key,
@@ -57,6 +58,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         format,
         roundTimeMinutes: roundTime,
         topCut: format === 'swiss_topcut' ? topCut : 0,
+        grandFinalReset: format === 'double_elimination' ? grandFinalReset : undefined,
       },
     })
     setName('')
@@ -64,6 +66,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setFormat('swiss')
     setRoundTime(50)
     setTopCut(8)
+    setGrandFinalReset(false)
     onClose()
   }
 
@@ -99,6 +102,17 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
             value={String(topCut)}
             onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
           />
+        )}
+        {format === 'double_elimination' && (
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={grandFinalReset}
+              onChange={e => setGrandFinalReset(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span>{t('tournament.grandFinalReset')}</span>
+          </label>
         )}
         <Select
           id="tournament-round-time"

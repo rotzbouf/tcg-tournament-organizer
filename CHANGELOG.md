@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-21
+
+### Added
+- Game-level result tracking (game scores within a match, e.g., 2-1 in best-of-3)
+- Game-configurable tiebreaker system: TCG-standard (OMW%, GW%, OGW%) for YGO/Pokemon/SWU, chess-standard (Buchholz/SB) for Riftbound
+- Tiebreaker minimum floors (33% for SWU/MTG-style, 25% for YGO/Pokemon)
+- Head-to-head tiebreaker for YGO and Pokemon
+- Game Loss penalty now mechanically awards opponent +1 game win
+- Grand Final bracket reset option for Double Elimination tournaments
+- Losers bracket pairing with rematch avoidance
+- Game score input fields on MatchCard
+
+### Changed
+- StandingsTable shows game-appropriate tiebreaker columns (OMW%/GW%/OGW% or Buchholz/SB based on game)
+- Discord webhook messages use i18n system instead of hardcoded German strings
+- Tiebreaker configuration per game via GameConfig
+
 ## [1.0.0] - 2026-06-21
 
 ### Added

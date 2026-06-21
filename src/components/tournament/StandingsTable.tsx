@@ -1,14 +1,24 @@
 import { useTranslation } from 'react-i18next'
 import { Standing } from '@/types/standing'
+import { GameType } from '@/types/tournament'
+import { GAME_CONFIG } from '@/lib/gameConfig'
 
 interface StandingsTableProps {
   standings: Standing[]
+  game?: GameType
 }
 
-export function StandingsTable({ standings }: StandingsTableProps) {
+function pct(n: number): string {
+  return (n * 100).toFixed(2) + '%'
+}
+
+export function StandingsTable({ standings, game }: StandingsTableProps) {
   const { t } = useTranslation()
 
   if (standings.length === 0) return null
+
+  const config = game ? GAME_CONFIG[game].tiebreakers : null
+  const isTcg = config?.system === 'tcg'
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -21,9 +31,23 @@ export function StandingsTable({ standings }: StandingsTableProps) {
             <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.wins')}</th>
             <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.losses')}</th>
             <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.draws')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.buchholz')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.medianBuchholz')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.sonnebornBerger')}</th>
+            {isTcg ? (
+              <>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.opponentMatchWinPct')}</th>
+                {config.useGameWinPct && (
+                  <>
+                    <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.gameWinPct')}</th>
+                    <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.opponentGameWinPct')}</th>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.buchholz')}</th>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.medianBuchholz')}</th>
+                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.sonnebornBerger')}</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -38,9 +62,23 @@ export function StandingsTable({ standings }: StandingsTableProps) {
               <td className="px-3 py-2 text-center text-green-600">{standing.wins}</td>
               <td className="px-3 py-2 text-center text-red-600">{standing.losses}</td>
               <td className="px-3 py-2 text-center text-yellow-600">{standing.draws}</td>
-              <td className="px-3 py-2 text-center text-gray-500">{standing.buchholz}</td>
-              <td className="px-3 py-2 text-center text-gray-500">{standing.medianBuchholz}</td>
-              <td className="px-3 py-2 text-center text-gray-500">{standing.sonnebornBerger}</td>
+              {isTcg ? (
+                <>
+                  <td className="px-3 py-2 text-center text-gray-500">{pct(standing.opponentMatchWinPct)}</td>
+                  {config.useGameWinPct && (
+                    <>
+                      <td className="px-3 py-2 text-center text-gray-500">{pct(standing.gameWinPct)}</td>
+                      <td className="px-3 py-2 text-center text-gray-500">{pct(standing.opponentGameWinPct)}</td>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <td className="px-3 py-2 text-center text-gray-500">{standing.buchholz}</td>
+                  <td className="px-3 py-2 text-center text-gray-500">{standing.medianBuchholz}</td>
+                  <td className="px-3 py-2 text-center text-gray-500">{standing.sonnebornBerger}</td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>

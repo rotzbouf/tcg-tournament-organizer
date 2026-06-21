@@ -17,5 +17,5 @@ export function selectCurrentRound(tournament: Tournament): Round | undefined {
 }
 
 export function selectStandings(tournament: Tournament): Standing[] {
-  return calculateStandings(tournament.players, tournament.rounds)
+  return calculateStandings(tournament.players, tournament.rounds, tournament.game)
 }
