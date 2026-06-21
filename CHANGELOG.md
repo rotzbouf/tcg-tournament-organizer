@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0-beta] - 2026-06-21
+
+### Added
+- **Local web server for mobile player access** — Players scan a QR code to interact via phone browser
+- Mobile page: view pairings, submit results, register, submit decklists, view standings
+- Server-Sent Events for live state updates to all connected devices
+- QR code generation for local network URL
+- Server Panel tab in tournament view with start/stop controls
+- IPC state synchronization bridge between renderer and main process
+- Timer state sync for mobile timer display
+- REST API endpoints for tournament interaction
+- Auto-detect local IP address for server URL
+- Server auto-cleanup on app close
+
 ## [1.1.0] - 2026-06-21
 
 ### Added

@@ -158,6 +158,16 @@
     "dropPlayer": "Spieler droppen",
     "dropPlayerMessage": "Möchtest du {{name}} wirklich aus dem Turnier droppen?"
   },
+  "server": {
+    "title": "Mobile",
+    "start": "Server starten",
+    "stop": "Server stoppen",
+    "running": "Server läuft",
+    "stopped": "Server gestoppt",
+    "address": "Adresse",
+    "scanQR": "QR-Code scannen um zu verbinden",
+    "connectedClients": "{{count}} verbunden"
+  },
   "discord": {
     "webhookUrl": "Discord Webhook-URL",
     "test": "Testen",

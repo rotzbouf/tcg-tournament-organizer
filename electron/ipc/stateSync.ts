@@ -1,4 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
+import { startServer, stopServer, getServerInfo } from '../server/index'
+import { broadcast, getClientCount } from '../server/sse'
+import QRCode from 'qrcode'
 
 let currentState: string | null = null
 let currentTimers: string | null = null
@@ -11,11 +14,28 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
   ipcMain.on('state:sync', (_event, state: string) => {
     currentState = state
     stateListeners.forEach(fn => fn())
+    broadcast({ type: 'state', state: JSON.parse(state), timers: currentTimers ? JSON.parse(currentTimers) : null })
   })
 
   ipcMain.on('timer:sync', (_event, timers: string) => {
     currentTimers = timers
-    stateListeners.forEach(fn => fn())
+    broadcast({ type: 'timers', timers: JSON.parse(timers) })
+  })
+
+  ipcMain.handle('server:start', async () => {
+    const { address, port } = await startServer()
+    const url = `http://${address}:${port}`
+    const qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
+    return { address, port, qrCodeSvg }
+  })
+
+  ipcMain.handle('server:stop', async () => {
+    await stopServer()
+  })
+
+  ipcMain.handle('server:getInfo', () => {
+    const info = getServerInfo()
+    return { ...info, clientCount: getClientCount() }
   })
 }
 
@@ -51,6 +71,4 @@ export function dispatchToRenderer(action: unknown): void {
   }
 }
 
-export function getClientCount(): number {
-  return 0
-}
+export { getClientCount } from '../server/sse'

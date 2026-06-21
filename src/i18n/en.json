@@ -158,6 +158,16 @@
     "dropPlayer": "Drop Player",
     "dropPlayerMessage": "Are you sure you want to drop {{name}} from the tournament?"
   },
+  "server": {
+    "title": "Mobile",
+    "start": "Start Server",
+    "stop": "Stop Server",
+    "running": "Server running",
+    "stopped": "Server stopped",
+    "address": "Address",
+    "scanQR": "Scan QR code to connect",
+    "connectedClients": "{{count}} connected"
+  },
   "discord": {
     "webhookUrl": "Discord Webhook URL",
     "test": "Test",

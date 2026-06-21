@@ -18,9 +18,10 @@ import { RoundHistory } from './RoundHistory'
 import { TimerDisplay } from './TimerDisplay'
 import { EloChangesPanel } from './EloChangesPanel'
 import { DiscordSettings } from './DiscordSettings'
+import { ServerPanel } from './ServerPanel'
 import { cn } from '@/lib/utils'
 
-type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties' | 'elo' | 'discord'
+type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties' | 'elo' | 'discord' | 'server'
 
 const statusBadgeVariant = {
   registration: 'info' as const,
@@ -119,6 +120,7 @@ export function TournamentView() {
     { key: 'penalties', label: `${t('penalties.title')}${tournament.penalties.length > 0 ? ` (${tournament.penalties.length})` : ''}`, show: tournament.status !== 'registration' },
     { key: 'elo', label: t('elo.title'), show: tournament.status === 'completed' },
     { key: 'discord', label: `Discord${tournament.discordWebhookUrl ? ' ✓' : ''}`, show: true },
+    { key: 'server', label: t('server.title'), show: true },
   ]
 
   return (
@@ -275,6 +277,7 @@ export function TournamentView() {
         {activeTab === 'elo' && (
           <EloChangesPanel tournament={tournament} />
         )}
+        {activeTab === 'server' && <ServerPanel />}
         {activeTab === 'discord' && (
           <DiscordSettings
             tournamentId={tournament.id}

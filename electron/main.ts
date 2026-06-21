@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import { registerFileHandlers } from './ipc/fileHandlers'
 import { registerStateSyncHandlers } from './ipc/stateSync'
+import { stopServer } from './server/index'
 
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged
@@ -35,6 +36,7 @@ function createWindow() {
 }
 
 app.on('window-all-closed', () => {
+  stopServer()
   if (process.platform !== 'darwin') {
     app.quit()
     mainWindow = null
