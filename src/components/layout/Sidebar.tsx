@@ -6,6 +6,7 @@ import { selectAllTournaments } from '@/state/selectors'
 import { useFileIO } from '@/hooks/useFileIO'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { Button } from '@/components/ui/Button'
+import { TimerDisplay } from '@/components/tournament/TimerDisplay'
 
 export function Sidebar() {
   const { t, i18n } = useTranslation()
@@ -45,6 +46,7 @@ export function Sidebar() {
             {tournaments.map(tournament => {
               const gameConfig = GAME_CONFIG[tournament.game]
               const isActive = location.pathname === `/tournament/${tournament.id}`
+              const isRunning = tournament.status === 'in_progress' || tournament.status === 'top_cut'
               return (
                 <Link
                   key={tournament.id}
@@ -57,7 +59,14 @@ export function Sidebar() {
                   )}
                 >
                   <span>{gameConfig.icon}</span>
-                  <span className="truncate">{tournament.name}</span>
+                  <span className="min-w-0 flex-1 truncate">{tournament.name}</span>
+                  {isRunning && (
+                    <TimerDisplay
+                      tournamentId={tournament.id}
+                      durationMinutes={tournament.roundTimeMinutes}
+                      compact
+                    />
+                  )}
                 </Link>
               )
             })}
