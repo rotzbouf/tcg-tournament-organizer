@@ -176,7 +176,8 @@
     "stopped": "Server stopped",
     "address": "Address",
     "scanQR": "Scan QR code to connect",
-    "connectedClients": "{{count}} connected"
+    "connectedClients": "{{count}} connected",
+    "openQrWindow": "Open QR code in window"
   },
   "discord": {
     "webhookUrl": "Discord Webhook URL",

@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startServer: (tournamentId: string) => ipcRenderer.invoke('server:start', tournamentId),
   stopServer: (tournamentId: string) => ipcRenderer.invoke('server:stop', tournamentId),
   getServerInfo: (tournamentId: string) => ipcRenderer.invoke('server:getInfo', tournamentId),
+  openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string }) => ipcRenderer.invoke('window:openQr', opts),
 })

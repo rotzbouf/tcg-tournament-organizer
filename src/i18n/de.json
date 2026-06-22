@@ -176,7 +176,8 @@
     "stopped": "Server gestoppt",
     "address": "Adresse",
     "scanQR": "QR-Code scannen um zu verbinden",
-    "connectedClients": "{{count}} verbunden"
+    "connectedClients": "{{count}} verbunden",
+    "openQrWindow": "QR-Code im Fenster öffnen"
   },
   "discord": {
     "webhookUrl": "Discord Webhook-URL",

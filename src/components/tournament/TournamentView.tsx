@@ -278,7 +278,7 @@ export function TournamentView() {
         {activeTab === 'elo' && (
           <EloChangesPanel tournament={tournament} />
         )}
-        {activeTab === 'server' && <ServerPanel tournamentId={tournament.id} />}
+        {activeTab === 'server' && <ServerPanel tournamentId={tournament.id} tournamentName={tournament.name} />}
         {activeTab === 'discord' && (
           <DiscordSettings
             tournamentId={tournament.id}

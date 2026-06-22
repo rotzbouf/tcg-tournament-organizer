@@ -1,5 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { ipcMain, BrowserWindow, screen } from 'electron'
 import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
 import { broadcast, getClientCount } from '../server/sse'
 
@@ -28,16 +27,49 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
 
   ipcMain.handle('server:start', async (_event, tournamentId: string) => {
     const { address, port } = await startServer(tournamentId)
-    const url = `http://${address}:${port}`
-    let qrCodeSvg = ''
-    try {
-      const req = createRequire(__filename)
-      const QRCode = req('qrcode')
-      qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
-    } catch (err) {
-      console.error('QR code generation failed:', err)
-    }
-    return { address, port, qrCodeSvg }
+    return { address, port }
+  })
+
+  ipcMain.handle('window:openQr', (_event, opts: { tournamentName: string; url: string; qrSvg: string }) => {
+    const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
+    const winWidth = 420
+    const winHeight = 520
+    const qrWindows = BrowserWindow.getAllWindows().filter(w => w.getTitle().startsWith('QR:'))
+    const offsetIndex = qrWindows.length
+    const x = Math.min(100 + offsetIndex * 40, screenWidth - winWidth)
+    const y = Math.min(100 + offsetIndex * 40, screenHeight - winHeight)
+
+    const win = new BrowserWindow({
+      width: winWidth,
+      height: winHeight,
+      x,
+      y,
+      resizable: false,
+      minimizable: true,
+      maximizable: false,
+      alwaysOnTop: true,
+      title: `QR: ${opts.tournamentName}`,
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    })
+    win.setMenuBarVisibility(false)
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; }
+  h1 { font-size: 24px; color: #111; margin: 0 0 8px; text-align: center; padding: 0 16px; }
+  .url { font-size: 14px; color: #2563eb; margin-bottom: 16px; font-family: monospace; }
+  .qr { padding: 12px; background: #fff; border-radius: 12px; }
+  .qr svg { width: 280px; height: 280px; }
+  .hint { font-size: 13px; color: #888; margin-top: 16px; }
+</style></head><body>
+  <h1>${opts.tournamentName.replace(/</g, '&lt;')}</h1>
+  <div class="url">${opts.url}</div>
+  <div class="qr">${opts.qrSvg}</div>
+  <div class="hint">QR-Code scannen zum Anmelden</div>
+</body></html>`
+
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
   })
 
   ipcMain.handle('server:stop', async (_event, tournamentId: string) => {

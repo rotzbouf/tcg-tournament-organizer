@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import QRCode from 'qrcode'
 import { Button } from '@/components/ui/Button'
 
 interface ServerPanelProps {
   tournamentId: string
+  tournamentName: string
 }
 
 interface ServerInfo {
@@ -13,7 +15,7 @@ interface ServerInfo {
   clientCount?: number
 }
 
-export function ServerPanel({ tournamentId }: ServerPanelProps) {
+export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) {
   const { t } = useTranslation()
   const [info, setInfo] = useState<ServerInfo>({ running: false })
   const [qrSvg, setQrSvg] = useState<string>('')
@@ -22,11 +24,20 @@ export function ServerPanel({ tournamentId }: ServerPanelProps) {
     window.electronAPI?.getServerInfo(tournamentId).then(setInfo)
   }, [tournamentId])
 
+  const generateQr = async (url: string) => {
+    try {
+      const svg = await QRCode.toString(url, { type: 'svg' })
+      setQrSvg(svg)
+    } catch {
+      setQrSvg('')
+    }
+  }
+
   const handleStart = async () => {
     const result = await window.electronAPI?.startServer(tournamentId)
     if (result) {
       setInfo({ running: true, address: result.address, port: result.port })
-      setQrSvg(result.qrCodeSvg)
+      generateQr(`http://${result.address}:${result.port}`)
     }
   }
 
@@ -34,6 +45,11 @@ export function ServerPanel({ tournamentId }: ServerPanelProps) {
     await window.electronAPI?.stopServer(tournamentId)
     setInfo({ running: false })
     setQrSvg('')
+  }
+
+  const handleOpenQrWindow = () => {
+    if (!url || !qrSvg) return
+    window.electronAPI?.openQrWindow({ tournamentName, url, qrSvg })
   }
 
   useEffect(() => {
@@ -44,6 +60,12 @@ export function ServerPanel({ tournamentId }: ServerPanelProps) {
     }, 5000)
     return () => clearInterval(interval)
   }, [info.running, tournamentId])
+
+  useEffect(() => {
+    if (info.running && info.address && info.port) {
+      generateQr(`http://${info.address}:${info.port}`)
+    }
+  }, [info.running, info.address, info.port])
 
   const url = info.running && info.address ? `http://${info.address}:${info.port}` : null
 
@@ -79,6 +101,10 @@ export function ServerPanel({ tournamentId }: ServerPanelProps) {
               />
             </div>
           )}
+
+          <Button variant="secondary" size="sm" onClick={handleOpenQrWindow} disabled={!qrSvg}>
+            {t('server.openQrWindow')}
+          </Button>
 
           {info.clientCount !== undefined && info.clientCount > 0 && (
             <p className="text-sm text-gray-500">
