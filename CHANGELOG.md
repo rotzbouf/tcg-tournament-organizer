@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2-beta] - 2026-06-22
+
+### Added
+- **QR-Code im eigenen Fenster öffnen** — Separates Always-on-Top-Fenster mit Turniername und QR-Code, mehrere gleichzeitig möglich für parallele Turnierregistrierung
+
+### Fixed
+- **QR-Code wird nach Server-Start nicht angezeigt** — QR-Code-Generierung in den Renderer-Prozess verschoben, umgeht Bundler-Probleme mit dem qrcode-Modul im Hauptprozess
+- **Mobile Registrierung: Eingabefeld wird nach Sekunden zurückgesetzt** — Timer-Update vom DOM-Rebuild getrennt, Eingabefelder bleiben während der Eingabe erhalten
+- **Spieler können Decklisten für andere einreichen** — Register und Decklist als zusammenhängender Flow, Spieler können nur ihre eigene Deckliste einreichen
+
 ## [1.2.1-beta] - 2026-06-22
 
 ### Added
