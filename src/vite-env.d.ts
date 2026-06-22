@@ -3,6 +3,8 @@
 interface ElectronAPI {
   saveFile: (data: string, defaultName?: string) => Promise<string | null>
   openFile: () => Promise<string | null>
+  saveCsv: (data: string, defaultName?: string) => Promise<string | null>
+  savePdf: (html: string, defaultName?: string) => Promise<string | null>
   syncState: (state: string) => void
   syncTimerState: (timers: string) => void
   onDispatchAction: (callback: (action: string) => void) => void

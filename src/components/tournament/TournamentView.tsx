@@ -5,6 +5,7 @@ import { useTournamentContext } from '@/state/TournamentContext'
 import { selectTournament, selectCurrentRound, selectStandings, selectDivisionStandings } from '@/state/selectors'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { DIVISION_LABELS, DIVISION_ORDER } from '@/lib/ageDivision'
+import { generateCsv, generatePdfHtml } from '@/lib/exportResults'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -311,6 +312,20 @@ export function TournamentView() {
             ) : (
               <StandingsTable standings={standings} game={tournament.game} />
             )}
+            <div className="mt-4 flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => {
+                const csv = generateCsv(tournament, standings)
+                window.electronAPI?.saveCsv(csv, `${tournament.name.replace(/\s+/g, '-')}-standings.csv`)
+              }}>
+                {t('export.csv')}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => {
+                const html = generatePdfHtml(tournament, standings)
+                window.electronAPI?.savePdf(html, `${tournament.name.replace(/\s+/g, '-')}-standings.pdf`)
+              }}>
+                {t('export.pdf')}
+              </Button>
+            </div>
           </>
         )}
         {activeTab === 'history' && (

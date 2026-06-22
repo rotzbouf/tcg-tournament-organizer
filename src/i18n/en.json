@@ -212,6 +212,10 @@
     "callSent": "Judge has been called!",
     "noTable": "No active match found"
   },
+  "export": {
+    "csv": "Export CSV",
+    "pdf": "Export PDF"
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",
