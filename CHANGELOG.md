@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.7-beta] - 2026-06-22
+## [1.2.7] - 2026-06-22
 
 ### Added
 - **CSV-Export** — Turnierergebnisse als CSV exportieren (Rang, Name, Spieler-ID, Punkte, Tiebreaker)
