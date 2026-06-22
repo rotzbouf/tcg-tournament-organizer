@@ -6,6 +6,9 @@ directories:
 files:
   - dist
   - dist-electron
+  - node_modules/qrcode/**/*
+  - node_modules/dijkstrajs/**/*
+  - node_modules/pngjs/**/*
 extraResources:
   - from: electron/server/mobile.html
     to: mobile.html

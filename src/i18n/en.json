@@ -65,7 +65,9 @@
     "bulkImport": "Bulk Import",
     "bulkImportHint": "One player name per line",
     "deckName": "Deck",
-    "addFromDatabase": "Add player from database..."
+    "addFromDatabase": "Add player from database...",
+    "playerId": "Player ID",
+    "playerIdPlaceholder": "e.g. Konami ID, Pokemon Player ID"
   },
   "rounds": {
     "title": "Current Round",
@@ -145,6 +147,9 @@
     "search": "Search players...",
     "noPlayers": "No players in database yet",
     "noHistory": "No tournament history",
+    "playerId": "Player ID",
+    "editProfile": "Edit Profile",
+    "profile": "Player Profile",
     "resetPoints": "Reset Points",
     "resetFull": "Clear All",
     "resetPointsMessage": "All Elo ratings and statistics for this game will be reset, but player names will be kept.",

@@ -9,6 +9,13 @@ export default defineConfig({
     electron({
       main: {
         entry: 'electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['qrcode'],
+            },
+          },
+        },
       },
       preload: {
         input: 'electron/preload.ts',

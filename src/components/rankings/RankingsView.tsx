@@ -75,6 +75,7 @@ export function RankingsView() {
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="px-3 py-2 text-left font-medium text-gray-600">#</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-600">{t('standings.player')}</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">{t('rankings.playerId')}</th>
                 <th className="px-3 py-2 text-center font-medium text-gray-600">{t('rankings.elo')}</th>
                 <th className="px-3 py-2 text-center font-medium text-gray-600">{t('rankings.matches')}</th>
                 <th className="px-3 py-2 text-center font-medium text-gray-600">{t('rankings.tournaments')}</th>
@@ -89,6 +90,7 @@ export function RankingsView() {
                 >
                   <td className="px-3 py-2 font-medium text-gray-900">{i + 1}</td>
                   <td className="px-3 py-2 text-gray-900">{player.name}</td>
+                  <td className="px-3 py-2 text-gray-400">{player.playerId || '–'}</td>
                   <td className="px-3 py-2 text-center font-semibold text-gray-900">{player.elo}</td>
                   <td className="px-3 py-2 text-center text-gray-500">{player.matchesPlayed}</td>
                   <td className="px-3 py-2 text-center text-gray-500">{player.tournamentsPlayed}</td>

@@ -63,6 +63,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const newPlayer = {
         id: generateId(),
         name: action.payload.playerName,
+        playerId: null,
         deckName: null,
         decklist: null,
         hasBye: false,
@@ -296,6 +297,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const newPlayers = action.payload.playerNames.map(name => ({
         id: generateId(),
         name,
+        playerId: null,
         deckName: null,
         decklist: null,
         hasBye: false,
@@ -496,6 +498,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
             id,
             name: player.name,
             game: tournament.game,
+            playerId: player.playerId ?? null,
             elo: update.eloAfter,
             matchesPlayed: s.wins + s.losses + s.draws,
             tournamentsPlayed: 1,
@@ -539,6 +542,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const newPlayer = {
         id: generateId(),
         name: dbPlayer.name,
+        playerId: dbPlayer.playerId ?? null,
         deckName: null,
         decklist: null,
         hasBye: false,
@@ -547,6 +551,22 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       return updateTournament(state, action.payload.tournamentId, {
         players: [...tournament.players, newPlayer],
       })
+    }
+
+    case 'UPDATE_DATABASE_PLAYER': {
+      const dbPlayer = state.playerDatabase[action.payload.databasePlayerId]
+      if (!dbPlayer) return state
+      const updates: Partial<typeof dbPlayer> = {}
+      if (action.payload.playerId !== undefined) updates.playerId = action.payload.playerId
+      if (action.payload.name !== undefined) updates.name = action.payload.name
+      if (Object.keys(updates).length === 0) return state
+      return {
+        ...state,
+        playerDatabase: {
+          ...state.playerDatabase,
+          [dbPlayer.id]: { ...dbPlayer, ...updates, lastUpdated: new Date().toISOString() },
+        },
+      }
     }
 
     case 'LOAD_STATE': {

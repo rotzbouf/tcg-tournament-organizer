@@ -65,7 +65,9 @@
     "bulkImport": "Massenimport",
     "bulkImportHint": "Ein Spielername pro Zeile",
     "deckName": "Deck",
-    "addFromDatabase": "Spieler aus Datenbank hinzufügen..."
+    "addFromDatabase": "Spieler aus Datenbank hinzufügen...",
+    "playerId": "Spieler-ID",
+    "playerIdPlaceholder": "z.B. Konami-ID, Pokemon Player ID"
   },
   "rounds": {
     "title": "Aktuelle Runde",
@@ -145,6 +147,9 @@
     "search": "Spieler suchen...",
     "noPlayers": "Noch keine Spieler in der Datenbank",
     "noHistory": "Keine Turnierhistorie",
+    "playerId": "Spieler-ID",
+    "editProfile": "Profil bearbeiten",
+    "profile": "Spielerprofil",
     "resetPoints": "Punkte zurücksetzen",
     "resetFull": "Komplett löschen",
     "resetPointsMessage": "Alle Elo-Punkte und Statistiken für dieses Spiel werden zurückgesetzt, aber die Spielernamen bleiben erhalten.",

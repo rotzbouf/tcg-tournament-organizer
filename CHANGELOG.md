@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1-beta] - 2026-06-22
+
+### Added
+- **Spieler-ID / Spielerprofil** — TCG-spezifische Spieler-IDs hinterlegen (Konami-ID, Pokemon Player ID, etc.)
+- Spielerprofil-Ansicht in der Rangliste mit editierbarer Spieler-ID
+- Spieler-ID-Spalte in der Ranglisten-Übersicht
+- Spieler-ID wird bei Turnier-Anmeldung aus der Datenbank übernommen
+- Spieler-ID wird in der Turnier-Spielerliste angezeigt
+
+### Fixed
+- **QR-Code wird nach Server-Start nicht angezeigt** — `qrcode`-Modul wurde beim Bundling nicht externalisiert, dynamischer Import schlug still fehl
+- `qrcode` als Rollup-External konfiguriert und statisch importiert
+- `electron-builder.yml` enthält nun `qrcode` und dessen Dependencies für den produktiven Build
+
 ## [1.2.0-beta] - 2026-06-21
 
 ### Added

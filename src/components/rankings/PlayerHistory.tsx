@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DatabasePlayer } from '@/types/database'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { useTournamentContext } from '@/state/TournamentContext'
 import { cn } from '@/lib/utils'
 
 interface PlayerHistoryProps {
@@ -10,6 +13,17 @@ interface PlayerHistoryProps {
 
 export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
   const { t } = useTranslation()
+  const { dispatch } = useTournamentContext()
+  const [editingId, setEditingId] = useState(false)
+  const [playerIdValue, setPlayerIdValue] = useState(player.playerId ?? '')
+
+  const handleSavePlayerId = () => {
+    dispatch({
+      type: 'UPDATE_DATABASE_PLAYER',
+      payload: { databasePlayerId: player.id, playerId: playerIdValue.trim() || null },
+    })
+    setEditingId(false)
+  }
 
   return (
     <div>
@@ -21,9 +35,39 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
         <span className="text-lg font-semibold text-gray-500">{player.elo} Elo</span>
       </div>
 
-      <div className="mb-4 flex gap-4 text-sm text-gray-500">
-        <span>{t('rankings.matches')}: {player.matchesPlayed}</span>
-        <span>{t('rankings.tournaments')}: {player.tournamentsPlayed}</span>
+      <div className="mb-4 rounded-lg border border-gray-200 p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('rankings.profile')}</h3>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="w-24 text-sm text-gray-500">{t('rankings.playerId')}:</span>
+            {editingId ? (
+              <>
+                <Input
+                  id="player-id-edit"
+                  value={playerIdValue}
+                  onChange={e => setPlayerIdValue(e.target.value)}
+                  placeholder={t('players.playerIdPlaceholder')}
+                  className="w-48"
+                />
+                <Button size="sm" onClick={handleSavePlayerId}>{t('common.save')}</Button>
+                <Button variant="secondary" size="sm" onClick={() => { setEditingId(false); setPlayerIdValue(player.playerId ?? '') }}>{t('common.cancel')}</Button>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-gray-900">{player.playerId || '–'}</span>
+                <Button variant="ghost" size="sm" onClick={() => setEditingId(true)}>{t('rankings.editProfile')}</Button>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-24 text-sm text-gray-500">{t('rankings.matches')}:</span>
+            <span className="text-sm text-gray-900">{player.matchesPlayed}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-24 text-sm text-gray-500">{t('rankings.tournaments')}:</span>
+            <span className="text-sm text-gray-900">{player.tournamentsPlayed}</span>
+          </div>
+        </div>
       </div>
 
       {player.history.length === 0 ? (

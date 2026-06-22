@@ -10,6 +10,7 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation
 - **Decklisten** — Spieler können vollständige Kartenlisten einreichen
 - **Elo-Rankings** — Persistente Spieler-Datenbank mit Elo-Wertung über mehrere Turniere
+- **Spielerprofil** — TCG-spezifische Spieler-IDs hinterlegen (Konami-ID, Pokemon Player ID, etc.)
 - **Discord Webhook** — Paarungen, Standings und Ergebnisse automatisch in Discord posten
 - **Rundenzeit** — Auswählbar von 20 bis 90 Minuten, Timer in Sidebar sichtbar
 - **Rangliste mit Tiebreakern** — Buchholz, Median-Buchholz, Sonneborn-Berger

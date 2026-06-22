@@ -15,6 +15,7 @@ export function loadState(): AppState | null {
     }
     for (const p of Object.values(parsed.playerDatabase) as Record<string, unknown>[]) {
       if (!p.game) p.game = 'yugioh'
+      if (p.playerId === undefined) p.playerId = null
     }
     for (const t of Object.values(parsed.tournaments) as Record<string, unknown>[]) {
       if (!t.format) {
@@ -44,6 +45,7 @@ export function loadState(): AppState | null {
       if (Array.isArray(t.players)) {
         for (const p of t.players as Record<string, unknown>[]) {
           if (p.decklist === undefined) p.decklist = null
+          if (p.playerId === undefined) p.playerId = null
         }
       }
     }

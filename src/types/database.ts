@@ -11,6 +11,7 @@ export interface DatabasePlayer {
   id: string
   name: string
   game: string
+  playerId: string | null
   elo: number
   matchesPlayed: number
   tournamentsPlayed: number
