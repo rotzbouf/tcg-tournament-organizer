@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5-beta] - 2026-06-22
+
+### Added
+- **Autocomplete bei Spielereingabe** — Vorschläge aus der Datenbank beim Tippen mit Name und Elo-Anzeige, Auswahl per Klick oder Pfeiltasten
+- **Turnierformat in der Turnieransicht** — Format (Swiss, Swiss + Top Cut, etc.), Top-Cut-Größe und Altersklassen im Header sichtbar
+- **Umschalten Gesamt-/Divisions-Rangliste** — Buttons zum Wechsel zwischen Rangliste pro Altersklasse und Gesamtrangliste
+
+### Changed
+- Separates Dropdown "Spieler aus Datenbank hinzufügen" entfernt, durch integriertes Autocomplete ersetzt
+
 ## [1.2.4-beta] - 2026-06-22
 
 ### Added
