@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3-beta] - 2026-06-22
+
+### Added
+- **Pokémon TCG Altersklassen** — Offizielle Divisionen (Junior / Senior / Masters) basierend auf Geburtsjahr und Season-Zyklus (Sep–Aug)
+- Paarung pro Division getrennt (Juniors nur gegen Juniors, etc.)
+- Standings pro Division mit eigener Rangliste
+- Division-Badge in der Turnier-Spielerliste
+- TO kann Altersklassen bei Turniererstellung deaktivieren für kleine lokale Turniere
+- **Erweiterte mobile Registrierung** — Vorname, Nachname, Geburtsdatum (optional), Spieler-ID (optional)
+- Session-Speicherung in localStorage für spätere Rückkehr zum Turnier
+- Spieler können nur noch eigene Deckliste einreichen (kein Dropdown für andere Spieler)
+
 ## [1.2.2-beta] - 2026-06-22
 
 ### Added
