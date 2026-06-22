@@ -8,7 +8,7 @@ import { DatabasePlayer } from '@/types/database'
 export type TournamentAction =
   | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
-  | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string } }
+  | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string; playerId?: string | null; dateOfBirth?: string | null } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }
   | { type: 'DROP_PLAYER'; payload: { tournamentId: string; playerId: string } }
   | { type: 'START_TOURNAMENT'; payload: { tournamentId: string } }

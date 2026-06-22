@@ -7,6 +7,7 @@ export interface Player {
   id: string
   name: string
   playerId: string | null
+  dateOfBirth: string | null
   deckName: string | null
   decklist: DecklistEntry[] | null
   hasBye: boolean

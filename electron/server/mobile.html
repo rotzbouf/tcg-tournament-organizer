@@ -10,7 +10,6 @@ body{font-family:-apple-system,system-ui,sans-serif;background:#f8fafc;color:#1e
 .header{background:#1e40af;color:#fff;padding:12px 16px;font-size:18px;font-weight:700;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
 .header button{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer}
 .container{padding:12px}
-.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);border:1px solid #e2e8f0}
 .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
 .badge-active{background:#dcfce7;color:#166534}
 .badge-reg{background:#dbeafe;color:#1e40af}
@@ -28,9 +27,8 @@ body{font-family:-apple-system,system-ui,sans-serif;background:#f8fafc;color:#1e
 .result-btns button:active{opacity:.7}
 .game-inputs{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:#64748b}
 .game-inputs input{width:40px;text-align:center;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:14px}
-input[type=text],textarea{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:8px}
+input[type=text],input[type=date],textarea{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:8px}
 textarea{min-height:120px;font-family:monospace;font-size:13px}
-select{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:8px;background:#fff}
 button.primary{width:100%;padding:12px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
 button.primary:disabled{opacity:.5}
 button.primary:active{opacity:.8}
@@ -44,11 +42,16 @@ button.secondary{width:100%;padding:10px;background:#fff;color:#1e40af;border:1p
 .timer-bar.expired{background:#dc2626;animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.6}}
 .msg{text-align:center;padding:8px;font-size:13px;color:#16a34a;font-weight:500}
-.msg.err{color:#dc2626}
 .filter input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:10px}
-.reg-done{background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center}
-.reg-done .name{font-size:16px;font-weight:700;color:#166534}
-.reg-done .hint{font-size:12px;color:#64748b;margin-top:4px}
+.reg-done{background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px}
+.reg-done .name{font-size:16px;font-weight:700;color:#166534;text-align:center}
+.reg-done .details{font-size:12px;color:#64748b;margin-top:6px}
+.reg-done .details span{display:block;margin-top:2px}
+.form-label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:4px}
+.form-row{display:flex;gap:8px}
+.form-row>*{flex:1}
+.form-group{margin-bottom:4px}
+.optional{font-weight:400;color:#94a3b8;font-size:11px}
 </style>
 </head>
 <body>
@@ -59,28 +62,30 @@ const T={
   en:{pairings:'Pairings',standings:'Standings',register:'Register',
     table:'T',bye:'Bye',vs:'vs',round:'Round',pending:'Pending',draw:'Draw',
     submit:'Submit',games:'Games',noData:'Loading...',
-    registered:'Registered!',resultSent:'Sent!',enterName:'Enter name...',
     rank:'#',player:'Player',points:'Pts',w:'W',l:'L',d:'D',omw:'OMW%',
     registeredAs:'Registered as',decklist:'Decklist',
     pasteDecklist:'Paste decklist (e.g. 3x Card Name)',
     decklistSaved:'Saved!',filter:'Filter by name...',
-    registerFirst:'Register first to submit a decklist',
-    changePlayer:'Not you? Change'},
+    changePlayer:'Not you? Change',
+    firstName:'First Name',lastName:'Last Name',
+    dateOfBirth:'Date of Birth',playerId:'Player ID',
+    optional:'optional',playerCount:'Players'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
     submit:'Absenden',games:'Spiele',noData:'Laden...',
-    registered:'Registriert!',resultSent:'Gesendet!',enterName:'Name eingeben...',
     rank:'#',player:'Spieler',points:'Pkt',w:'S',l:'N',d:'U',omw:'OMW%',
     registeredAs:'Registriert als',decklist:'Deckliste',
     pasteDecklist:'Deckliste (z.B. 3x Kartenname)',
     decklistSaved:'Gespeichert!',filter:'Nach Name filtern...',
-    registerFirst:'Zuerst registrieren um eine Deckliste einzureichen',
-    changePlayer:'Nicht du? Wechseln'}
+    changePlayer:'Nicht du? Wechseln',
+    firstName:'Vorname',lastName:'Nachname',
+    dateOfBirth:'Geburtsdatum',playerId:'Spieler-ID',
+    optional:'optional',playerCount:'Spieler'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
 let tournament=null,standings=null,timers=null,activeTab='pairings';
-let registeredName=localStorage.getItem('tcg-reg-name')||'';
+let session=JSON.parse(localStorage.getItem('tcg-session')||'null');
 let needsFullRender=true;
 const app=document.getElementById('app');
 const timerRoot=document.getElementById('timer-root');
@@ -154,7 +159,6 @@ function updateTimer(){
 function renderPairings(el){
   const round=tournament.rounds[tournament.rounds.length-1];
   if(!round){el.innerHTML='<p>—</p>';return}
-  const gn=id=>tournament.players.find(p=>p.id===id)?.name||'?';
   el.innerHTML=`<div class="filter"><input type="text" id="pf" placeholder="${t('filter')}" oninput="filterPairings()"></div><div id="ml"></div>`;
   filterPairings();
 }
@@ -189,13 +193,17 @@ function renderStandings(el){
 }
 
 function renderRegister(el){
-  const myPlayer=registeredName?tournament.players.find(p=>p.name.toLowerCase()===registeredName.toLowerCase()):null;
+  const fullName=session?session.fullName:'';
+  const myPlayer=fullName?tournament.players.find(p=>p.name.toLowerCase()===fullName.toLowerCase()):null;
 
   if(myPlayer){
+    const details=[];
+    if(session.dateOfBirth)details.push(`${t('dateOfBirth')}: ${session.dateOfBirth}`);
+    if(session.playerId)details.push(`${t('playerId')}: ${session.playerId}`);
     el.innerHTML=`
       <div class="reg-done">
         <div class="name">${t('registeredAs')}: ${esc(myPlayer.name)}</div>
-        <div class="hint">${t('player')} #${tournament.players.indexOf(myPlayer)+1}</div>
+        ${details.length?`<div class="details">${details.map(d=>`<span>${esc(d)}</span>`).join('')}</div>`:''}
       </div>
       <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">${t('decklist')}</h3>
       <textarea id="dt" placeholder="${t('pasteDecklist')}">${myPlayer.decklist?myPlayer.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n'):''}</textarea>
@@ -205,9 +213,28 @@ function renderRegister(el){
     return;
   }
 
-  el.innerHTML=`<input type="text" id="rn" placeholder="${t('enterName')}">
-    <button class="primary" onclick="doReg()">${t('register')}</button><div id="rm" class="msg"></div>
-    <p style="margin-top:12px;font-size:13px;color:#64748b">${tournament.players.length} ${t('player')}</p>`;
+  el.innerHTML=`
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">${t('firstName')}</label>
+        <input type="text" id="rf" placeholder="${t('firstName')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">${t('lastName')}</label>
+        <input type="text" id="rl" placeholder="${t('lastName')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('dateOfBirth')} <span class="optional">(${t('optional')})</span></label>
+      <input type="date" id="rd">
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('playerId')} <span class="optional">(${t('optional')})</span></label>
+      <input type="text" id="rp" placeholder="${t('playerId')}">
+    </div>
+    <button class="primary" onclick="doReg()">${t('register')}</button>
+    <div id="rm" class="msg"></div>
+    <p style="margin-top:12px;font-size:13px;color:#64748b">${tournament.players.length} ${t('playerCount')}</p>`;
 }
 
 async function sr(mid,result){
@@ -219,12 +246,19 @@ async function sr(mid,result){
 }
 
 async function doReg(){
-  const el=document.getElementById('rn');
-  const n=el?.value?.trim();if(!n)return;
-  const res=await post('/api/register',{playerName:n});
+  const fn=document.getElementById('rf')?.value?.trim();
+  const ln=document.getElementById('rl')?.value?.trim();
+  if(!fn||!ln){document.getElementById('rm').textContent=lang==='de'?'Vor- und Nachname erforderlich':'First and last name required';return}
+  const dob=document.getElementById('rd')?.value||'';
+  const pid=document.getElementById('rp')?.value?.trim()||'';
+  const fullName=fn+' '+ln;
+  const body={playerName:fullName};
+  if(pid)body.playerId=pid;
+  if(dob)body.dateOfBirth=dob;
+  const res=await post('/api/register',body);
   if(res.ok){
-    registeredName=n;
-    localStorage.setItem('tcg-reg-name',n);
+    session={fullName,firstName:fn,lastName:ln,dateOfBirth:dob,playerId:pid};
+    localStorage.setItem('tcg-session',JSON.stringify(session));
     needsFullRender=true;
   }
 }
@@ -236,8 +270,8 @@ async function doDl(playerId){
 }
 
 function changeReg(){
-  registeredName='';
-  localStorage.removeItem('tcg-reg-name');
+  session=null;
+  localStorage.removeItem('tcg-session');
   needsFullRender=true;
 }
 

@@ -80,12 +80,12 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   if (reqPath === '/api/register' && req.method === 'POST') {
     readBody(req, (body) => {
-      const { playerName } = body as { playerName?: string }
+      const { playerName, playerId, dateOfBirth } = body as { playerName?: string; playerId?: string; dateOfBirth?: string }
       if (!playerName?.trim()) { jsonResponse(res, { error: 'name required' }, 400); return }
-      dispatchToRenderer({
-        type: 'ADD_PLAYER',
-        payload: { tournamentId: boundTournamentId, playerName: playerName.trim() },
-      })
+      const payload: Record<string, unknown> = { tournamentId: boundTournamentId, playerName: playerName.trim() }
+      if (playerId?.trim()) payload.playerId = playerId.trim()
+      if (dateOfBirth?.trim()) payload.dateOfBirth = dateOfBirth.trim()
+      dispatchToRenderer({ type: 'ADD_PLAYER', payload })
       jsonResponse(res, { ok: true })
     })
     return

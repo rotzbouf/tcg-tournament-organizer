@@ -67,7 +67,10 @@
     "deckName": "Deck",
     "addFromDatabase": "Add player from database...",
     "playerId": "Player ID",
-    "playerIdPlaceholder": "e.g. Konami ID, Pokemon Player ID"
+    "playerIdPlaceholder": "e.g. Konami ID, Pokemon Player ID",
+    "dateOfBirth": "Date of Birth",
+    "firstName": "First Name",
+    "lastName": "Last Name"
   },
   "rounds": {
     "title": "Current Round",

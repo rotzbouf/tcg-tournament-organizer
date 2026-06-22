@@ -46,6 +46,7 @@ export function loadState(): AppState | null {
         for (const p of t.players as Record<string, unknown>[]) {
           if (p.decklist === undefined) p.decklist = null
           if (p.playerId === undefined) p.playerId = null
+          if (p.dateOfBirth === undefined) p.dateOfBirth = null
         }
       }
     }

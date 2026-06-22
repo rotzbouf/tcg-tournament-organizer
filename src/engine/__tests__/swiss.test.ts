@@ -7,7 +7,7 @@ function makePlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `p${i + 1}`,
     name: `Player ${i + 1}`,
-    playerId: null, deckName: null, decklist: null, hasBye: false,
+    playerId: null, dateOfBirth: null, deckName: null, decklist: null, hasBye: false,
     droppedInRound: null,
   }))
 }

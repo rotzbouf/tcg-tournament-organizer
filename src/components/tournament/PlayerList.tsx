@@ -94,6 +94,9 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game }
                 {player.playerId && (
                   <span className="text-xs text-blue-400">[{player.playerId}]</span>
                 )}
+                {player.dateOfBirth && (
+                  <span className="text-xs text-gray-400">{player.dateOfBirth}</span>
+                )}
                 {player.deckName && (
                   <span className="text-xs text-gray-400">({player.deckName})</span>
                 )}
