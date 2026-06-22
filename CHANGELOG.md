@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4-beta] - 2026-06-22
+
+### Added
+- **Judge Call über Mobile** — Spieler können per Button einen Judge an ihren Tisch rufen, Tischnummer wird automatisch erkannt
+- Popup-Benachrichtigung auf dem TO-Bildschirm mit Spielername und Tischnummer
+- Eigenes Match wird in der mobilen Paarungsansicht blau hervorgehoben
+- Rundenzeit-Timer auf der mobilen Seite sichtbar
+
+### Changed
+- **Ergebnis-Reporting nur noch über TO** — Result-Buttons aus der mobilen Ansicht entfernt, Hinweis auf Meldung beim Turnierleiter
+
 ## [1.2.3-beta] - 2026-06-22
 
 ### Added
