@@ -92,16 +92,6 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
             <p className="mt-1 font-mono text-lg text-blue-600">{url}</p>
           </div>
 
-          {qrSvg && (
-            <div>
-              <p className="mb-2 text-sm font-medium text-gray-700">{t('server.scanQR')}</p>
-              <div
-                className="inline-block rounded-lg border border-gray-200 bg-white p-3"
-                dangerouslySetInnerHTML={{ __html: qrSvg }}
-              />
-            </div>
-          )}
-
           <Button variant="secondary" size="sm" onClick={handleOpenQrWindow} disabled={!qrSvg}>
             {t('server.openQrWindow')}
           </Button>
