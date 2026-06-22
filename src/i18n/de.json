@@ -200,6 +200,13 @@
     "l": "N",
     "d": "U"
   },
+  "judge": {
+    "callTitle": "Judge Call!",
+    "dismiss": "Bestätigen",
+    "callButton": "Judge rufen",
+    "callSent": "Judge wurde gerufen!",
+    "noTable": "Kein aktives Match gefunden"
+  },
   "common": {
     "cancel": "Abbrechen",
     "save": "Speichern",

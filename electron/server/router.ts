@@ -2,7 +2,7 @@ import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import { getCurrentState, getCurrentTimers, dispatchToRenderer } from '../ipc/stateSync'
+import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall } from '../ipc/stateSync'
 import { addClient } from './sse'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
@@ -101,6 +101,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         type: 'UPDATE_PLAYER',
         payload: { tournamentId: boundTournamentId, playerId: decklistMatch[1], decklist: entries.length > 0 ? entries : null },
       })
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
+  if (reqPath === '/api/judge-call' && req.method === 'POST') {
+    readBody(req, (body) => {
+      const { playerName, tableNumber } = body as { playerName?: string; tableNumber?: number }
+      if (!playerName) { jsonResponse(res, { error: 'name required' }, 400); return }
+      sendJudgeCall({ playerName, tableNumber: tableNumber ?? 0 })
       jsonResponse(res, { ok: true })
     })
     return

@@ -21,18 +21,15 @@ body{font-family:-apple-system,system-ui,sans-serif;background:#f8fafc;color:#1e
 .match .table-num{font-size:20px;font-weight:800;color:#1e40af;min-width:50px;text-align:center}
 .match .names{flex:1;font-size:14px;font-weight:500}
 .match .score{font-size:13px;color:#64748b;font-weight:600;margin:0 6px}
-.result-btns{display:flex;gap:6px;margin-top:8px}
-.result-btns button{flex:1;padding:10px 4px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:#fff}
-.result-btns button.sel{background:#1e40af;color:#fff;border-color:#1e40af}
-.result-btns button:active{opacity:.7}
-.game-inputs{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:#64748b}
-.game-inputs input{width:40px;text-align:center;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:14px}
 input[type=text],input[type=date],textarea{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:8px}
 textarea{min-height:120px;font-family:monospace;font-size:13px}
 button.primary{width:100%;padding:12px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
 button.primary:disabled{opacity:.5}
 button.primary:active{opacity:.8}
 button.secondary{width:100%;padding:10px;background:#fff;color:#1e40af;border:1px solid #1e40af;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+button.judge{width:100%;padding:14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
+button.judge:active{opacity:.8}
+button.judge:disabled{opacity:.5}
 .standings-table{width:100%;font-size:12px;border-collapse:collapse}
 .standings-table th{text-align:left;padding:6px 8px;background:#f1f5f9;font-weight:600;color:#64748b}
 .standings-table td{padding:6px 8px;border-bottom:1px solid #f1f5f9}
@@ -52,6 +49,7 @@ button.secondary{width:100%;padding:10px;background:#fff;color:#1e40af;border:1p
 .form-row>*{flex:1}
 .form-group{margin-bottom:4px}
 .optional{font-weight:400;color:#94a3b8;font-size:11px}
+.my-match{border:2px solid #1e40af;background:#eff6ff}
 </style>
 </head>
 <body>
@@ -61,26 +59,30 @@ button.secondary{width:100%;padding:10px;background:#fff;color:#1e40af;border:1p
 const T={
   en:{pairings:'Pairings',standings:'Standings',register:'Register',
     table:'T',bye:'Bye',vs:'vs',round:'Round',pending:'Pending',draw:'Draw',
-    submit:'Submit',games:'Games',noData:'Loading...',
+    games:'Games',noData:'Loading...',
     rank:'#',player:'Player',points:'Pts',w:'W',l:'L',d:'D',omw:'OMW%',
-    registeredAs:'Registered as',decklist:'Decklist',
+    registeredAs:'Registered as',decklist:'Decklist',submit:'Submit',
     pasteDecklist:'Paste decklist (e.g. 3x Card Name)',
     decklistSaved:'Saved!',filter:'Filter by name...',
     changePlayer:'Not you? Change',
     firstName:'First Name',lastName:'Last Name',
     dateOfBirth:'Date of Birth',playerId:'Player ID',
-    optional:'optional',playerCount:'Players'},
+    optional:'optional',playerCount:'Players',
+    callJudge:'Call Judge',judgeCalled:'Judge has been called!',
+    reportToTO:'Report results to the Tournament Organizer'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
-    submit:'Absenden',games:'Spiele',noData:'Laden...',
+    games:'Spiele',noData:'Laden...',
     rank:'#',player:'Spieler',points:'Pkt',w:'S',l:'N',d:'U',omw:'OMW%',
-    registeredAs:'Registriert als',decklist:'Deckliste',
+    registeredAs:'Registriert als',decklist:'Deckliste',submit:'Absenden',
     pasteDecklist:'Deckliste (z.B. 3x Kartenname)',
     decklistSaved:'Gespeichert!',filter:'Nach Name filtern...',
     changePlayer:'Nicht du? Wechseln',
     firstName:'Vorname',lastName:'Nachname',
     dateOfBirth:'Geburtsdatum',playerId:'Spieler-ID',
-    optional:'optional',playerCount:'Spieler'}
+    optional:'optional',playerCount:'Spieler',
+    callJudge:'Judge rufen',judgeCalled:'Judge wurde gerufen!',
+    reportToTO:'Ergebnisse beim Turnierleiter melden'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
@@ -156,17 +158,31 @@ function updateTimer(){
   timerRoot.innerHTML=`<div class="timer-bar ${cls}">${str}</div>`;
 }
 
+function getMyMatch(){
+  if(!session||!tournament)return null;
+  const round=tournament.rounds[tournament.rounds.length-1];
+  if(!round||round.isComplete)return null;
+  const me=tournament.players.find(p=>p.name.toLowerCase()===session.fullName.toLowerCase());
+  if(!me)return null;
+  const match=round.matches.find(m=>!m.isBye&&(m.player1Id===me.id||m.player2Id===me.id));
+  return match?{match,playerId:me.id,playerName:me.name}:null;
+}
+
 function renderPairings(el){
   const round=tournament.rounds[tournament.rounds.length-1];
   if(!round){el.innerHTML='<p>—</p>';return}
-  el.innerHTML=`<div class="filter"><input type="text" id="pf" placeholder="${t('filter')}" oninput="filterPairings()"></div><div id="ml"></div>`;
+  el.innerHTML=`<div class="filter"><input type="text" id="pf" placeholder="${t('filter')}" oninput="filterPairings()"></div><div id="ml"></div>
+    <p style="margin-top:12px;text-align:center;font-size:12px;color:#94a3b8">${t('reportToTO')}</p>
+    <div id="jc"></div>`;
   filterPairings();
+  renderJudgeButton();
 }
 
 function filterPairings(){
   const round=tournament.rounds[tournament.rounds.length-1];if(!round)return;
   const gn=id=>tournament.players.find(p=>p.id===id)?.name||'?';
   const f=(document.getElementById('pf')?.value||'').toLowerCase();
+  const myInfo=getMyMatch();
   const ml=document.getElementById('ml');if(!ml)return;
   ml.innerHTML=round.matches.filter(m=>{
     if(!f)return true;return gn(m.player1Id).toLowerCase().includes(f)||(m.player2Id&&gn(m.player2Id).toLowerCase().includes(f));
@@ -174,15 +190,16 @@ function filterPairings(){
     if(m.isBye)return`<div class="match"><div class="match-header"><span class="table-num">—</span><span class="names">${esc(gn(m.player1Id))}</span><span class="badge badge-reg">${t('bye')}</span></div></div>`;
     const gs=m.player1Games!=null?`<span class="score">${m.player1Games}-${m.player2Games}</span>`:'';
     const rb=m.result==='pending'?`<span class="badge badge-reg">${t('pending')}</span>`:m.result==='draw'?`<span class="badge" style="background:#fef3c7;color:#92400e">${t('draw')}</span>`:`<span class="badge badge-active">${esc(gn(m.result==='player1_win'?m.player1Id:m.player2Id))}</span>`;
-    const btns=round.isComplete?'':`
-      <div class="game-inputs">${t('games')}: <input type="number" min="0" max="9" id="g1-${m.id}" value="${m.player1Games??''}" placeholder="0"> - <input type="number" min="0" max="9" id="g2-${m.id}" value="${m.player2Games??''}" placeholder="0"></div>
-      <div class="result-btns">
-        <button class="${m.result==='player1_win'?'sel':''}" onclick="sr('${m.id}','player1_win')">${esc(gn(m.player1Id))}</button>
-        <button class="${m.result==='draw'?'sel':''}" onclick="sr('${m.id}','draw')">${t('draw')}</button>
-        <button class="${m.result==='player2_win'?'sel':''}" onclick="sr('${m.id}','player2_win')">${esc(gn(m.player2Id))}</button>
-      </div>`;
-    return`<div class="match"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div>${btns}</div>`;
+    const isMyMatch=myInfo&&m.id===myInfo.match.id;
+    return`<div class="match${isMyMatch?' my-match':'"}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div></div>`;
   }).join('');
+}
+
+function renderJudgeButton(){
+  const jc=document.getElementById('jc');if(!jc)return;
+  const myInfo=getMyMatch();
+  if(!myInfo){jc.innerHTML='';return}
+  jc.innerHTML=`<button class="judge" onclick="callJudge()">${t('callJudge')}</button><div id="jm" class="msg"></div>`;
 }
 
 function renderStandings(el){
@@ -237,12 +254,13 @@ function renderRegister(el){
     <p style="margin-top:12px;font-size:13px;color:#64748b">${tournament.players.length} ${t('playerCount')}</p>`;
 }
 
-async function sr(mid,result){
-  const g1=document.getElementById('g1-'+mid)?.value;
-  const g2=document.getElementById('g2-'+mid)?.value;
-  const body={result};
-  if(g1!==''&&g2!==''){body.player1Games=parseInt(g1);body.player2Games=parseInt(g2)}
-  await post('/api/matches/'+mid+'/result',body);
+async function callJudge(){
+  const myInfo=getMyMatch();if(!myInfo)return;
+  const btn=document.querySelector('.judge');if(btn)btn.disabled=true;
+  await post('/api/judge-call',{playerName:myInfo.playerName,tableNumber:myInfo.match.tableNumber});
+  const jm=document.getElementById('jm');
+  if(jm)jm.textContent=t('judgeCalled');
+  setTimeout(()=>{if(btn)btn.disabled=false;if(jm)jm.textContent=''},5000);
 }
 
 async function doReg(){

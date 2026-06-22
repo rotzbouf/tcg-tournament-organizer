@@ -10,6 +10,7 @@ interface ElectronAPI {
   stopServer: (tournamentId: string) => Promise<void>
   getServerInfo: (tournamentId: string) => Promise<{ running: boolean; address?: string; port?: number; clientCount?: number }>
   openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string }) => Promise<void>
+  onJudgeCall: (callback: (data: string) => void) => void
 }
 
 interface Window {

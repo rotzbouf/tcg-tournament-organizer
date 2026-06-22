@@ -118,4 +118,10 @@ export function dispatchToRenderer(action: unknown): void {
   }
 }
 
+export function sendJudgeCall(data: { playerName: string; tableNumber: number }): void {
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    mainWindowRef.webContents.send('judge:call', JSON.stringify(data))
+  }
+}
+
 export { getClientCount } from '../server/sse'
