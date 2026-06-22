@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.7-beta] - 2026-06-22
+
+### Added
+- **CSV-Export** — Turnierergebnisse als CSV exportieren (Rang, Name, Spieler-ID, Punkte, Tiebreaker)
+- **PDF-Export** — Formatiertes Ergebnis-PDF mit Turnierinformationen und Standings-Tabelle
+- **Automatische Top-Cut-Berechnung** — Top-Cut-Größe wird anhand der Spieleranzahl nach offiziellen Regeln berechnet (9–16: Top 4, 17–32: Top 8, 33–64: Top 16, 65+: Top 32)
+
+### Changed
+- Manuelle Top-Cut-Auswahl entfernt, ersetzt durch automatische Berechnung beim Turnierstart
+
 ## [1.2.6-beta] - 2026-06-22
 
 ### Added
