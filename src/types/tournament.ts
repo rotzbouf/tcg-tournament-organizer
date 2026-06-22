@@ -27,6 +27,7 @@ export interface Tournament {
   currentRound: number
   topCut: TopCutSize
   grandFinalReset: boolean
+  ageDivisionsEnabled: boolean
   discordWebhookUrl: string | null
   createdAt: string
   updatedAt: string

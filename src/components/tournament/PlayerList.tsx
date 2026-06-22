@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTournamentContext } from '@/state/TournamentContext'
+import { getPlayerDivision, DIVISION_LABELS } from '@/lib/ageDivision'
 import { AddPlayerForm } from './AddPlayerForm'
 import { BulkImportDialog } from './BulkImportDialog'
 import { DecklistDialog } from './DecklistDialog'
@@ -17,10 +18,12 @@ interface PlayerListProps {
   editable: boolean
   inProgress?: boolean
   game?: GameType
+  ageDivisionsEnabled?: boolean
+  createdAt?: string
 }
 
-export function PlayerList({ tournamentId, players, editable, inProgress, game }: PlayerListProps) {
-  const { t } = useTranslation()
+export function PlayerList({ tournamentId, players, editable, inProgress, game, ageDivisionsEnabled, createdAt }: PlayerListProps) {
+  const { t, i18n } = useTranslation()
   const { state, dispatch } = useTournamentContext()
   const [dropPlayerId, setDropPlayerId] = useState<string | null>(null)
   const [showBulkImport, setShowBulkImport] = useState(false)
@@ -91,6 +94,11 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game }
                 )}>
                   {player.name}
                 </span>
+                {ageDivisionsEnabled && createdAt && (
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500">
+                    {DIVISION_LABELS[getPlayerDivision(player.dateOfBirth, createdAt)][i18n.language === 'de' ? 'de' : 'en']}
+                  </span>
+                )}
                 {player.playerId && (
                   <span className="text-xs text-blue-400">[{player.playerId}]</span>
                 )}

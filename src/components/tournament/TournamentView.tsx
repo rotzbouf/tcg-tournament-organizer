@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTournamentContext } from '@/state/TournamentContext'
-import { selectTournament, selectCurrentRound, selectStandings } from '@/state/selectors'
+import { selectTournament, selectCurrentRound, selectStandings, selectDivisionStandings } from '@/state/selectors'
 import { GAME_CONFIG } from '@/lib/gameConfig'
+import { DIVISION_LABELS, DIVISION_ORDER } from '@/lib/ageDivision'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -32,7 +33,7 @@ const statusBadgeVariant = {
 
 export function TournamentView() {
   const { id } = useParams<{ id: string }>()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { state, dispatch, undo, canUndo } = useTournamentContext()
   const tournament = id ? selectTournament(state, id) : undefined
@@ -255,6 +256,8 @@ export function TournamentView() {
             editable={tournament.status === 'registration'}
             inProgress={tournament.status === 'in_progress' || tournament.status === 'top_cut'}
             game={tournament.game}
+            ageDivisionsEnabled={tournament.ageDivisionsEnabled}
+            createdAt={tournament.createdAt}
           />
         )}
         {activeTab === 'round' && currentRound && (
@@ -267,7 +270,24 @@ export function TournamentView() {
             isTopCut={isElimFormat}
           />
         )}
-        {activeTab === 'standings' && <StandingsTable standings={standings} game={tournament.game} />}
+        {activeTab === 'standings' && (
+          tournament.ageDivisionsEnabled ? (
+            <div className="space-y-6">
+              {DIVISION_ORDER.map(div => {
+                const divStandings = selectDivisionStandings(tournament, div)
+                if (divStandings.length === 0) return null
+                return (
+                  <div key={div}>
+                    <h3 className="mb-2 text-lg font-bold text-gray-800">{DIVISION_LABELS[div][i18n.language === 'de' ? 'de' : 'en']}</h3>
+                    <StandingsTable standings={divStandings} game={tournament.game} />
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <StandingsTable standings={standings} game={tournament.game} />
+          )
+        )}
         {activeTab === 'history' && (
           <RoundHistory
             rounds={tournament.rounds}

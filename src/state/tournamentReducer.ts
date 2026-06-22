@@ -1,7 +1,8 @@
 import { AppState, TournamentAction } from './actions'
 import { Tournament } from '@/types/tournament'
 import { Penalty } from '@/types/penalty'
-import { Round } from '@/types/round'
+import { Match, Round } from '@/types/round'
+import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds } from '@/engine/scoring'
 import { generatePairings, generateFirstRoundPairings } from '@/engine/swiss'
@@ -11,6 +12,7 @@ import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDouble
 import { calculateStandings } from '@/engine/standings'
 import { calculateEloChanges } from '@/engine/elo'
 import { EloHistoryEntry } from '@/types/database'
+import { getPlayerDivision, DIVISION_ORDER, AgeDivision } from '@/lib/ageDivision'
 
 export const initialState: AppState = {
   tournaments: {},
@@ -19,6 +21,54 @@ export const initialState: AppState = {
 
 function makeRound(partial: Omit<Round, 'phaseIndex'>, phaseIndex: number): Round {
   return { ...partial, phaseIndex }
+}
+
+function groupByDivision(players: Player[], createdAt: string): Map<AgeDivision, Player[]> {
+  const groups = new Map<AgeDivision, Player[]>()
+  for (const div of DIVISION_ORDER) groups.set(div, [])
+  for (const p of players) {
+    const div = getPlayerDivision(p.dateOfBirth, createdAt)
+    groups.get(div)!.push(p)
+  }
+  return groups
+}
+
+function renumberTables(matches: Match[]): Match[] {
+  let table = 1
+  return matches.map(m => ({ ...m, tableNumber: m.isBye ? 0 : table++ }))
+}
+
+function generateDivisionFirstRoundPairings(players: Player[], createdAt: string): Match[] {
+  const groups = groupByDivision(players, createdAt)
+  const allMatches: Match[] = []
+  for (const div of DIVISION_ORDER) {
+    const divPlayers = groups.get(div)!
+    if (divPlayers.length >= 2) allMatches.push(...generateFirstRoundPairings(divPlayers))
+    else if (divPlayers.length === 1) allMatches.push({ id: generateId(), roundNumber: 1, tableNumber: 0, player1Id: divPlayers[0].id, player2Id: null, result: 'player1_win', isBye: true })
+  }
+  return renumberTables(allMatches)
+}
+
+function generateDivisionPairings(players: Player[], rounds: Round[], roundNumber: number, createdAt: string): Match[] {
+  const groups = groupByDivision(players, createdAt)
+  const allMatches: Match[] = []
+  for (const div of DIVISION_ORDER) {
+    const divPlayers = groups.get(div)!
+    if (divPlayers.length < 2) continue
+    const divPlayerIds = new Set(divPlayers.map(p => p.id))
+    const divRounds = rounds.map(r => ({ ...r, matches: r.matches.filter(m => divPlayerIds.has(m.player1Id)) }))
+    allMatches.push(...generatePairings(divPlayers, divRounds, roundNumber))
+  }
+  return renumberTables(allMatches)
+}
+
+function calculateDivisionTotalRounds(players: Player[], createdAt: string): number {
+  const groups = groupByDivision(players, createdAt)
+  let max = 0
+  for (const divPlayers of groups.values()) {
+    if (divPlayers.length >= 2) max = Math.max(max, calculateTotalRounds(divPlayers.length))
+  }
+  return max
 }
 
 export function tournamentReducer(state: AppState, action: TournamentAction): AppState {
@@ -42,6 +92,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         currentRound: 0,
         topCut: action.payload.topCut,
         grandFinalReset: action.payload.grandFinalReset ?? false,
+        ageDivisionsEnabled: action.payload.ageDivisionsEnabled ?? false,
         discordWebhookUrl: null,
         createdAt: now,
         updatedAt: now,
@@ -128,8 +179,13 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         })
       }
 
-      const totalRounds = calculateTotalRounds(tournament.players.length)
-      const matches = generateFirstRoundPairings(tournament.players)
+      const useDivisions = tournament.ageDivisionsEnabled
+      const totalRounds = useDivisions
+        ? calculateDivisionTotalRounds(tournament.players, tournament.createdAt)
+        : calculateTotalRounds(tournament.players.length)
+      const matches = useDivisions
+        ? generateDivisionFirstRoundPairings(tournament.players, tournament.createdAt)
+        : generateFirstRoundPairings(tournament.players)
       const updatedPlayers = tournament.players.map(p => {
         const hasBye = matches.some(m => m.isBye && m.player1Id === p.id)
         return hasBye ? { ...p, hasBye: true } : p
@@ -174,7 +230,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (tournament.status === 'in_progress') {
         if (tournament.currentRound >= tournament.totalRounds) return state
         const nextRoundNumber = tournament.currentRound + 1
-        const matches = generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
+        const matches = tournament.ageDivisionsEnabled
+          ? generateDivisionPairings(tournament.players, tournament.rounds, nextRoundNumber, tournament.createdAt)
+          : generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
         const updatedPlayers = tournament.players.map(p => {
           const hasBye = p.hasBye || matches.some(m => m.isBye && m.player1Id === p.id)
           return hasBye ? { ...p, hasBye: true } : p

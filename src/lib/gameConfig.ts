@@ -15,6 +15,7 @@ export interface GameConfig {
   accent: string
   icon: string
   tiebreakers: TiebreakerConfig
+  hasAgeDivisions: boolean
 }
 
 export const GAME_CONFIG: Record<GameType, GameConfig> = {
@@ -24,6 +25,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     accent: '#F5E6FF',
     icon: '🃏',
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.25, useGameWinPct: false, useHeadToHead: true },
+    hasAgeDivisions: false,
   },
   pokemon: {
     name: 'Pokémon TCG',
@@ -31,6 +33,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     accent: '#FFF8E1',
     icon: '⚡',
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.25, useGameWinPct: false, useHeadToHead: true },
+    hasAgeDivisions: true,
   },
   star_wars_unlimited: {
     name: 'Star Wars: Unlimited',
@@ -38,6 +41,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     accent: '#E8E8F0',
     icon: '⭐',
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
+    hasAgeDivisions: false,
   },
   riftbound: {
     name: 'Riftbound',
@@ -45,5 +49,6 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     accent: '#E8F5E9',
     icon: '🌀',
     tiebreakers: { system: 'chess', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false },
+    hasAgeDivisions: false,
   },
 }

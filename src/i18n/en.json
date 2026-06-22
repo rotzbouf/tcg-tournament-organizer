@@ -49,6 +49,8 @@
     "grandFinal": "Grand Final",
     "grandFinalReset": "Grand Final Bracket Reset",
     "grandFinalResetHint": "Losers bracket winner must win twice",
+    "ageDivisions": "Age Divisions (Junior / Senior / Masters)",
+    "ageDivisionsHint": "Players are divided by birth year into divisions and paired separately",
     "edit": "Edit Tournament",
     "minPlayers": "At least 2 players required"
   },

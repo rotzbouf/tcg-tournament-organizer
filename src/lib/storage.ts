@@ -39,6 +39,9 @@ export function loadState(): AppState | null {
       if (typeof t.grandFinalReset !== 'boolean') {
         t.grandFinalReset = false
       }
+      if (typeof t.ageDivisionsEnabled !== 'boolean') {
+        t.ageDivisionsEnabled = false
+      }
       if (t.discordWebhookUrl === undefined) {
         t.discordWebhookUrl = null
       }

@@ -26,6 +26,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [roundTime, setRoundTime] = useState(50)
   const [topCut, setTopCut] = useState<TopCutSize>(8)
   const [grandFinalReset, setGrandFinalReset] = useState(false)
+  const [ageDivisions, setAgeDivisions] = useState(true)
 
   const gameOptions = (Object.keys(GAME_CONFIG) as GameType[]).map(key => ({
     value: key,
@@ -59,6 +60,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         roundTimeMinutes: roundTime,
         topCut: format === 'swiss_topcut' ? topCut : 0,
         grandFinalReset: format === 'double_elimination' ? grandFinalReset : undefined,
+        ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions ? ageDivisions : false,
       },
     })
     setName('')
@@ -67,6 +69,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setRoundTime(50)
     setTopCut(8)
     setGrandFinalReset(false)
+    setAgeDivisions(true)
     onClose()
   }
 
@@ -112,6 +115,17 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
               className="rounded border-gray-300"
             />
             <span>{t('tournament.grandFinalReset')}</span>
+          </label>
+        )}
+        {GAME_CONFIG[game].hasAgeDivisions && (
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={ageDivisions}
+              onChange={e => setAgeDivisions(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span>{t('tournament.ageDivisions')}</span>
           </label>
         )}
         <Select

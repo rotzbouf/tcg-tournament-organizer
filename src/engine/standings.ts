@@ -5,7 +5,8 @@ import { GameType } from '@/types/tournament'
 import { calculateMatchPoints, getPlayerRecord } from './scoring'
 import { GAME_CONFIG, TiebreakerConfig } from '@/lib/gameConfig'
 
-export function calculateStandings(players: Player[], rounds: Round[], game?: GameType): Standing[] {
+export function calculateStandings(players: Player[], rounds: Round[], game?: GameType, playerFilter?: Set<string>): Standing[] {
+  const filteredPlayers = playerFilter ? players.filter(p => playerFilter.has(p.id)) : players
   const completedRounds = rounds.filter(r => r.isComplete)
 
   const swissRounds = completedRounds.filter(r => r.phase === 'swiss' || r.phase === 'round_robin')
@@ -14,7 +15,7 @@ export function calculateStandings(players: Player[], rounds: Round[], game?: Ga
 
   const config: TiebreakerConfig = game ? GAME_CONFIG[game].tiebreakers : { system: 'chess', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false }
 
-  const standings: Standing[] = players.map(player => {
+  const standings: Standing[] = filteredPlayers.map(player => {
     const matchPoints = calculateMatchPoints(player.id, swissRounds)
     const record = getPlayerRecord(player.id, swissRounds)
     const opponents = getOpponentIds(player.id, swissRounds)
