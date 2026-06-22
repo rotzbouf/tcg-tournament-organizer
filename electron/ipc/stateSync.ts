@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
 import { broadcast, getClientCount } from '../server/sse'
-import QRCode from 'qrcode'
+import * as QRCodeModule from 'qrcode'
 
 let currentState: string | null = null
 let currentTimers: string | null = null
@@ -29,7 +29,13 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
   ipcMain.handle('server:start', async (_event, tournamentId: string) => {
     const { address, port } = await startServer(tournamentId)
     const url = `http://${address}:${port}`
-    const qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
+    let qrCodeSvg = ''
+    try {
+      const QRCode = (QRCodeModule as { default?: typeof QRCodeModule }).default ?? QRCodeModule
+      qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
+    } catch (err) {
+      console.error('QR code generation failed:', err)
+    }
     return { address, port, qrCodeSvg }
   })
 
