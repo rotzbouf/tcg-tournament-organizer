@@ -106,7 +106,9 @@
     "sonnebornBerger": "SB",
     "opponentMatchWinPct": "OMW%",
     "gameWinPct": "GW%",
-    "opponentGameWinPct": "OGW%"
+    "opponentGameWinPct": "OGW%",
+    "byDivision": "By Division",
+    "global": "Overall"
   },
   "timer": {
     "start": "Start",

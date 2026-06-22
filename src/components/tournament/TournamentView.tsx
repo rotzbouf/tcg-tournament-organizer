@@ -42,6 +42,7 @@ export function TournamentView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showPenaltyDialog, setShowPenaltyDialog] = useState(false)
+  const [standingsView, setStandingsView] = useState<'divisions' | 'global'>('divisions')
 
   if (!tournament) {
     return (
@@ -275,22 +276,42 @@ export function TournamentView() {
           />
         )}
         {activeTab === 'standings' && (
-          tournament.ageDivisionsEnabled ? (
-            <div className="space-y-6">
-              {DIVISION_ORDER.map(div => {
-                const divStandings = selectDivisionStandings(tournament, div)
-                if (divStandings.length === 0) return null
-                return (
-                  <div key={div}>
-                    <h3 className="mb-2 text-lg font-bold text-gray-800">{DIVISION_LABELS[div][i18n.language === 'de' ? 'de' : 'en']}</h3>
-                    <StandingsTable standings={divStandings} game={tournament.game} />
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <StandingsTable standings={standings} game={tournament.game} />
-          )
+          <>
+            {tournament.ageDivisionsEnabled && (
+              <div className="mb-4 flex gap-2">
+                <Button
+                  variant={standingsView === 'divisions' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setStandingsView('divisions')}
+                >
+                  {t('standings.byDivision')}
+                </Button>
+                <Button
+                  variant={standingsView === 'global' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setStandingsView('global')}
+                >
+                  {t('standings.global')}
+                </Button>
+              </div>
+            )}
+            {tournament.ageDivisionsEnabled && standingsView === 'divisions' ? (
+              <div className="space-y-6">
+                {DIVISION_ORDER.map(div => {
+                  const divStandings = selectDivisionStandings(tournament, div)
+                  if (divStandings.length === 0) return null
+                  return (
+                    <div key={div}>
+                      <h3 className="mb-2 text-lg font-bold text-gray-800">{DIVISION_LABELS[div][i18n.language === 'de' ? 'de' : 'en']}</h3>
+                      <StandingsTable standings={divStandings} game={tournament.game} />
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <StandingsTable standings={standings} game={tournament.game} />
+            )}
+          </>
         )}
         {activeTab === 'history' && (
           <RoundHistory
