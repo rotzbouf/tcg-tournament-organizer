@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import QRCode from 'qrcode'
 import { Button } from '@/components/ui/Button'
@@ -20,24 +20,30 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
   const [info, setInfo] = useState<ServerInfo>({ running: false })
   const [qrSvg, setQrSvg] = useState<string>('')
 
-  useEffect(() => {
-    window.electronAPI?.getServerInfo(tournamentId).then(setInfo)
-  }, [tournamentId])
-
-  const generateQr = async (url: string) => {
-    try {
-      const svg = await QRCode.toString(url, { type: 'svg' })
-      setQrSvg(svg)
-    } catch {
-      setQrSvg('')
+  const updateQr = useCallback(async (serverInfo: ServerInfo) => {
+    if (serverInfo.running && serverInfo.address && serverInfo.port) {
+      try {
+        const svg = await QRCode.toString(`http://${serverInfo.address}:${serverInfo.port}`, { type: 'svg' })
+        setQrSvg(svg)
+      } catch {
+        setQrSvg('')
+      }
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    window.electronAPI?.getServerInfo(tournamentId).then(serverInfo => {
+      setInfo(serverInfo)
+      updateQr(serverInfo)
+    })
+  }, [tournamentId, updateQr])
 
   const handleStart = async () => {
     const result = await window.electronAPI?.startServer(tournamentId)
     if (result) {
-      setInfo({ running: true, address: result.address, port: result.port })
-      generateQr(`http://${result.address}:${result.port}`)
+      const serverInfo = { running: true, address: result.address, port: result.port }
+      setInfo(serverInfo)
+      updateQr(serverInfo)
     }
   }
 
@@ -60,12 +66,6 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
     }, 5000)
     return () => clearInterval(interval)
   }, [info.running, tournamentId])
-
-  useEffect(() => {
-    if (info.running && info.address && info.port) {
-      generateQr(`http://${info.address}:${info.port}`)
-    }
-  }, [info.running, info.address, info.port])
 
   const url = info.running && info.address ? `http://${info.address}:${info.port}` : null
 
