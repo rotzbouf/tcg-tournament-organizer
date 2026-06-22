@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
+import { createRequire } from 'node:module'
 import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
 import { broadcast, getClientCount } from '../server/sse'
-import * as QRCodeModule from 'qrcode'
 
 let currentState: string | null = null
 let currentTimers: string | null = null
@@ -31,7 +31,8 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
     const url = `http://${address}:${port}`
     let qrCodeSvg = ''
     try {
-      const QRCode = (QRCodeModule as { default?: typeof QRCodeModule }).default ?? QRCodeModule
+      const req = createRequire(__filename)
+      const QRCode = req('qrcode')
       qrCodeSvg = await QRCode.toString(url, { type: 'svg' })
     } catch (err) {
       console.error('QR code generation failed:', err)
