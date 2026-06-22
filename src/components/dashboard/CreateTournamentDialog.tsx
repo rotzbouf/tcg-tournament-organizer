@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useTournamentContext } from '@/state/TournamentContext'
-import { GameType, TopCutSize, TournamentFormat } from '@/types/tournament'
+import { GameType, TournamentFormat } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
 interface CreateTournamentDialogProps {
@@ -14,7 +14,6 @@ interface CreateTournamentDialogProps {
 }
 
 const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 80, 90]
-const TOP_CUT_OPTIONS: TopCutSize[] = [4, 8, 16, 32]
 const FORMAT_OPTIONS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
 
 export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialogProps) {
@@ -24,7 +23,6 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [game, setGame] = useState<GameType>('yugioh')
   const [format, setFormat] = useState<TournamentFormat>('swiss')
   const [roundTime, setRoundTime] = useState(50)
-  const [topCut, setTopCut] = useState<TopCutSize>(8)
   const [grandFinalReset, setGrandFinalReset] = useState(false)
   const [ageDivisions, setAgeDivisions] = useState(true)
 
@@ -43,11 +41,6 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     label: t('tournament.minutesValue', { count: min }),
   }))
 
-  const topCutOptions = TOP_CUT_OPTIONS.map(size => ({
-    value: String(size),
-    label: t('tournament.topCutValue', { count: size }),
-  }))
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
@@ -58,7 +51,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         game,
         format,
         roundTimeMinutes: roundTime,
-        topCut: format === 'swiss_topcut' ? topCut : 0,
+        topCut: 0,
         grandFinalReset: format === 'double_elimination' ? grandFinalReset : undefined,
         ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions ? ageDivisions : false,
       },
@@ -67,7 +60,6 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setGame('yugioh')
     setFormat('swiss')
     setRoundTime(50)
-    setTopCut(8)
     setGrandFinalReset(false)
     setAgeDivisions(true)
     onClose()
@@ -98,13 +90,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           onChange={e => setFormat(e.target.value as TournamentFormat)}
         />
         {format === 'swiss_topcut' && (
-          <Select
-            id="tournament-top-cut"
-            label={t('tournament.topCut')}
-            options={topCutOptions}
-            value={String(topCut)}
-            onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
-          />
+          <p className="text-sm text-gray-500">{t('tournament.topCutAutoHint')}</p>
         )}
         {format === 'double_elimination' && (
           <label className="flex items-center gap-2 text-sm text-gray-700">

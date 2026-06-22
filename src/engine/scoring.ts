@@ -72,3 +72,11 @@ export function calculateTotalRounds(playerCount: number): number {
   if (playerCount <= 1) return 0
   return Math.ceil(Math.log2(playerCount))
 }
+
+export function calculateTopCutSize(playerCount: number): 0 | 4 | 8 | 16 | 32 {
+  if (playerCount < 9) return 0
+  if (playerCount <= 16) return 4
+  if (playerCount <= 32) return 8
+  if (playerCount <= 64) return 16
+  return 32
+}

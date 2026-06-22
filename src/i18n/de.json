@@ -49,6 +49,7 @@
     "grandFinal": "Grand Final",
     "grandFinalReset": "Grand Final Bracket Reset",
     "grandFinalResetHint": "Losers-Bracket-Sieger muss zweimal gewinnen",
+    "topCutAutoHint": "Top-Cut-Größe wird automatisch anhand der Spieleranzahl berechnet (9–16: Top 4, 17–32: Top 8, 33–64: Top 16, 65+: Top 32)",
     "ageDivisions": "Altersklassen (Junior / Senior / Masters)",
     "ageDivisionsHint": "Spieler werden nach Geburtsjahr in Divisionen eingeteilt und getrennt gepaart",
     "edit": "Turnier bearbeiten",

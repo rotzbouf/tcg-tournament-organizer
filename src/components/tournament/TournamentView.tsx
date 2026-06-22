@@ -135,7 +135,7 @@ export function TournamentView() {
               <h2 className="text-2xl font-bold text-gray-900">{tournament.name}</h2>
               <p className="text-sm text-gray-500">
                 {gameConfig.name} — {t(`tournament.formatOptions.${tournament.format}`)}
-                {tournament.format === 'swiss_topcut' && ` (Top ${tournament.topCut})`}
+                {tournament.format === 'swiss_topcut' && tournament.topCut > 0 && ` (Top ${tournament.topCut})`}
                 {tournament.ageDivisionsEnabled && ` — ${t('tournament.ageDivisions')}`}
               </p>
               {hasMultiPhase && (

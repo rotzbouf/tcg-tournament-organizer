@@ -4,7 +4,7 @@ import { Penalty } from '@/types/penalty'
 import { Match, Round } from '@/types/round'
 import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
-import { calculateTotalRounds } from '@/engine/scoring'
+import { calculateTotalRounds, calculateTopCutSize } from '@/engine/scoring'
 import { generatePairings, generateFirstRoundPairings } from '@/engine/swiss'
 import { generateTopCutRound } from '@/engine/topcut'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
@@ -190,10 +190,14 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const hasBye = matches.some(m => m.isBye && m.player1Id === p.id)
         return hasBye ? { ...p, hasBye: true } : p
       })
+      const autoTopCut = tournament.format === 'swiss_topcut'
+        ? calculateTopCutSize(tournament.players.length)
+        : 0
       return updateTournament(state, action.payload.tournamentId, {
         status: 'in_progress',
         totalRounds,
         currentRound: 1,
+        topCut: autoTopCut,
         players: updatedPlayers,
         rounds: [makeRound({ roundNumber: 1, matches, isComplete: false, phase: 'swiss' }, pi)],
       })

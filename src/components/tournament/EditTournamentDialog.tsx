@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useTournamentContext } from '@/state/TournamentContext'
-import { Tournament, TopCutSize, TournamentFormat } from '@/types/tournament'
+import { Tournament, TournamentFormat } from '@/types/tournament'
 
 interface EditTournamentDialogProps {
   open: boolean
@@ -14,7 +14,6 @@ interface EditTournamentDialogProps {
 }
 
 const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 80, 90]
-const TOP_CUT_OPTIONS: TopCutSize[] = [4, 8, 16, 32]
 const FORMAT_OPTIONS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
 
 export function EditTournamentDialog({ open, onClose, tournament }: EditTournamentDialogProps) {
@@ -23,7 +22,6 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
   const [name, setName] = useState(tournament.name)
   const [format, setFormat] = useState<TournamentFormat>(tournament.format)
   const [roundTime, setRoundTime] = useState(tournament.roundTimeMinutes)
-  const [topCut, setTopCut] = useState<TopCutSize>(tournament.topCut || 8)
 
   const formatOptions = FORMAT_OPTIONS.map(f => ({
     value: f,
@@ -33,11 +31,6 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
   const roundTimeOptions = ROUND_TIME_OPTIONS.map(min => ({
     value: String(min),
     label: t('tournament.minutesValue', { count: min }),
-  }))
-
-  const topCutOptions = TOP_CUT_OPTIONS.map(size => ({
-    value: String(size),
-    label: t('tournament.topCutValue', { count: size }),
   }))
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,7 +43,7 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
         name: name.trim(),
         format,
         roundTimeMinutes: roundTime,
-        topCut: format === 'swiss_topcut' ? topCut : 0,
+        topCut: 0,
       },
     })
     onClose()
@@ -74,13 +67,7 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
           onChange={e => setFormat(e.target.value as TournamentFormat)}
         />
         {format === 'swiss_topcut' && (
-          <Select
-            id="edit-tournament-top-cut"
-            label={t('tournament.topCut')}
-            options={topCutOptions}
-            value={String(topCut)}
-            onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
-          />
+          <p className="text-sm text-gray-500">{t('tournament.topCutAutoHint')}</p>
         )}
         <Select
           id="edit-tournament-round-time"
