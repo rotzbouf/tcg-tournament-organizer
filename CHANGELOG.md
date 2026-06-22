@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6-beta] - 2026-06-22
+
+### Added
+- **Einzelne Spieler aus Datenbank löschen** — ×-Button pro Spieler in der Rangliste mit Bestätigungsdialog
+
 ## [1.2.5-beta] - 2026-06-22
 
 ### Added
