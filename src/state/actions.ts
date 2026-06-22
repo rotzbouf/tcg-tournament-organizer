@@ -27,6 +27,7 @@ export type TournamentAction =
   | { type: 'RESET_PLAYER_DATABASE'; payload?: { game?: GameType; keepNames?: boolean } }
   | { type: 'ADD_FROM_DATABASE'; payload: { tournamentId: string; databasePlayerId: string } }
   | { type: 'UPDATE_DATABASE_PLAYER'; payload: { databasePlayerId: string; playerId?: string | null; name?: string } }
+  | { type: 'DELETE_DATABASE_PLAYER'; payload: { databasePlayerId: string } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {

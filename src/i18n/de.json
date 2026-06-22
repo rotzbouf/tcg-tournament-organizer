@@ -157,6 +157,8 @@
     "playerId": "Spieler-ID",
     "editProfile": "Profil bearbeiten",
     "profile": "Spielerprofil",
+    "deletePlayer": "Spieler löschen",
+    "deletePlayerMessage": "Möchtest du {{name}} wirklich aus der Datenbank löschen? Elo-Wertung und Turnierhistorie gehen verloren.",
     "resetPoints": "Punkte zurücksetzen",
     "resetFull": "Komplett löschen",
     "resetPointsMessage": "Alle Elo-Punkte und Statistiken für dieses Spiel werden zurückgesetzt, aber die Spielernamen bleiben erhalten.",

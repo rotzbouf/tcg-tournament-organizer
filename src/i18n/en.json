@@ -157,6 +157,8 @@
     "playerId": "Player ID",
     "editProfile": "Edit Profile",
     "profile": "Player Profile",
+    "deletePlayer": "Delete Player",
+    "deletePlayerMessage": "Are you sure you want to delete {{name}} from the database? Elo rating and tournament history will be lost.",
     "resetPoints": "Reset Points",
     "resetFull": "Clear All",
     "resetPointsMessage": "All Elo ratings and statistics for this game will be reset, but player names will be kept.",

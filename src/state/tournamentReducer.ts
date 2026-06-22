@@ -571,6 +571,11 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       return { ...state, playerDatabase: updatedDb }
     }
 
+    case 'DELETE_DATABASE_PLAYER': {
+      const { [action.payload.databasePlayerId]: _, ...rest } = state.playerDatabase
+      return { ...state, playerDatabase: rest }
+    }
+
     case 'RESET_PLAYER_DATABASE': {
       const gameFilter = action.payload?.game
       const keepNames = action.payload?.keepNames ?? false

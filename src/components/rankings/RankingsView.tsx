@@ -18,6 +18,7 @@ export function RankingsView() {
   const [gameFilter, setGameFilter] = useState<GameType>('yugioh')
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState<'full' | 'points' | null>(null)
+  const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null)
 
   const players = Object.values(state.playerDatabase)
     .filter(p => p.game === gameFilter)
@@ -79,6 +80,7 @@ export function RankingsView() {
                 <th className="px-3 py-2 text-center font-medium text-gray-600">{t('rankings.elo')}</th>
                 <th className="px-3 py-2 text-center font-medium text-gray-600">{t('rankings.matches')}</th>
                 <th className="px-3 py-2 text-center font-medium text-gray-600">{t('rankings.tournaments')}</th>
+                <th className="w-10 px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -94,6 +96,15 @@ export function RankingsView() {
                   <td className="px-3 py-2 text-center font-semibold text-gray-900">{player.elo}</td>
                   <td className="px-3 py-2 text-center text-gray-500">{player.matchesPlayed}</td>
                   <td className="px-3 py-2 text-center text-gray-500">{player.tournamentsPlayed}</td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      className="text-gray-300 hover:text-red-500"
+                      onClick={e => { e.stopPropagation(); setDeletePlayerId(player.id) }}
+                      title={t('players.remove')}
+                    >
+                      ×
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -116,6 +127,17 @@ export function RankingsView() {
         onConfirm={handleReset}
         title={showResetConfirm === 'full' ? t('rankings.resetFull') : t('rankings.resetPoints')}
         message={showResetConfirm === 'full' ? t('rankings.resetFullMessage') : t('rankings.resetPointsMessage')}
+      />
+
+      <ConfirmDialog
+        open={deletePlayerId !== null}
+        onClose={() => setDeletePlayerId(null)}
+        onConfirm={() => {
+          if (deletePlayerId) dispatch({ type: 'DELETE_DATABASE_PLAYER', payload: { databasePlayerId: deletePlayerId } })
+          setDeletePlayerId(null)
+        }}
+        title={t('rankings.deletePlayer')}
+        message={t('rankings.deletePlayerMessage', { name: deletePlayerId ? state.playerDatabase[deletePlayerId]?.name : '' })}
       />
     </div>
   )
