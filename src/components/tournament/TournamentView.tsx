@@ -132,7 +132,11 @@ export function TournamentView() {
             <span className="text-2xl">{gameConfig.icon}</span>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{tournament.name}</h2>
-              <p className="text-sm text-gray-500">{gameConfig.name}</p>
+              <p className="text-sm text-gray-500">
+                {gameConfig.name} — {t(`tournament.formatOptions.${tournament.format}`)}
+                {tournament.format === 'swiss_topcut' && ` (Top ${tournament.topCut})`}
+                {tournament.ageDivisionsEnabled && ` — ${t('tournament.ageDivisions')}`}
+              </p>
               {hasMultiPhase && (
                 <PhaseIndicator phases={tournament.phases} currentPhaseIndex={tournament.currentPhaseIndex} />
               )}
