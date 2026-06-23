@@ -9,9 +9,10 @@ interface RoundHistoryProps {
   rounds: Round[]
   players: Player[]
   tournamentId: string
+  showGameScores?: boolean
 }
 
-export function RoundHistory({ rounds, players, tournamentId }: RoundHistoryProps) {
+export function RoundHistory({ rounds, players, tournamentId, showGameScores = true }: RoundHistoryProps) {
   const { t } = useTranslation()
   const [expandedRound, setExpandedRound] = useState<number | null>(null)
 
@@ -53,6 +54,7 @@ export function RoundHistory({ rounds, players, tournamentId }: RoundHistoryProp
                   players={players}
                   tournamentId={tournamentId}
                   readonly
+                  showGameScores={showGameScores}
                 />
               ))}
             </div>

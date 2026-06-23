@@ -13,6 +13,7 @@ interface RoundPanelProps {
   canGenerate: boolean
   isLastRound: boolean
   isTopCut?: boolean
+  showGameScores?: boolean
 }
 
 export function RoundPanel({
@@ -22,6 +23,7 @@ export function RoundPanel({
   canGenerate,
   isLastRound,
   isTopCut = false,
+  showGameScores = true,
 }: RoundPanelProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
@@ -96,6 +98,7 @@ export function RoundPanel({
             tournamentId={tournamentId}
             readonly={round.isComplete}
             hideDrawOption={isTopCut}
+            showGameScores={showGameScores}
             selectedPlayerId={selectedPlayer?.playerId ?? null}
             onPlayerClick={swapEnabled ? handlePlayerClick : undefined}
           />

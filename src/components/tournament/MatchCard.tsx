@@ -14,11 +14,12 @@ interface MatchCardProps {
   tournamentId: string
   readonly?: boolean
   hideDrawOption?: boolean
+  showGameScores?: boolean
   selectedPlayerId?: string | null
   onPlayerClick?: (matchId: string, playerId: string) => void
 }
 
-export function MatchCard({ match, players, tournamentId, readonly, hideDrawOption, selectedPlayerId, onPlayerClick }: MatchCardProps) {
+export function MatchCard({ match, players, tournamentId, readonly, hideDrawOption, showGameScores = true, selectedPlayerId, onPlayerClick }: MatchCardProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
   const [p1Games, setP1Games] = useState<string>(match.player1Games?.toString() ?? '')
@@ -71,7 +72,7 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
             >
               {player1?.name}
             </span>
-            {hasGameScores && (
+            {showGameScores && hasGameScores && (
               <span className="text-xs font-semibold text-gray-500">{match.player1Games}-{match.player2Games}</span>
             )}
             <span className="text-sm text-gray-400">{t('match.vs')}</span>
@@ -105,28 +106,30 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
 
       {!readonly && (
         <div className="mt-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">{t('match.games')}:</label>
-            <input
-              type="number"
-              min={0}
-              max={9}
-              value={p1Games}
-              onChange={e => setP1Games(e.target.value)}
-              className="w-10 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
-              placeholder="0"
-            />
-            <span className="text-xs text-gray-400">-</span>
-            <input
-              type="number"
-              min={0}
-              max={9}
-              value={p2Games}
-              onChange={e => setP2Games(e.target.value)}
-              className="w-10 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
-              placeholder="0"
-            />
-          </div>
+          {showGameScores && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">{t('match.games')}:</label>
+              <input
+                type="number"
+                min={0}
+                max={9}
+                value={p1Games}
+                onChange={e => setP1Games(e.target.value)}
+                className="w-10 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="0"
+              />
+              <span className="text-xs text-gray-400">-</span>
+              <input
+                type="number"
+                min={0}
+                max={9}
+                value={p2Games}
+                onChange={e => setP2Games(e.target.value)}
+                className="w-10 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
+                placeholder="0"
+              />
+            </div>
+          )}
           <div className="flex gap-2">
             <Button
               size="sm"

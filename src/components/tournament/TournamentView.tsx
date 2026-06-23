@@ -272,6 +272,7 @@ export function TournamentView() {
             canGenerate={canGenerate}
             isLastRound={isLastRound}
             isTopCut={isElimFormat}
+            showGameScores={gameConfig.tiebreakers.useGameWinPct}
           />
         )}
         {activeTab === 'standings' && (
@@ -338,6 +339,7 @@ export function TournamentView() {
             rounds={tournament.rounds}
             players={tournament.players}
             tournamentId={tournament.id}
+            showGameScores={gameConfig.tiebreakers.useGameWinPct}
           />
         )}
         {activeTab === 'elo' && (
