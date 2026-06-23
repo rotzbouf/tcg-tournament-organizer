@@ -68,7 +68,8 @@ const T={
     dateOfBirth:'Date of Birth',playerId:'Player ID',
     optional:'optional',playerCount:'Players',
     callJudge:'Call Judge',judgeCalled:'Judge has been called!',
-    reportToTO:'Report results to the Tournament Organizer'},
+    reportToTO:'Report results to the Tournament Organizer',
+    dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
     games:'Spiele',noData:'Laden...',
@@ -80,7 +81,8 @@ const T={
     dateOfBirth:'Geburtsdatum',playerId:'Spieler-ID',
     optional:'optional',playerCount:'Spieler',
     callJudge:'Judge rufen',judgeCalled:'Judge wurde gerufen!',
-    reportToTO:'Ergebnisse beim Turnierleiter melden'}
+    reportToTO:'Ergebnisse beim Turnierleiter melden',
+    dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
@@ -171,14 +173,20 @@ function getMyMatch(){
   return match?{match,playerId:me.id,playerName:me.name}:null;
 }
 
+function getMyPlayer(){
+  if(!session||!tournament)return null;
+  return tournament.players.find(p=>p.name.toLowerCase()===session.fullName.toLowerCase())||null;
+}
+
 function renderPairings(el){
   const round=tournament.rounds[tournament.rounds.length-1];
   if(!round){el.innerHTML='<p>—</p>';return}
   el.innerHTML=`<div class="filter"><input type="text" id="pf" placeholder="${t('filter')}" oninput="filterPairings()"></div><div id="ml"></div>
     <p style="margin-top:12px;text-align:center;font-size:12px;color:#94a3b8">${t('reportToTO')}</p>
-    <div id="jc"></div>`;
+    <div id="jc"></div><div id="dp"></div>`;
   filterPairings();
   renderJudgeButton();
+  renderDropButton();
 }
 
 function filterPairings(){
@@ -203,6 +211,20 @@ function renderJudgeButton(){
   const myInfo=getMyMatch();
   if(!myInfo){jc.innerHTML='';return}
   jc.innerHTML=`<button class="judge" onclick="callJudge()">${t('callJudge')}</button><div id="jm" class="msg"></div>`;
+}
+
+function renderDropButton(){
+  const dp=document.getElementById('dp');if(!dp)return;
+  const me=getMyPlayer();
+  if(!me||me.droppedInRound!==null){dp.innerHTML=me&&me.droppedInRound!==null?`<p style="margin-top:12px;text-align:center;font-size:13px;color:#dc2626;font-weight:600">${t('dropped')}</p>`:'';return}
+  if(tournament.status!=='in_progress'&&tournament.status!=='top_cut'){dp.innerHTML='';return}
+  dp.innerHTML=`<button class="secondary" style="margin-top:12px;color:#dc2626;border-color:#dc2626" onclick="doDrop('${me.id}')">${t('dropOut')}</button>`;
+}
+
+async function doDrop(playerId){
+  if(!confirm(t('dropConfirm')))return;
+  await post('/api/players/'+playerId+'/drop',{});
+  needsFullRender=true;
 }
 
 function renderStandings(el){

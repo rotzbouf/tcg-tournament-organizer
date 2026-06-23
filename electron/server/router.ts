@@ -108,6 +108,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return
   }
 
+  const dropMatch = reqPath.match(/^\/api\/players\/([^/]+)\/drop$/)
+  if (dropMatch && req.method === 'POST') {
+    dispatchToRenderer({
+      type: 'DROP_PLAYER',
+      payload: { tournamentId: boundTournamentId, playerId: dropMatch[1] },
+    })
+    jsonResponse(res, { ok: true })
+    return
+  }
+
   if (reqPath === '/api/judge-call' && req.method === 'POST') {
     readBody(req, (body) => {
       const { playerName, tableNumber } = body as { playerName?: string; tableNumber?: number }
