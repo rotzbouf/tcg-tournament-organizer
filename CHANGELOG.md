@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.1-beta] - 2026-06-23
+## [1.3.1] - 2026-06-23
 
 ### Added
 - **Custom-Notiz im Penalty-System** — Neue Option "Notiz" als Strafart, rein zur Dokumentation ohne Spieleffekt
