@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.0-beta] - 2026-06-23
+## [1.3.0] - 2026-06-23
 
 ### Added
 - **Disney Lorcana** — Neues TCG mit OMW%/GW%/OGW%-Tiebreaker (33% Floor), Minimum 4 Swiss-Runden
