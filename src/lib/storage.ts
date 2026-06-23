@@ -45,6 +45,9 @@ export function loadState(): AppState | null {
       if (t.discordWebhookUrl === undefined) {
         t.discordWebhookUrl = null
       }
+      if (typeof t.eloApplied !== 'boolean') {
+        t.eloApplied = t.status === 'completed'
+      }
       if (Array.isArray(t.players)) {
         for (const p of t.players as Record<string, unknown>[]) {
           if (p.decklist === undefined) p.decklist = null

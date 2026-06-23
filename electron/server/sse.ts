@@ -3,7 +3,7 @@ import http from 'node:http'
 const clients = new Set<http.ServerResponse>()
 let keepaliveInterval: ReturnType<typeof setInterval> | null = null
 
-export function addClient(res: http.ServerResponse): void {
+export function addClient(res: http.ServerResponse, initialData?: unknown): void {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -11,6 +11,9 @@ export function addClient(res: http.ServerResponse): void {
     'Access-Control-Allow-Origin': '*',
   })
   res.write(':ok\n\n')
+  if (initialData) {
+    res.write(`data: ${JSON.stringify(initialData)}\n\n`)
+  }
   clients.add(res)
   res.on('close', () => clients.delete(res))
 

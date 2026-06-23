@@ -60,7 +60,9 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   }
 
   if (reqPath === '/api/events' && req.method === 'GET') {
-    addClient(res)
+    const state = getCurrentState()
+    const timers = getCurrentTimers()
+    addClient(res, state ? { type: 'state', state, timers } : undefined)
     return
   }
 

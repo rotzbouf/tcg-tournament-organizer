@@ -86,7 +86,7 @@ const T={
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
-let tournament=null,standings=null,timers=null,activeTab='pairings';
+let tournament=null,standings=null,timers=null,activeTab='pairings',boundTournamentId=null;
 let session=JSON.parse(localStorage.getItem('tcg-session')||'null');
 let needsFullRender=true;
 const app=document.getElementById('app');
@@ -97,24 +97,23 @@ async function post(url,body){return fetch(API+url,{method:'POST',headers:{'Cont
 
 function connectSSE(){
   const es=new EventSource(API+'/api/events');
-  es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.timers)timers=d.timers;if(d.state)loadFromState(d.state);scheduleRender()}catch{}};
+  es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.timers)timers=d.timers;if(d.state)loadFromState(d.state);needsFullRender=true}catch{}};
 }
 
 function loadFromState(state){
   if(!state||!state.tournaments)return;
-  const ids=Object.keys(state.tournaments);
-  if(ids.length>0)tournament=state.tournaments[ids[0]];
-}
-
-function scheduleRender(){
-  if(activeTab==='register')return;
-  needsFullRender=true;
+  if(boundTournamentId&&state.tournaments[boundTournamentId]){
+    tournament=state.tournaments[boundTournamentId];
+  }else{
+    const ids=Object.keys(state.tournaments);
+    if(ids.length>0)tournament=state.tournaments[ids[0]];
+  }
 }
 
 async function init(){
   try{
     const d=await fetch(API+'/api/tournament').then(r=>r.json());
-    if(d.tournament)tournament=d.tournament;
+    if(d.tournament){tournament=d.tournament;boundTournamentId=d.tournament.id}
     if(d.standings)standings=d.standings;
     if(d.timers)timers=d.timers;
   }catch{}

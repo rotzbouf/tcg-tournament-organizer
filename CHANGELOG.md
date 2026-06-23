@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.8-beta] - 2026-06-23
+
+### Added
+- **QR-Code drucken** — Drucken-Button im QR-Code-Fenster, damit der QR-Code am Eventtag ausgedruckt im Shop ausgelegt werden kann
+- **Automatische Elo-Aktualisierung** — Elo-Wertung wird automatisch beim Turnierende angewendet, mit Schutz gegen doppelte Anwendung
+- **SSE Initial-State** — Mobile Seite erhält sofort den aktuellen Turnierstand beim Verbinden
+
+### Changed
+- Manueller "Elo aktualisieren"-Button entfernt (Missbrauchsschutz)
+- "Nächste Runde generieren"-Button nach Turnierende deaktiviert
+- Mobile Seite nutzt gebundene Turnier-ID statt erstes Turnier aus dem State
+
+### Fixed
+- Mobile Registrierungsseite konnte leer bleiben wenn der initiale API-Aufruf fehlschlug
+- SSE-Updates auf dem Registrierungs-Tab wurden komplett blockiert
+
 ## [1.2.7] - 2026-06-22
 
 ### Added

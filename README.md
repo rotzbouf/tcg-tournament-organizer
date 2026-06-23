@@ -18,6 +18,7 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Undo** — Aktionen rückgängig machen (Ctrl+Z)
 - **Bulk Import** — Spielerliste per Textarea einfügen
 - **Paarungen drucken** — Druckoptimierte Ansicht
+- **QR-Code drucken** — QR-Code für mobile Spielerregistrierung ausdrucken
 - **Tischnummern** — Automatische Nummerierung auf Match-Cards
 - **JSON Export/Import** — Turnierdaten speichern und laden
 - **Zweisprachig** — Deutsch und Englisch
@@ -92,6 +93,7 @@ npm run electron:build
 - Standard-Elo-Formel mit K=32 (neue Spieler) und K=16 (etablierte Spieler, 30+ Matches)
 - Persistente Spieler-Datenbank über alle Turniere
 - Turnier-History mit Elo-Verlauf pro Spieler
+- Automatische Anwendung beim Turnierende (einmalig, kein manueller Button)
 
 ## Lizenz
 
