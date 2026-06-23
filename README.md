@@ -19,6 +19,7 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Bulk Import** — Spielerliste per Textarea einfügen
 - **Paarungen drucken** — Druckoptimierte Ansicht
 - **QR-Code drucken** — QR-Code für mobile Spielerregistrierung ausdrucken
+- **Mobile Turnier-Navigation** — Registrierte Spieler können Paarungen und Rangliste direkt am Handy einsehen
 - **Tischnummern** — Automatische Nummerierung auf Match-Cards
 - **JSON Export/Import** — Turnierdaten speichern und laden
 - **Zweisprachig** — Deutsch und Englisch

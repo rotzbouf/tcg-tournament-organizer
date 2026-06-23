@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.9] - 2026-06-23
+
+### Added
+- **Navigation nach Registrierung** — Registrierte Spieler sehen sofort Paarungen- und Rangliste-Tabs auf der mobilen Seite
+
+### Changed
+- "Nicht du? Wechseln"-Button auf der mobilen Seite entfernt, um versehentliche Doppel-Registrierungen zu vermeiden
+
+### Fixed
+- Mobile Seite zeigte weiße Seite wegen Syntax-Fehler in Template-Literal
+
 ## [1.2.8-beta] - 2026-06-23
 
 ### Added
