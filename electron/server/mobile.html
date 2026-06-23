@@ -190,7 +190,7 @@ function filterPairings(){
     const gs=m.player1Games!=null?`<span class="score">${m.player1Games}-${m.player2Games}</span>`:'';
     const rb=m.result==='pending'?`<span class="badge badge-reg">${t('pending')}</span>`:m.result==='draw'?`<span class="badge" style="background:#fef3c7;color:#92400e">${t('draw')}</span>`:`<span class="badge badge-active">${esc(gn(m.result==='player1_win'?m.player1Id:m.player2Id))}</span>`;
     const isMyMatch=myInfo&&m.id===myInfo.match.id;
-    return`<div class="match${isMyMatch?' my-match':'"}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div></div>`;
+    return`<div class="match${isMyMatch?' my-match':''}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div></div>`;
   }).join('');
 }
 
