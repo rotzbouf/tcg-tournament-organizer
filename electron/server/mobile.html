@@ -64,7 +64,6 @@ const T={
     registeredAs:'Registered as',decklist:'Decklist',submit:'Submit',
     pasteDecklist:'Paste decklist (e.g. 3x Card Name)',
     decklistSaved:'Saved!',filter:'Filter by name...',
-    changePlayer:'Not you? Change',
     firstName:'First Name',lastName:'Last Name',
     dateOfBirth:'Date of Birth',playerId:'Player ID',
     optional:'optional',playerCount:'Players',
@@ -77,7 +76,6 @@ const T={
     registeredAs:'Registriert als',decklist:'Deckliste',submit:'Absenden',
     pasteDecklist:'Deckliste (z.B. 3x Kartenname)',
     decklistSaved:'Gespeichert!',filter:'Nach Name filtern...',
-    changePlayer:'Nicht du? Wechseln',
     firstName:'Vorname',lastName:'Nachname',
     dateOfBirth:'Geburtsdatum',playerId:'Spieler-ID',
     optional:'optional',playerCount:'Spieler',
@@ -128,12 +126,18 @@ function renderLoop(){
   requestAnimationFrame(renderLoop);
 }
 
+function isRegistered(){
+  if(!session||!tournament)return false;
+  return tournament.players.some(p=>p.name.toLowerCase()===session.fullName.toLowerCase());
+}
+
 function render(){
   if(!tournament){app.innerHTML=`<div class="header">TCG Tournament<button onclick="toggleLang()">${lang.toUpperCase()}</button></div><div class="container"><p>${t('noData')}</p></div>`;return}
   const isReg=tournament.status==='registration';
-  if(isReg&&activeTab!=='register')activeTab='register';
+  const registered=isRegistered();
+  if(isReg&&!registered&&activeTab!=='register')activeTab='register';
   if(!isReg&&activeTab==='register')activeTab='pairings';
-  const tabs=[{k:'pairings',l:t('pairings'),s:!isReg},{k:'standings',l:t('standings'),s:!isReg},{k:'register',l:t('register'),s:isReg}];
+  const tabs=[{k:'pairings',l:t('pairings'),s:!isReg||registered},{k:'standings',l:t('standings'),s:!isReg||registered},{k:'register',l:t('register'),s:isReg}];
   app.innerHTML=`<div class="header"><span>${esc(tournament.name)}</span><button onclick="toggleLang()">${lang.toUpperCase()}</button></div>
     <div class="container">
       <div class="tabs">${tabs.filter(x=>x.s).map(x=>`<div class="tab ${activeTab===x.k?'active':''}" onclick="setTab('${x.k}')">${x.l}</div>`).join('')}</div>
@@ -224,8 +228,7 @@ function renderRegister(el){
       <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">${t('decklist')}</h3>
       <textarea id="dt" placeholder="${t('pasteDecklist')}">${myPlayer.decklist?myPlayer.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n'):''}</textarea>
       <button class="primary" onclick="doDl('${myPlayer.id}')">${t('submit')}</button>
-      <div id="dm" class="msg"></div>
-      <button class="secondary" onclick="changeReg()">${t('changePlayer')}</button>`;
+      <div id="dm" class="msg"></div>`;
     return;
   }
 
@@ -284,12 +287,6 @@ async function doDl(playerId){
   const txt=document.getElementById('dt')?.value;if(!txt)return;
   await post('/api/players/'+playerId+'/decklist',{decklistText:txt});
   document.getElementById('dm').textContent=t('decklistSaved');
-}
-
-function changeReg(){
-  session=null;
-  localStorage.removeItem('tcg-session');
-  needsFullRender=true;
 }
 
 function setTab(k){activeTab=k;needsFullRender=true}
