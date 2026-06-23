@@ -16,6 +16,7 @@ export interface GameConfig {
   icon: string
   tiebreakers: TiebreakerConfig
   hasAgeDivisions: boolean
+  minSwissRounds: number
 }
 
 export const GAME_CONFIG: Record<GameType, GameConfig> = {
@@ -26,6 +27,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     icon: '🃏',
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.25, useGameWinPct: false, useHeadToHead: true },
     hasAgeDivisions: false,
+    minSwissRounds: 0,
   },
   pokemon: {
     name: 'Pokémon TCG',
@@ -34,6 +36,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     icon: '⚡',
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.25, useGameWinPct: false, useHeadToHead: true },
     hasAgeDivisions: true,
+    minSwissRounds: 0,
   },
   star_wars_unlimited: {
     name: 'Star Wars: Unlimited',
@@ -42,6 +45,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     icon: '⭐',
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
     hasAgeDivisions: false,
+    minSwissRounds: 0,
   },
   riftbound: {
     name: 'Riftbound',
@@ -50,5 +54,33 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     icon: '🌀',
     tiebreakers: { system: 'chess', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false },
     hasAgeDivisions: false,
+    minSwissRounds: 0,
+  },
+  lorcana: {
+    name: 'Disney Lorcana',
+    color: '#0D47A1',
+    accent: '#E3F2FD',
+    icon: '✨',
+    tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
+    hasAgeDivisions: false,
+    minSwissRounds: 4,
+  },
+  altered: {
+    name: 'Altered',
+    color: '#6A1B9A',
+    accent: '#F3E5F5',
+    icon: '🔮',
+    tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
+    hasAgeDivisions: false,
+    minSwissRounds: 0,
+  },
+  mtg: {
+    name: 'Magic: The Gathering',
+    color: '#BF360C',
+    accent: '#FBE9E7',
+    icon: '🔥',
+    tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
+    hasAgeDivisions: false,
+    minSwissRounds: 4,
   },
 }

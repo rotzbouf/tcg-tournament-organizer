@@ -11,7 +11,7 @@ interface ExportData {
 const CURRENT_VERSION = '1.2.0'
 const APP_NAME = 'TCG Tournament Organizer'
 
-const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound']
+const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
 const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'top_cut', 'completed']
 const VALID_FORMATS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
 

@@ -4,7 +4,7 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 
 ## Features
 
-- **Mehrere Turniere gleichzeitig** — Yu-Gi-Oh!, Pokémon TCG, Star Wars: Unlimited, Riftbound
+- **Mehrere Turniere gleichzeitig** — Yu-Gi-Oh!, Pokémon TCG, Star Wars: Unlimited, Riftbound, Disney Lorcana, Altered, Magic: The Gathering
 - **4 Turnier-Formate** — Swiss, Swiss + Top Cut, Double Elimination, Round Robin
 - **Multi-Phase-Turniere** — Mehrere Phasen hintereinander (z.B. Round Robin → Swiss → Top Cut)
 - **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation

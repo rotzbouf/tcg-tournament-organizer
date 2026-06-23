@@ -13,6 +13,7 @@ import { calculateStandings } from '@/engine/standings'
 import { calculateEloChanges } from '@/engine/elo'
 import { EloHistoryEntry } from '@/types/database'
 import { getPlayerDivision, DIVISION_ORDER, AgeDivision } from '@/lib/ageDivision'
+import { GAME_CONFIG } from '@/lib/gameConfig'
 
 export const initialState: AppState = {
   tournaments: {},
@@ -62,11 +63,11 @@ function generateDivisionPairings(players: Player[], rounds: Round[], roundNumbe
   return renumberTables(allMatches)
 }
 
-function calculateDivisionTotalRounds(players: Player[], createdAt: string): number {
+function calculateDivisionTotalRounds(players: Player[], createdAt: string, minRounds = 0): number {
   const groups = groupByDivision(players, createdAt)
   let max = 0
   for (const divPlayers of groups.values()) {
-    if (divPlayers.length >= 2) max = Math.max(max, calculateTotalRounds(divPlayers.length))
+    if (divPlayers.length >= 2) max = Math.max(max, calculateTotalRounds(divPlayers.length, minRounds))
   }
   return max
 }
@@ -181,9 +182,10 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       }
 
       const useDivisions = tournament.ageDivisionsEnabled
+      const minRounds = GAME_CONFIG[tournament.game].minSwissRounds
       const totalRounds = useDivisions
-        ? calculateDivisionTotalRounds(tournament.players, tournament.createdAt)
-        : calculateTotalRounds(tournament.players.length)
+        ? calculateDivisionTotalRounds(tournament.players, tournament.createdAt, minRounds)
+        : calculateTotalRounds(tournament.players.length, minRounds)
       const matches = useDivisions
         ? generateDivisionFirstRoundPairings(tournament.players, tournament.createdAt)
         : generateFirstRoundPairings(tournament.players)
@@ -554,7 +556,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const activePlayers = updatedPlayers.filter(p => p.droppedInRound === null)
         matches = generateFirstRoundPairings(activePlayers)
         phase = 'swiss'
-        totalRounds = tournament.currentRound + calculateTotalRounds(activePlayers.length)
+        totalRounds = tournament.currentRound + calculateTotalRounds(activePlayers.length, GAME_CONFIG[tournament.game].minSwissRounds)
       } else {
         const activeIds = updatedPlayers.filter(p => p.droppedInRound === null).map(p => p.id)
         const clamped = nearestPowerOfTwo(activeIds.length)

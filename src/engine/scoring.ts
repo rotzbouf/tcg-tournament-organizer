@@ -68,9 +68,9 @@ export function getPlayerRecord(playerId: string, rounds: Round[]): { wins: numb
   return { wins, losses, draws }
 }
 
-export function calculateTotalRounds(playerCount: number): number {
+export function calculateTotalRounds(playerCount: number, minRounds = 0): number {
   if (playerCount <= 1) return 0
-  return Math.ceil(Math.log2(playerCount))
+  return Math.max(Math.ceil(Math.log2(playerCount)), minRounds)
 }
 
 export function calculateTopCutSize(playerCount: number): 0 | 4 | 8 | 16 | 32 {
