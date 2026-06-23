@@ -31,6 +31,7 @@ export interface Tournament {
   grandFinalReset: boolean
   ageDivisionsEnabled: boolean
   decklistVisibility: DecklistVisibility
+  powerPairings: boolean
   discordWebhookUrl: string | null
   eloApplied: boolean
   createdAt: string

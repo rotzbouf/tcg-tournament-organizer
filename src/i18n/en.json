@@ -54,7 +54,9 @@
     "ageDivisionsHint": "Players are divided by birth year into divisions and paired separately",
     "edit": "Edit Tournament",
     "minPlayers": "At least 2 players required",
-    "notFound": "Tournament not found"
+    "notFound": "Tournament not found",
+    "powerPairings": "Power Pairings (pair last round by tiebreaker)",
+    "powerPairingsHint": "In the last Swiss round, players within a point bracket are paired by tiebreaker rank"
   },
   "players": {
     "title": "Players",
@@ -233,6 +235,13 @@
   "export": {
     "csv": "Export CSV",
     "pdf": "Export PDF"
+  },
+  "template": {
+    "title": "Template",
+    "none": "No template",
+    "save": "Save as template",
+    "name": "Template name",
+    "delete": "Delete template"
   },
   "common": {
     "cancel": "Cancel",

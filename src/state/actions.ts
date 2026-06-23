@@ -4,9 +4,10 @@ import { PenaltyType } from '@/types/penalty'
 import { TournamentPhase } from '@/types/phase'
 import { DecklistEntry } from '@/types/player'
 import { DatabasePlayer } from '@/types/database'
+import { TournamentTemplate } from '@/types/template'
 
 export type TournamentAction =
-  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility } }
+  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string; playerId?: string | null; dateOfBirth?: string | null } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }
@@ -29,9 +30,12 @@ export type TournamentAction =
   | { type: 'UPDATE_DATABASE_PLAYER'; payload: { databasePlayerId: string; playerId?: string | null; name?: string } }
   | { type: 'DELETE_DATABASE_PLAYER'; payload: { databasePlayerId: string } }
   | { type: 'SWAP_PLAYERS'; payload: { tournamentId: string; matchId1: string; playerId1: string; matchId2: string; playerId2: string } }
+  | { type: 'SAVE_TEMPLATE'; payload: Omit<TournamentTemplate, 'id'> }
+  | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {
   tournaments: Record<string, import('@/types/tournament').Tournament>
   playerDatabase: Record<string, DatabasePlayer>
+  templates: TournamentTemplate[]
 }

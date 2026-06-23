@@ -5,7 +5,7 @@ import { Match, Round } from '@/types/round'
 import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds, calculateTopCutSize } from '@/engine/scoring'
-import { generatePairings, generateFirstRoundPairings } from '@/engine/swiss'
+import { generatePairings, generatePowerPairings, generateFirstRoundPairings } from '@/engine/swiss'
 import { generateTopCutRound } from '@/engine/topcut'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
@@ -18,6 +18,7 @@ import { GAME_CONFIG } from '@/lib/gameConfig'
 export const initialState: AppState = {
   tournaments: {},
   playerDatabase: {},
+  templates: [],
 }
 
 function makeRound(partial: Omit<Round, 'phaseIndex'>, phaseIndex: number): Round {
@@ -63,6 +64,20 @@ function generateDivisionPairings(players: Player[], rounds: Round[], roundNumbe
   return renumberTables(allMatches)
 }
 
+function generateDivisionPowerPairings(players: Player[], rounds: Round[], roundNumber: number, createdAt: string, game: string): Match[] {
+  const groups = groupByDivision(players, createdAt)
+  const allMatches: Match[] = []
+  for (const div of DIVISION_ORDER) {
+    const divPlayers = groups.get(div)!
+    if (divPlayers.length < 2) continue
+    const divPlayerIds = new Set(divPlayers.map(p => p.id))
+    const divRounds = rounds.map(r => ({ ...r, matches: r.matches.filter(m => divPlayerIds.has(m.player1Id)) }))
+    const divStandings = calculateStandings(divPlayers, divRounds, game as never)
+    allMatches.push(...generatePowerPairings(divPlayers, divRounds, roundNumber, divStandings))
+  }
+  return renumberTables(allMatches)
+}
+
 function calculateDivisionTotalRounds(players: Player[], createdAt: string, minRounds = 0): number {
   const groups = groupByDivision(players, createdAt)
   let max = 0
@@ -95,6 +110,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         grandFinalReset: action.payload.grandFinalReset ?? false,
         ageDivisionsEnabled: action.payload.ageDivisionsEnabled ?? false,
         decklistVisibility: action.payload.decklistVisibility ?? 'hidden',
+        powerPairings: action.payload.powerPairings ?? true,
         discordWebhookUrl: null,
         eloApplied: false,
         createdAt: now,
@@ -238,9 +254,19 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (tournament.status === 'in_progress') {
         if (tournament.currentRound >= tournament.totalRounds) return state
         const nextRoundNumber = tournament.currentRound + 1
-        const matches = tournament.ageDivisionsEnabled
-          ? generateDivisionPairings(tournament.players, tournament.rounds, nextRoundNumber, tournament.createdAt)
-          : generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
+        const isLastRound = nextRoundNumber === tournament.totalRounds
+        const usePowerPairings = isLastRound && tournament.powerPairings
+        let matches: Match[]
+        if (tournament.ageDivisionsEnabled) {
+          matches = usePowerPairings
+            ? generateDivisionPowerPairings(tournament.players, tournament.rounds, nextRoundNumber, tournament.createdAt, tournament.game)
+            : generateDivisionPairings(tournament.players, tournament.rounds, nextRoundNumber, tournament.createdAt)
+        } else if (usePowerPairings) {
+          const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
+          matches = generatePowerPairings(tournament.players, tournament.rounds, nextRoundNumber, standings)
+        } else {
+          matches = generatePairings(tournament.players, tournament.rounds, nextRoundNumber)
+        }
         const updatedPlayers = tournament.players.map(p => {
           const hasBye = p.hasBye || matches.some(m => m.isBye && m.player1Id === p.id)
           return hasBye ? { ...p, hasBye: true } : p
@@ -761,8 +787,17 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       return updateTournament(state, action.payload.tournamentId, { rounds })
     }
 
+    case 'SAVE_TEMPLATE': {
+      const template = { ...action.payload, id: generateId() }
+      return { ...state, templates: [...(state.templates ?? []), template] }
+    }
+
+    case 'DELETE_TEMPLATE': {
+      return { ...state, templates: (state.templates ?? []).filter(t => t.id !== action.payload.templateId) }
+    }
+
     case 'LOAD_STATE': {
-      return action.payload
+      return { ...action.payload, templates: action.payload.templates ?? [] }
     }
 
     default:

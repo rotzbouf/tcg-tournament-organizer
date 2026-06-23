@@ -54,7 +54,9 @@
     "ageDivisionsHint": "Spieler werden nach Geburtsjahr in Divisionen eingeteilt und getrennt gepaart",
     "edit": "Turnier bearbeiten",
     "minPlayers": "Mindestens 2 Spieler benötigt",
-    "notFound": "Turnier nicht gefunden"
+    "notFound": "Turnier nicht gefunden",
+    "powerPairings": "Power Pairings (letzte Runde nach Tiebreaker paaren)",
+    "powerPairingsHint": "In der letzten Swiss-Runde werden Spieler innerhalb eines Punktebrackets nach Tiebreaker-Rang gepaart"
   },
   "players": {
     "title": "Spieler",
@@ -233,6 +235,13 @@
   "export": {
     "csv": "CSV exportieren",
     "pdf": "PDF exportieren"
+  },
+  "template": {
+    "title": "Vorlage",
+    "none": "Keine Vorlage",
+    "save": "Als Vorlage speichern",
+    "name": "Vorlagenname",
+    "delete": "Vorlage löschen"
   },
   "common": {
     "cancel": "Abbrechen",

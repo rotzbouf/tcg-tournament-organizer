@@ -1,5 +1,6 @@
 import { Player } from '@/types/player'
 import { Match, Round } from '@/types/round'
+import { Standing } from '@/types/standing'
 import { calculateMatchPoints } from './scoring'
 import { generateId } from '@/lib/utils'
 
@@ -210,6 +211,39 @@ function shuffleArray<T>(arr: T[]): T[] {
     ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
   return shuffled
+}
+
+export function generatePowerPairings(
+  players: Player[],
+  rounds: Round[],
+  currentRoundNumber: number,
+  standings: Standing[]
+): Match[] {
+  const activePlayers = players.filter(p => p.droppedInRound === null)
+  if (activePlayers.length < 2) return []
+
+  const standingsRank = new Map(standings.map(s => [s.playerId, s.rank]))
+  const candidates = buildCandidates(activePlayers, rounds)
+  candidates.sort((a, b) => {
+    if (b.matchPoints !== a.matchPoints) return b.matchPoints - a.matchPoints
+    return (standingsRank.get(a.playerId) ?? 999) - (standingsRank.get(b.playerId) ?? 999)
+  })
+
+  const matches: Match[] = []
+  let pool = [...candidates]
+
+  if (pool.length % 2 !== 0) {
+    const byeMatch = assignBye(pool, currentRoundNumber)
+    if (byeMatch) {
+      matches.push(byeMatch.match)
+      pool = pool.filter(c => c.playerId !== byeMatch.byePlayerId)
+    }
+  }
+
+  const paired = pairPlayers(pool, currentRoundNumber)
+  matches.push(...paired)
+
+  return assignTableNumbers(matches)
 }
 
 export function generateFirstRoundPairings(players: Player[]): Match[] {
