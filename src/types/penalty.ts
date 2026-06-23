@@ -1,4 +1,4 @@
-export type PenaltyType = 'warning' | 'game_loss' | 'match_loss' | 'disqualification'
+export type PenaltyType = 'warning' | 'game_loss' | 'match_loss' | 'disqualification' | 'note'
 
 export interface Penalty {
   id: string

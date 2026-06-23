@@ -15,7 +15,7 @@ interface PenaltyDialogProps {
   players: Player[]
 }
 
-const PENALTY_TYPES: PenaltyType[] = ['warning', 'game_loss', 'match_loss', 'disqualification']
+const PENALTY_TYPES: PenaltyType[] = ['warning', 'game_loss', 'match_loss', 'disqualification', 'note']
 
 export function PenaltyDialog({ open, onClose, tournamentId, players }: PenaltyDialogProps) {
   const { t } = useTranslation()

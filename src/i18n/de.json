@@ -140,7 +140,8 @@
       "warning": "Verwarnung",
       "game_loss": "Spielverlust",
       "match_loss": "Matchverlust",
-      "disqualification": "Disqualifikation"
+      "disqualification": "Disqualifikation",
+      "note": "Notiz"
     },
     "reason": "Grund",
     "remove": "Entfernen",

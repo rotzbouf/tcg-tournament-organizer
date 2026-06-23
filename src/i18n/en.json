@@ -140,7 +140,8 @@
       "warning": "Warning",
       "game_loss": "Game Loss",
       "match_loss": "Match Loss",
-      "disqualification": "Disqualification"
+      "disqualification": "Disqualification",
+      "note": "Note"
     },
     "reason": "Reason",
     "remove": "Remove",

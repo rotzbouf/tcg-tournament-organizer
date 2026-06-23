@@ -16,6 +16,7 @@ const penaltyBadgeVariant = {
   game_loss: 'info' as const,
   match_loss: 'default' as const,
   disqualification: 'success' as const,
+  note: 'default' as const,
 }
 
 export function PenaltyList({ tournamentId, penalties, players }: PenaltyListProps) {
