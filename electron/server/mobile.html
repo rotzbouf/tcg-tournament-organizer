@@ -183,10 +183,9 @@ function renderPairings(el){
   if(!round){el.innerHTML='<p>—</p>';return}
   el.innerHTML=`<div class="filter"><input type="text" id="pf" placeholder="${t('filter')}" oninput="filterPairings()"></div><div id="ml"></div>
     <p style="margin-top:12px;text-align:center;font-size:12px;color:#94a3b8">${t('reportToTO')}</p>
-    <div id="jc"></div><div id="dp"></div>`;
+    <div id="jc"></div>`;
   filterPairings();
   renderJudgeButton();
-  renderDropButton();
 }
 
 function filterPairings(){
@@ -230,7 +229,8 @@ async function doDrop(playerId){
 function renderStandings(el){
   fetch(API+'/api/tournament').then(r=>r.json()).then(d=>{
     if(!d.standings)return;
-    el.innerHTML=`<table class="standings-table"><thead><tr><th>${t('rank')}</th><th>${t('player')}</th><th>${t('points')}</th><th>${t('w')}</th><th>${t('l')}</th><th>${t('d')}</th><th>${t('omw')}</th></tr></thead><tbody>${d.standings.map(s=>`<tr${s.dropped?' style="opacity:.4"':''}><td>${s.rank}</td><td>${esc(s.playerName)}</td><td><b>${s.matchPoints}</b></td><td>${s.wins}</td><td>${s.losses}</td><td>${s.draws}</td><td>${(s.opponentMatchWinPct*100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
+    el.innerHTML=`<table class="standings-table"><thead><tr><th>${t('rank')}</th><th>${t('player')}</th><th>${t('points')}</th><th>${t('w')}</th><th>${t('l')}</th><th>${t('d')}</th><th>${t('omw')}</th></tr></thead><tbody>${d.standings.map(s=>`<tr${s.dropped?' style="opacity:.4"':''}><td>${s.rank}</td><td>${esc(s.playerName)}</td><td><b>${s.matchPoints}</b></td><td>${s.wins}</td><td>${s.losses}</td><td>${s.draws}</td><td>${(s.opponentMatchWinPct*100).toFixed(1)}%</td></tr>`).join('')}</tbody></table><div id="dp"></div>`;
+    renderDropButton();
   });
 }
 
