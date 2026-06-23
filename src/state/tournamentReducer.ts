@@ -11,7 +11,7 @@ import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roun
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
 import { calculateEloChanges } from '@/engine/elo'
-import { EloHistoryEntry } from '@/types/database'
+import { DatabasePenalty, EloHistoryEntry } from '@/types/database'
 import { getPlayerDivision, DIVISION_ORDER, AgeDivision } from '@/lib/ageDivision'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
@@ -94,6 +94,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         topCut: action.payload.topCut,
         grandFinalReset: action.payload.grandFinalReset ?? false,
         ageDivisionsEnabled: action.payload.ageDivisionsEnabled ?? false,
+        decklistVisibility: action.payload.decklistVisibility ?? 'hidden',
         discordWebhookUrl: null,
         eloApplied: false,
         createdAt: now,
@@ -391,6 +392,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
             matchesPlayed: s.wins + s.losses + s.draws,
             tournamentsPlayed: 1,
             history: [historyEntry],
+            penalties: [],
             lastUpdated: now,
           }
         }
@@ -436,6 +438,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament) return state
       const updates: Partial<Tournament> = {}
       if (action.payload.discordWebhookUrl !== undefined) updates.discordWebhookUrl = action.payload.discordWebhookUrl
+      if (action.payload.decklistVisibility !== undefined) updates.decklistVisibility = action.payload.decklistVisibility
       if (tournament.status === 'registration') {
         if (action.payload.name !== undefined) updates.name = action.payload.name
         if (action.payload.roundTimeMinutes !== undefined) updates.roundTimeMinutes = action.payload.roundTimeMinutes
@@ -510,7 +513,33 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         }
       }
 
-      return updateTournament(state, action.payload.tournamentId, updates)
+      let updatedState = updateTournament(state, action.payload.tournamentId, updates)
+
+      if (action.payload.type !== 'note') {
+        const player = tournament.players.find(p => p.id === action.payload.playerId)
+        if (player) {
+          const nameKey = player.name.toLowerCase()
+          const dbPlayer = Object.values(updatedState.playerDatabase).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
+          if (dbPlayer) {
+            const dbPenalty: DatabasePenalty = {
+              tournamentId: tournament.id,
+              tournamentName: tournament.name,
+              date: penalty.issuedAt,
+              type: action.payload.type,
+              reason: action.payload.reason,
+            }
+            updatedState = {
+              ...updatedState,
+              playerDatabase: {
+                ...updatedState.playerDatabase,
+                [dbPlayer.id]: { ...dbPlayer, penalties: [...(dbPlayer.penalties ?? []), dbPenalty], lastUpdated: penalty.issuedAt },
+              },
+            }
+          }
+        }
+      }
+
+      return updatedState
     }
 
     case 'REMOVE_PENALTY': {
@@ -626,6 +655,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
             matchesPlayed: s.wins + s.losses + s.draws,
             tournamentsPlayed: 1,
             history: [historyEntry],
+            penalties: [],
             lastUpdated: now,
           }
         }
@@ -654,7 +684,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           continue
         }
         if (keepNames) {
-          updatedDb[id] = { ...player, elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [] }
+          updatedDb[id] = { ...player, elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [], penalties: player.penalties ?? [] }
         }
       }
       return { ...state, playerDatabase: updatedDb }
@@ -696,6 +726,39 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           [dbPlayer.id]: { ...dbPlayer, ...updates, lastUpdated: new Date().toISOString() },
         },
       }
+    }
+
+    case 'SWAP_PLAYERS': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || (tournament.status !== 'in_progress' && tournament.status !== 'top_cut')) return state
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      if (!currentRound || currentRound.isComplete) return state
+      const match1 = currentRound.matches.find(m => m.id === action.payload.matchId1)
+      const match2 = currentRound.matches.find(m => m.id === action.payload.matchId2)
+      if (!match1 || !match2 || match1.isBye || match2.isBye) return state
+      if (match1.id === match2.id) return state
+
+      const { playerId1, playerId2 } = action.payload
+
+      const swapInMatch = (match: Match, oldId: string, newId: string): Match => {
+        if (match.player1Id === oldId) return { ...match, player1Id: newId, result: 'pending', player1Games: undefined, player2Games: undefined }
+        if (match.player2Id === oldId) return { ...match, player2Id: newId, result: 'pending', player1Games: undefined, player2Games: undefined }
+        return match
+      }
+
+      const rounds = tournament.rounds.map(round =>
+        round.roundNumber === currentRound.roundNumber
+          ? {
+              ...round,
+              matches: round.matches.map(m => {
+                if (m.id === match1.id) return swapInMatch(m, playerId1, playerId2)
+                if (m.id === match2.id) return swapInMatch(m, playerId2, playerId1)
+                return m
+              }),
+            }
+          : round
+      )
+      return updateTournament(state, action.payload.tournamentId, { rounds })
     }
 
     case 'LOAD_STATE': {

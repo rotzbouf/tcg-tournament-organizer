@@ -1,4 +1,4 @@
-import { GameType, TopCutSize, TournamentFormat } from '@/types/tournament'
+import { DecklistVisibility, GameType, TopCutSize, TournamentFormat } from '@/types/tournament'
 import { MatchResult } from '@/types/round'
 import { PenaltyType } from '@/types/penalty'
 import { TournamentPhase } from '@/types/phase'
@@ -6,7 +6,7 @@ import { DecklistEntry } from '@/types/player'
 import { DatabasePlayer } from '@/types/database'
 
 export type TournamentAction =
-  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean } }
+  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string; playerId?: string | null; dateOfBirth?: string | null } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }
@@ -17,7 +17,7 @@ export type TournamentAction =
   | { type: 'COMPLETE_ROUND'; payload: { tournamentId: string } }
   | { type: 'START_TOP_CUT'; payload: { tournamentId: string } }
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }
-  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; discordWebhookUrl?: string | null } }
+  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility } }
   | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
   | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName?: string | null; decklist?: DecklistEntry[] | null } }
   | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string } }
@@ -28,6 +28,7 @@ export type TournamentAction =
   | { type: 'ADD_FROM_DATABASE'; payload: { tournamentId: string; databasePlayerId: string } }
   | { type: 'UPDATE_DATABASE_PLAYER'; payload: { databasePlayerId: string; playerId?: string | null; name?: string } }
   | { type: 'DELETE_DATABASE_PLAYER'; payload: { databasePlayerId: string } }
+  | { type: 'SWAP_PLAYERS'; payload: { tournamentId: string; matchId1: string; playerId1: string; matchId2: string; playerId2: string } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {

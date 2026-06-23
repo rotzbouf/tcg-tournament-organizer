@@ -11,6 +11,8 @@ export type TopCutSize = 0 | 4 | 8 | 16 | 32
 
 export type TournamentFormat = 'swiss' | 'swiss_topcut' | 'double_elimination' | 'round_robin'
 
+export type DecklistVisibility = 'hidden' | 'to_only' | 'public'
+
 export interface Tournament {
   id: string
   name: string
@@ -28,6 +30,7 @@ export interface Tournament {
   topCut: TopCutSize
   grandFinalReset: boolean
   ageDivisionsEnabled: boolean
+  decklistVisibility: DecklistVisibility
   discordWebhookUrl: string | null
   eloApplied: boolean
   createdAt: string

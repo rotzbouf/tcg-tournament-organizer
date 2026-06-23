@@ -70,6 +70,23 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
         </div>
       </div>
 
+      {(player.penalties?.length ?? 0) > 0 && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-red-700">{t('penalties.history')}</h3>
+          <div className="space-y-2">
+            {[...(player.penalties ?? [])].reverse().map((p, i) => (
+              <div key={i} className="flex items-center gap-3 text-sm">
+                <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
+                  {t(`penalties.type.${p.type}`)}
+                </span>
+                <span className="text-gray-700">{p.reason}</span>
+                <span className="ml-auto text-xs text-gray-400">{p.tournamentName} — {new Date(p.date).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {player.history.length === 0 ? (
         <p className="text-center text-sm text-gray-400">{t('rankings.noHistory')}</p>
       ) : (

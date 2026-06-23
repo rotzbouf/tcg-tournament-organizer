@@ -154,6 +154,7 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
           tournamentId={tournamentId}
           player={players.find(p => p.id === decklistPlayerId)!}
           readonly={!editable}
+          game={game}
         />
       )}
 

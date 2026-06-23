@@ -7,8 +7,9 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Mehrere Turniere gleichzeitig** — Yu-Gi-Oh!, Pokémon TCG, Star Wars: Unlimited, Riftbound, Disney Lorcana, Altered, Magic: The Gathering
 - **4 Turnier-Formate** — Swiss, Swiss + Top Cut, Double Elimination, Round Robin
 - **Multi-Phase-Turniere** — Mehrere Phasen hintereinander (z.B. Round Robin → Swiss → Top Cut)
-- **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen
-- **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools
+- **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen; Cross-Tournament-Tracking in der Spieler-Datenbank
+- **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools; Sichtbarkeits-Modi (Versteckt/Nur TO/Öffentlich); Kartenbank-Validierung (Kartenzahl, Kopien-Limit)
+- **Manuelle Paarungsänderung** — Spieler zwischen Matches per Klick tauschen
 - **Elo-Rankings** — Persistente Spieler-Datenbank mit Elo-Wertung über mehrere Turniere
 - **Spielerprofil** — TCG-spezifische Spieler-IDs hinterlegen (Konami-ID, Pokemon Player ID, etc.)
 - **Discord Webhook** — Paarungen, Standings und Ergebnisse automatisch in Discord posten
@@ -88,6 +89,8 @@ npm run electron:build
 | Spielverlust (Game Loss) | Wird protokolliert, für Richter-Referenz |
 | Matchverlust (Match Loss) | Setzt das Matchergebnis automatisch auf Gegner-Sieg |
 | Disqualifikation | Spieler wird sofort aus dem Turnier gedroppt |
+
+Strafen (außer Notizen) werden zusätzlich in der Spieler-Datenbank gespeichert. Beim Hinzufügen eines Spielers mit bestehenden Strafen wird eine Warnung angezeigt.
 
 ## Elo-Rankings
 

@@ -14,9 +14,11 @@ interface MatchCardProps {
   tournamentId: string
   readonly?: boolean
   hideDrawOption?: boolean
+  selectedPlayerId?: string | null
+  onPlayerClick?: (matchId: string, playerId: string) => void
 }
 
-export function MatchCard({ match, players, tournamentId, readonly, hideDrawOption }: MatchCardProps) {
+export function MatchCard({ match, players, tournamentId, readonly, hideDrawOption, selectedPlayerId, onPlayerClick }: MatchCardProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
   const [p1Games, setP1Games] = useState<string>(match.player1Games?.toString() ?? '')
@@ -32,7 +34,7 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
           <span className="font-medium text-gray-900">{player1?.name}</span>
           <Badge variant="info">{t('rounds.bye')}</Badge>
         </div>
-        <Badge variant="success">3 pts</Badge>
+        <Badge variant="success">3 {t('standings.points').toLowerCase()}</Badge>
       </Card>
     )
   }
@@ -61,8 +63,11 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
             <span
               className={cn(
                 'font-medium',
-                match.result === 'player1_win' ? 'text-green-700' : 'text-gray-900'
+                match.result === 'player1_win' ? 'text-green-700' : 'text-gray-900',
+                onPlayerClick && 'cursor-pointer rounded px-1 -mx-1 hover:bg-blue-50',
+                selectedPlayerId === match.player1Id && 'ring-2 ring-blue-500 bg-blue-50'
               )}
+              onClick={onPlayerClick ? (e) => { e.stopPropagation(); onPlayerClick(match.id, match.player1Id) } : undefined}
             >
               {player1?.name}
             </span>
@@ -73,8 +78,11 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
             <span
               className={cn(
                 'font-medium',
-                match.result === 'player2_win' ? 'text-green-700' : 'text-gray-900'
+                match.result === 'player2_win' ? 'text-green-700' : 'text-gray-900',
+                onPlayerClick && match.player2Id && 'cursor-pointer rounded px-1 -mx-1 hover:bg-blue-50',
+                selectedPlayerId === match.player2Id && 'ring-2 ring-blue-500 bg-blue-50'
               )}
+              onClick={onPlayerClick && match.player2Id ? (e) => { e.stopPropagation(); onPlayerClick(match.id, match.player2Id!) } : undefined}
             >
               {player2?.name}
             </span>

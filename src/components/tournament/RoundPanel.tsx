@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Round } from '@/types/round'
 import { Player } from '@/types/player'
@@ -24,8 +25,42 @@ export function RoundPanel({
 }: RoundPanelProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
+  const [selectedPlayer, setSelectedPlayer] = useState<{ matchId: string; playerId: string } | null>(null)
 
   const allResultsIn = round.matches.every(m => m.result !== 'pending')
+  const swapEnabled = !round.isComplete && !isTopCut
+
+  const handlePlayerClick = useCallback((matchId: string, playerId: string) => {
+    if (!swapEnabled) return
+    if (!selectedPlayer) {
+      setSelectedPlayer({ matchId, playerId })
+      return
+    }
+    if (selectedPlayer.playerId === playerId) {
+      setSelectedPlayer(null)
+      return
+    }
+    dispatch({
+      type: 'SWAP_PLAYERS',
+      payload: {
+        tournamentId,
+        matchId1: selectedPlayer.matchId,
+        playerId1: selectedPlayer.playerId,
+        matchId2: matchId,
+        playerId2: playerId,
+      },
+    })
+    setSelectedPlayer(null)
+  }, [swapEnabled, selectedPlayer, dispatch, tournamentId])
+
+  useEffect(() => {
+    if (!selectedPlayer) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedPlayer(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedPlayer])
 
   const handleComplete = () => {
     dispatch({ type: 'COMPLETE_ROUND', payload: { tournamentId } })
@@ -41,6 +76,17 @@ export function RoundPanel({
 
   return (
     <div className="space-y-4">
+      {selectedPlayer && (
+        <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          <span>{t('rounds.swapHint')}</span>
+          <button
+            onClick={() => setSelectedPlayer(null)}
+            className="ml-auto text-blue-500 hover:text-blue-700"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      )}
       <div className="space-y-3">
         {round.matches.map(match => (
           <MatchCard
@@ -50,6 +96,8 @@ export function RoundPanel({
             tournamentId={tournamentId}
             readonly={round.isComplete}
             hideDrawOption={isTopCut}
+            selectedPlayerId={selectedPlayer?.playerId ?? null}
+            onPlayerClick={swapEnabled ? handlePlayerClick : undefined}
           />
         ))}
       </div>

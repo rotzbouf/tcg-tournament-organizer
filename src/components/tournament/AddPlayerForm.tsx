@@ -99,7 +99,14 @@ export function AddPlayerForm({ tournamentId, game, existingPlayers }: AddPlayer
                   onMouseDown={() => addFromDatabase(p)}
                   onMouseEnter={() => setSelectedIndex(i)}
                 >
-                  <span className="font-medium">{p.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{p.name}</span>
+                    {(p.penalties?.length ?? 0) > 0 && (
+                      <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                        {t('penalties.countBadge', { count: p.penalties.length })}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-gray-400">{p.elo} Elo</span>
                 </li>
               ))}

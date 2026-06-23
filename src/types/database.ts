@@ -7,6 +7,14 @@ export interface EloHistoryEntry {
   placement: number
 }
 
+export interface DatabasePenalty {
+  tournamentId: string
+  tournamentName: string
+  date: string
+  type: string
+  reason: string
+}
+
 export interface DatabasePlayer {
   id: string
   name: string
@@ -16,5 +24,6 @@ export interface DatabasePlayer {
   matchesPlayed: number
   tournamentsPlayed: number
   history: EloHistoryEntry[]
+  penalties: DatabasePenalty[]
   lastUpdated: string
 }

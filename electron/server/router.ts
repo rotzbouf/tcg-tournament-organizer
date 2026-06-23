@@ -32,6 +32,7 @@ interface Tournament {
   game: string
   format: string
   status: string
+  decklistVisibility: 'hidden' | 'to_only' | 'public'
   players: Array<{ id: string; name: string; deckName: string | null; decklist: unknown; droppedInRound: number | null }>
   rounds: Array<{ roundNumber: number; matches: Array<{ id: string; player1Id: string; player2Id: string | null; result: string; tableNumber: number; isBye: boolean; player1Games?: number; player2Games?: number }>; isComplete: boolean; phase: string }>
   roundTimeMinutes: number
@@ -77,6 +78,18 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     if (!tournament) { jsonResponse(res, { error: 'not found' }, 404); return }
     const standings = calculateStandings(tournament.players as never[], tournament.rounds as never[], tournament.game as never)
     jsonResponse(res, { tournament, standings, timers: getCurrentTimers() })
+    return
+  }
+
+  if (reqPath === '/api/decklists' && req.method === 'GET') {
+    const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+    const tournament = state?.tournaments[boundTournamentId]
+    if (!tournament) { jsonResponse(res, { error: 'not found' }, 404); return }
+    if (tournament.decklistVisibility !== 'public') { jsonResponse(res, { error: 'decklists not public' }, 403); return }
+    const decklists = tournament.players
+      .filter(p => p.decklist && !p.droppedInRound)
+      .map(p => ({ playerId: p.id, name: p.name, deckName: p.deckName, decklist: p.decklist }))
+    jsonResponse(res, { decklists })
     return
   }
 

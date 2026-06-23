@@ -9,6 +9,14 @@ export interface TiebreakerConfig {
   useHeadToHead: boolean
 }
 
+export interface DeckRules {
+  mainMin: number
+  mainMax: number
+  sideMin: number
+  sideMax: number
+  maxCopies: number
+}
+
 export interface GameConfig {
   name: string
   color: string
@@ -17,6 +25,7 @@ export interface GameConfig {
   tiebreakers: TiebreakerConfig
   hasAgeDivisions: boolean
   minSwissRounds: number
+  deckRules: DeckRules | null
 }
 
 export const GAME_CONFIG: Record<GameType, GameConfig> = {
@@ -28,6 +37,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.25, useGameWinPct: false, useHeadToHead: true },
     hasAgeDivisions: false,
     minSwissRounds: 0,
+    deckRules: { mainMin: 40, mainMax: 60, sideMin: 0, sideMax: 15, maxCopies: 3 },
   },
   pokemon: {
     name: 'Pokémon TCG',
@@ -37,6 +47,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.25, useGameWinPct: false, useHeadToHead: true },
     hasAgeDivisions: true,
     minSwissRounds: 0,
+    deckRules: { mainMin: 60, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
   },
   star_wars_unlimited: {
     name: 'Star Wars: Unlimited',
@@ -46,6 +57,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
     hasAgeDivisions: false,
     minSwissRounds: 0,
+    deckRules: { mainMin: 50, mainMax: 50, sideMin: 0, sideMax: 10, maxCopies: 3 },
   },
   riftbound: {
     name: 'Riftbound',
@@ -55,6 +67,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'chess', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false },
     hasAgeDivisions: false,
     minSwissRounds: 0,
+    deckRules: null,
   },
   lorcana: {
     name: 'Disney Lorcana',
@@ -64,6 +77,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
     hasAgeDivisions: false,
     minSwissRounds: 4,
+    deckRules: { mainMin: 60, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
   },
   altered: {
     name: 'Altered',
@@ -73,6 +87,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
     hasAgeDivisions: false,
     minSwissRounds: 0,
+    deckRules: { mainMin: 40, mainMax: 40, sideMin: 0, sideMax: 0, maxCopies: 3 },
   },
   mtg: {
     name: 'Magic: The Gathering',
@@ -82,5 +97,6 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: true, useHeadToHead: false },
     hasAgeDivisions: false,
     minSwissRounds: 4,
+    deckRules: { mainMin: 60, mainMax: -1, sideMin: 0, sideMax: 15, maxCopies: 4 },
   },
 }

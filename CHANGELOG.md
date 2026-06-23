@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-23
+
+### Added
+- **Manuelle Paarungsänderung** — Spieler zwischen Matches tauschen per Klick (Spieler auswählen → zweiten Spieler anklicken → Swap)
+- **Decklist-Sichtbarkeits-Modi** — Drei Modi: Versteckt, Nur für TO, Öffentlich. Steuerbar über neuen Decklisten-Tab, Mobile-Seite respektiert Einstellung
+- **Kartenbank-Validierung** — Decklisten werden gegen Deck-Regeln geprüft (Kartenzahl, maximale Kopien pro Karte). Regeln pro TCG konfiguriert
+- **Cross-Tournament Penalty-Tracking** — Strafen werden in der Spieler-Datenbank gespeichert und bei zukünftigen Turnieren als Warnung angezeigt
+- **Decklist-Übersicht** — Neuer Tab für den TO mit allen eingereichten Decklisten, aufklappbar pro Spieler
+
+### Fixed
+- Hardcoded Strings ("Tournament not found", "3 pts") durch i18n-Keys ersetzt
+
 ## [1.3.1] - 2026-06-23
 
 ### Added

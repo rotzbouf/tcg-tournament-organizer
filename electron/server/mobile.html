@@ -69,7 +69,8 @@ const T={
     optional:'optional',playerCount:'Players',
     callJudge:'Call Judge',judgeCalled:'Judge has been called!',
     reportToTO:'Report results to the Tournament Organizer',
-    dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.'},
+    dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.',
+    noDecklists:'No decklists available',cards:'cards'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
     games:'Spiele',noData:'Laden...',
@@ -82,7 +83,8 @@ const T={
     optional:'optional',playerCount:'Spieler',
     callJudge:'Judge rufen',judgeCalled:'Judge wurde gerufen!',
     reportToTO:'Ergebnisse beim Turnierleiter melden',
-    dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.'}
+    dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.',
+    noDecklists:'Keine Decklisten verfügbar',cards:'Karten'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
@@ -139,7 +141,8 @@ function render(){
   const registered=isRegistered();
   if(isReg&&!registered&&activeTab!=='register')activeTab='register';
   if(!isReg&&activeTab==='register')activeTab='pairings';
-  const tabs=[{k:'pairings',l:t('pairings'),s:!isReg||registered},{k:'standings',l:t('standings'),s:!isReg||registered},{k:'register',l:t('register'),s:isReg}];
+  const showDecklists=tournament.decklistVisibility==='public'&&!isReg;
+  const tabs=[{k:'pairings',l:t('pairings'),s:!isReg||registered},{k:'standings',l:t('standings'),s:!isReg||registered},{k:'decklists',l:t('decklist'),s:showDecklists},{k:'register',l:t('register'),s:isReg}];
   app.innerHTML=`<div class="header"><span>${esc(tournament.name)}</span><button onclick="toggleLang()">${lang.toUpperCase()}</button></div>
     <div class="container">
       <div class="tabs">${tabs.filter(x=>x.s).map(x=>`<div class="tab ${activeTab===x.k?'active':''}" onclick="setTab('${x.k}')">${x.l}</div>`).join('')}</div>
@@ -148,6 +151,7 @@ function render(){
   const tc=document.getElementById('tc');
   if(activeTab==='pairings')renderPairings(tc);
   else if(activeTab==='standings')renderStandings(tc);
+  else if(activeTab==='decklists')renderDecklists(tc);
   else if(activeTab==='register')renderRegister(tc);
 }
 
@@ -224,6 +228,20 @@ async function doDrop(playerId){
   if(!confirm(t('dropConfirm')))return;
   await post('/api/players/'+playerId+'/drop',{});
   needsFullRender=true;
+}
+
+function renderDecklists(el){
+  fetch(API+'/api/decklists').then(r=>r.json()).then(d=>{
+    if(!d.decklists||d.decklists.length===0){el.innerHTML=`<p style="text-align:center;color:#94a3b8">${t('noDecklists')}</p>`;return}
+    el.innerHTML=d.decklists.map(dl=>{
+      const cards=dl.decklist?dl.decklist.reduce((s,e)=>s+e.quantity,0):0;
+      const list=dl.decklist?dl.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n'):'';
+      return`<div class="match" onclick="this.querySelector('pre').style.display=this.querySelector('pre').style.display==='none'?'block':'none'">
+        <div class="match-header"><span class="names"><b>${esc(dl.name)}</b>${dl.deckName?' — '+esc(dl.deckName):''}</span><span style="font-size:12px;color:#94a3b8">${cards} ${t('cards')}</span></div>
+        <pre style="display:none;margin-top:8px;font-size:12px;white-space:pre-wrap;color:#475569">${esc(list)}</pre>
+      </div>`;
+    }).join('');
+  }).catch(()=>{el.innerHTML=`<p style="text-align:center;color:#94a3b8">${t('noDecklists')}</p>`});
 }
 
 function renderStandings(el){

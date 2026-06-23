@@ -19,11 +19,12 @@ import { StandingsTable } from './StandingsTable'
 import { RoundHistory } from './RoundHistory'
 import { TimerDisplay } from './TimerDisplay'
 import { EloChangesPanel } from './EloChangesPanel'
+import { DecklistOverview } from './DecklistOverview'
 import { DiscordSettings } from './DiscordSettings'
 import { ServerPanel } from './ServerPanel'
 import { cn } from '@/lib/utils'
 
-type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties' | 'elo' | 'discord' | 'server'
+type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties' | 'decklists' | 'elo' | 'discord' | 'server'
 
 const statusBadgeVariant = {
   registration: 'info' as const,
@@ -48,7 +49,7 @@ export function TournamentView() {
   if (!tournament) {
     return (
       <div className="text-center text-gray-500">
-        <p>Tournament not found</p>
+        <p>{t('tournament.notFound')}</p>
         <Button variant="secondary" className="mt-4" onClick={() => navigate('/')}>
           {t('nav.dashboard')}
         </Button>
@@ -121,6 +122,7 @@ export function TournamentView() {
     { key: 'round', label: t('rounds.title'), show: tournament.status !== 'registration' },
     { key: 'standings', label: t('standings.title'), show: tournament.status !== 'registration' },
     { key: 'history', label: t('rounds.history'), show: tournament.rounds.some(r => r.isComplete) },
+    { key: 'decklists', label: t('decklist.title'), show: true },
     { key: 'penalties', label: `${t('penalties.title')}${tournament.penalties.length > 0 ? ` (${tournament.penalties.length})` : ''}`, show: tournament.status !== 'registration' },
     { key: 'elo', label: t('elo.title'), show: tournament.status === 'completed' },
     { key: 'discord', label: `Discord${tournament.discordWebhookUrl ? ' ✓' : ''}`, show: true },
@@ -323,6 +325,13 @@ export function TournamentView() {
               </Button>
             </div>
           </>
+        )}
+        {activeTab === 'decklists' && (
+          <DecklistOverview
+            tournamentId={tournament.id}
+            players={tournament.players}
+            visibility={tournament.decklistVisibility}
+          />
         )}
         {activeTab === 'history' && (
           <RoundHistory
