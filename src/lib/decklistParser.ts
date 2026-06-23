@@ -1,7 +1,8 @@
 import { DecklistEntry } from '@/types/player'
 
-const SECTION_HEADER = /^(?:Pok[eé]mon|Trainer|Energy|Monster|Spell|Trap|Extra Deck|Side Deck|Deck|Sideboard|Commander|#main|#extra|!side|Main Deck|Extra|Side)\b/i
-const POKEMON_SECTION = /^Pok[eé]mon\b/i
+const SECTION_WITH_COLON = /^(?:Pok[eé]mon|Trainer|Energy|Monster|Spell|Trap|Extra Deck|Side Deck|Main Deck|Extra|Side)\s*:\s*\d*$/i
+const SECTION_STANDALONE = /^(?:Deck|Sideboard|Commander|#main|#extra|!side)$/i
+const POKEMON_SECTION = /^Pok[eé]mon\s*:/i
 
 const PTCGL_LINE = /^\*\s*(\d+)\s+(.+?)\s+([A-Z][A-Z0-9]{1,4}\s+\d+)\s*$/
 const MTGA_LINE = /^(\d+)\s*[xX]?\s+(.+?)\s+(\([A-Z0-9]{2,5}\)\s+\d+)\s*$/
@@ -26,9 +27,7 @@ export function parseDecklistText(text: string): DecklistEntry[] {
 }
 
 function isSectionHeader(line: string): boolean {
-  if (SECTION_HEADER.test(line)) return true
-  if (/^[A-Za-zÀ-ÿ ]+:\s*\d*$/.test(line)) return true
-  return false
+  return SECTION_WITH_COLON.test(line) || SECTION_STANDALONE.test(line)
 }
 
 function parseLine(line: string, keepSetInfo: boolean): DecklistEntry {

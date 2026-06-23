@@ -35,6 +35,46 @@ describe('parseDecklistText', () => {
     const result = parseDecklistText('3x Card A\n\n2x Card B\n  \n')
     expect(result).toHaveLength(2)
   })
+
+  it('strips set codes in MTGA format', () => {
+    const result = parseDecklistText('4 Lightning Bolt (STA) 62')
+    expect(result).toEqual([{ quantity: 4, cardName: 'Lightning Bolt' }])
+  })
+
+  it('strips set codes in Limitless format', () => {
+    const result = parseDecklistText('4 Comfey LOR 79')
+    expect(result).toEqual([{ quantity: 4, cardName: 'Comfey' }])
+  })
+
+  it('parses PTCGL format with asterisk', () => {
+    const result = parseDecklistText('* 4 Comfey LOR 79')
+    expect(result).toEqual([{ quantity: 4, cardName: 'Comfey' }])
+  })
+
+  it('skips section headers but keeps card names starting with section words', () => {
+    const text = 'Monster: 3\nMonster Reborn\nSpell: 1\nDark Hole'
+    const result = parseDecklistText(text)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({ quantity: 1, cardName: 'Monster Reborn' })
+    expect(result[1]).toEqual({ quantity: 1, cardName: 'Dark Hole' })
+  })
+
+  it('skips standalone section headers', () => {
+    const text = 'Deck\n4 Lightning Bolt\nSideboard\n2 Rest in Peace'
+    const result = parseDecklistText(text)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({ quantity: 4, cardName: 'Lightning Bolt' })
+    expect(result[1]).toEqual({ quantity: 2, cardName: 'Rest in Peace' })
+  })
+
+  it('keeps set ID for Pokémon section, strips for Trainer/Energy', () => {
+    const text = 'Pokémon: 2\n* 4 Comfey LOR 79\nTrainer: 1\n* 4 Nest Ball SVI 181\nEnergy: 1\n* 4 Psychic Energy SVE 5'
+    const result = parseDecklistText(text)
+    expect(result).toHaveLength(3)
+    expect(result[0]).toEqual({ quantity: 4, cardName: 'Comfey LOR 79' })
+    expect(result[1]).toEqual({ quantity: 4, cardName: 'Nest Ball' })
+    expect(result[2]).toEqual({ quantity: 4, cardName: 'Psychic Energy' })
+  })
 })
 
 describe('formatDecklistText', () => {
