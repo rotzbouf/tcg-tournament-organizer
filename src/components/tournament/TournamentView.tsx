@@ -78,7 +78,8 @@ export function TournamentView() {
     topCutRounds[topCutRounds.length - 1]?.matches.length === 1
   const isLastRoundRobin = isRoundRobin && tournament.currentRound >= tournament.totalRounds
 
-  const canGenerate = currentRound?.isComplete === true && !isGrandFinalComplete &&
+  const canGenerate = tournament.status !== 'completed' &&
+    currentRound?.isComplete === true && !isGrandFinalComplete &&
     !(isLastSwissRound && !hasTopCut) && !isLastTopCutRound && !isLastRoundRobin
 
   const isLastRound = isInTopCut ? isLastTopCutRound :
@@ -194,11 +195,6 @@ export function TournamentView() {
           {(tournament.status === 'in_progress' || tournament.status === 'top_cut') && (
             <Button variant="secondary" size="sm" onClick={() => setShowPenaltyDialog(true)}>
               {t('penalties.issue')}
-            </Button>
-          )}
-          {tournament.status === 'completed' && (
-            <Button variant="secondary" size="sm" onClick={() => { dispatch({ type: 'UPDATE_ELO_RATINGS', payload: { tournamentId: tournament.id } }); setActiveTab('elo') }}>
-              {t('elo.update')}
             </Button>
           )}
           {canUndo && (

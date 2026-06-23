@@ -114,4 +114,7 @@ function migrateTournament(t: Record<string, unknown> & { format?: unknown; pena
   if (t.discordWebhookUrl === undefined) {
     t.discordWebhookUrl = null
   }
+  if (typeof t.eloApplied !== 'boolean') {
+    t.eloApplied = t.status === 'completed'
+  }
 }

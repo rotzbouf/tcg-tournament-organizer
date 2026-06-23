@@ -29,6 +29,7 @@ export interface Tournament {
   grandFinalReset: boolean
   ageDivisionsEnabled: boolean
   discordWebhookUrl: string | null
+  eloApplied: boolean
   createdAt: string
   updatedAt: string
 }

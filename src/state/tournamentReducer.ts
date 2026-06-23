@@ -94,6 +94,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         grandFinalReset: action.payload.grandFinalReset ?? false,
         ageDivisionsEnabled: action.payload.ageDivisionsEnabled ?? false,
         discordWebhookUrl: null,
+        eloApplied: false,
         createdAt: now,
         updatedAt: now,
       }
@@ -335,9 +336,65 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'COMPLETE_TOURNAMENT': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
-      return updateTournament(state, action.payload.tournamentId, {
+
+      const completedState = updateTournament(state, action.payload.tournamentId, {
         status: 'completed',
+        eloApplied: true,
       })
+
+      const playerIds = tournament.players.map(p => p.id)
+      const playerNameMap: Record<string, string> = {}
+      tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
+
+      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, completedState.playerDatabase, playerNameMap, tournament.game)
+      const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
+      const now = new Date().toISOString()
+
+      const updatedDb = { ...completedState.playerDatabase }
+      for (const update of eloUpdates) {
+        const player = tournament.players.find(p => p.id === update.playerId)
+        if (!player) continue
+        const nameKey = player.name.toLowerCase()
+        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
+        const standing = standings.find(s => s.playerId === update.playerId)
+
+        const historyEntry: EloHistoryEntry = {
+          tournamentId: tournament.id,
+          tournamentName: tournament.name,
+          date: now,
+          eloBefore: update.eloBefore,
+          eloAfter: update.eloAfter,
+          placement: standing?.rank ?? 0,
+        }
+
+        if (existing) {
+          const s = standings.find(s => s.playerId === update.playerId)!
+          updatedDb[existing.id] = {
+            ...existing,
+            elo: update.eloAfter,
+            matchesPlayed: existing.matchesPlayed + s.wins + s.losses + s.draws,
+            tournamentsPlayed: existing.tournamentsPlayed + 1,
+            history: [...existing.history, historyEntry],
+            lastUpdated: now,
+          }
+        } else {
+          const id = generateId()
+          const s = standings.find(s => s.playerId === update.playerId)!
+          updatedDb[id] = {
+            id,
+            name: player.name,
+            game: tournament.game,
+            playerId: player.playerId ?? null,
+            elo: update.eloAfter,
+            matchesPlayed: s.wins + s.losses + s.draws,
+            tournamentsPlayed: 1,
+            history: [historyEntry],
+            lastUpdated: now,
+          }
+        }
+      }
+
+      return { ...completedState, playerDatabase: updatedDb }
     }
 
     case 'UPDATE_PLAYER': {
@@ -518,7 +575,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
     case 'UPDATE_ELO_RATINGS': {
       const tournament = state.tournaments[action.payload.tournamentId]
-      if (!tournament || tournament.status !== 'completed') return state
+      if (!tournament || tournament.status !== 'completed' || tournament.eloApplied) return state
 
       const playerIds = tournament.players.map(p => p.id)
       const playerNameMap: Record<string, string> = {}

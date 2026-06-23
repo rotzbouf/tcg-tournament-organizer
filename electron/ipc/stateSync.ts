@@ -33,7 +33,7 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
   ipcMain.handle('window:openQr', (_event, opts: { tournamentName: string; url: string; qrSvg: string }) => {
     const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
     const winWidth = 420
-    const winHeight = 520
+    const winHeight = 570
     const qrWindows = BrowserWindow.getAllWindows().filter(w => w.getTitle().startsWith('QR:'))
     const offsetIndex = qrWindows.length
     const x = Math.min(100 + offsetIndex * 40, screenWidth - winWidth)
@@ -62,11 +62,16 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
   .qr { padding: 12px; background: #fff; border-radius: 12px; }
   .qr svg { width: 280px; height: 280px; }
   .hint { font-size: 13px; color: #888; margin-top: 16px; }
+  .print-btn { margin-top: 12px; padding: 8px 24px; font-size: 14px; font-weight: 500; color: #fff;
+    background: #2563eb; border: none; border-radius: 6px; cursor: pointer; }
+  .print-btn:hover { background: #1d4ed8; }
+  @media print { .print-btn { display: none; } }
 </style></head><body>
   <h1>${opts.tournamentName.replace(/</g, '&lt;')}</h1>
   <div class="url">${opts.url}</div>
   <div class="qr">${opts.qrSvg}</div>
   <div class="hint">QR-Code scannen zum Anmelden</div>
+  <button class="print-btn" onclick="window.print()">Drucken</button>
 </body></html>`
 
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
