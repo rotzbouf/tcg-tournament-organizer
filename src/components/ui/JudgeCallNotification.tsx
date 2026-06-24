@@ -29,12 +29,12 @@ export function JudgeCallNotification() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-sm space-y-3 rounded-xl bg-white p-6 shadow-2xl">
+      <div className="w-full max-w-sm space-y-3 rounded-xl bg-card p-6 shadow-2xl">
         <h2 className="text-center text-lg font-bold text-red-600">{t('judge.callTitle')}</h2>
         {calls.map(call => (
-          <div key={call.timestamp} className="rounded-lg border-2 border-red-200 bg-red-50 p-4">
+          <div key={call.timestamp} className="rounded-lg border-2 border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{call.playerName}</p>
+              <p className="text-2xl font-bold text-foreground">{call.playerName}</p>
               {call.tableNumber > 0 && (
                 <p className="mt-1 text-3xl font-black text-red-600">
                   {t('match.table', { number: call.tableNumber })}

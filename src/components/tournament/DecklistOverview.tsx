@@ -24,7 +24,7 @@ export function DecklistOverview({ tournamentId, players, visibility }: Decklist
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t('decklist.submitted', { count: playersWithDecklist.length, total: players.length })}
         </p>
         <Select
@@ -43,7 +43,7 @@ export function DecklistOverview({ tournamentId, players, visibility }: Decklist
       </div>
 
       {playersWithDecklist.length === 0 ? (
-        <p className="py-8 text-center text-gray-400">{t('decklist.noDecklists')}</p>
+        <p className="py-8 text-center text-muted-foreground">{t('decklist.noDecklists')}</p>
       ) : (
         <div className="space-y-2">
           {playersWithDecklist.map(player => {
@@ -53,15 +53,15 @@ export function DecklistOverview({ tournamentId, players, visibility }: Decklist
               <Card key={player.id} className="cursor-pointer" onClick={() => setExpandedPlayer(isExpanded ? null : player.id)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-gray-900">{player.name}</span>
-                    {player.deckName && <span className="text-sm text-gray-500">{player.deckName}</span>}
+                    <span className="font-medium text-foreground">{player.name}</span>
+                    {player.deckName && <span className="text-sm text-muted-foreground">{player.deckName}</span>}
                   </div>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-muted-foreground">
                     {stats.totalCards} {t('decklist.totalCards').toLowerCase()} — {stats.uniqueCards} {t('decklist.uniqueCards').toLowerCase()}
                   </span>
                 </div>
                 {isExpanded && (
-                  <pre className="mt-3 max-h-64 overflow-auto rounded bg-gray-50 p-3 font-mono text-xs text-gray-700">
+                  <pre className="mt-3 max-h-64 overflow-auto rounded bg-background p-3 font-mono text-xs text-secondary-foreground">
                     {formatDecklistText(player.decklist!)}
                   </pre>
                 )}
@@ -73,10 +73,10 @@ export function DecklistOverview({ tournamentId, players, visibility }: Decklist
 
       {playersWithoutDecklist.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-gray-400">{t('decklist.missing')}</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">{t('decklist.missing')}</p>
           <div className="flex flex-wrap gap-2">
             {playersWithoutDecklist.map(player => (
-              <span key={player.id} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-500">
+              <span key={player.id} className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                 {player.name}
               </span>
             ))}

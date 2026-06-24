@@ -33,8 +33,8 @@ export function DiscordSettings({ tournamentId, webhookUrl }: DiscordSettingsPro
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-gray-200 p-4">
-      <h3 className="text-sm font-semibold text-gray-700">Discord Webhook</h3>
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <h3 className="text-sm font-semibold text-secondary-foreground">Discord Webhook</h3>
       <Input
         id="discord-webhook-url"
         placeholder={t('discord.webhookUrl')}

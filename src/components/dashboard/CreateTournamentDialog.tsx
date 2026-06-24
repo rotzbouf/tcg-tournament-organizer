@@ -143,26 +143,26 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           onChange={e => setFormat(e.target.value as TournamentFormat)}
         />
         {format === 'swiss_topcut' && (
-          <p className="text-sm text-gray-500">{t('tournament.topCutAutoHint')}</p>
+          <p className="text-sm text-muted-foreground">{t('tournament.topCutAutoHint')}</p>
         )}
         {format === 'double_elimination' && (
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
             <input
               type="checkbox"
               checked={grandFinalReset}
               onChange={e => setGrandFinalReset(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-input"
             />
             <span>{t('tournament.grandFinalReset')}</span>
           </label>
         )}
         {GAME_CONFIG[game].hasAgeDivisions && (
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
             <input
               type="checkbox"
               checked={ageDivisions}
               onChange={e => setAgeDivisions(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-input"
             />
             <span>{t('tournament.ageDivisions')}</span>
           </label>
@@ -175,12 +175,12 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           onChange={e => setRoundTime(Number(e.target.value))}
         />
         {(format === 'swiss' || format === 'swiss_topcut') && (
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
             <input
               type="checkbox"
               checked={powerPairings}
               onChange={e => setPowerPairings(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-input"
             />
             <span>{t('tournament.powerPairings')}</span>
           </label>
@@ -196,7 +196,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           value={decklistVisibility}
           onChange={e => setDecklistVisibility(e.target.value as DecklistVisibility)}
         />
-        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+        <div className="flex items-center justify-between border-t border-muted pt-3">
           {showSaveTemplate ? (
             <div className="flex items-center gap-2">
               <input
@@ -204,7 +204,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
                 placeholder={t('template.name')}
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
-                className="w-40 rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-40 rounded border border-input bg-card text-foreground px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
               />
               <Button type="button" size="sm" onClick={handleSaveTemplate} disabled={!templateName.trim()}>
                 {t('common.save')}

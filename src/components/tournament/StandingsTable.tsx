@@ -21,62 +21,62 @@ export function StandingsTable({ standings, game }: StandingsTableProps) {
   const isTcg = config?.system === 'tcg'
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="px-3 py-2 text-left font-medium text-gray-600">{t('standings.rank')}</th>
-            <th className="px-3 py-2 text-left font-medium text-gray-600">{t('standings.player')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.points')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.wins')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.losses')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.draws')}</th>
+          <tr className="border-b border-border bg-background">
+            <th className="px-3 py-2 text-left font-medium text-secondary-foreground">{t('standings.rank')}</th>
+            <th className="px-3 py-2 text-left font-medium text-secondary-foreground">{t('standings.player')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.points')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.wins')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.losses')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.draws')}</th>
             {isTcg ? (
               <>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.opponentMatchWinPct')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.opponentMatchWinPct')}</th>
                 {config.useGameWinPct && (
                   <>
-                    <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.gameWinPct')}</th>
-                    <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.opponentGameWinPct')}</th>
+                    <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.gameWinPct')}</th>
+                    <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.opponentGameWinPct')}</th>
                   </>
                 )}
               </>
             ) : (
               <>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.buchholz')}</th>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.medianBuchholz')}</th>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.sonnebornBerger')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.buchholz')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.medianBuchholz')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.sonnebornBerger')}</th>
               </>
             )}
           </tr>
         </thead>
         <tbody>
           {standings.map(standing => (
-            <tr key={standing.playerId} className={`border-b border-gray-100 last:border-0${standing.dropped ? ' opacity-50' : ''}`}>
-              <td className="px-3 py-2 font-medium text-gray-900">{standing.rank}</td>
-              <td className="px-3 py-2 text-gray-900">
+            <tr key={standing.playerId} className={`border-b border-muted last:border-0${standing.dropped ? ' opacity-50' : ''}`}>
+              <td className="px-3 py-2 font-medium text-foreground">{standing.rank}</td>
+              <td className="px-3 py-2 text-foreground">
                 {standing.dropped ? <span className="line-through">{standing.playerName}</span> : standing.playerName}
                 {standing.dropped && <span className="ml-2 text-xs text-red-500">{t('players.dropped')}</span>}
               </td>
-              <td className="px-3 py-2 text-center font-semibold text-gray-900">{standing.matchPoints}</td>
+              <td className="px-3 py-2 text-center font-semibold text-foreground">{standing.matchPoints}</td>
               <td className="px-3 py-2 text-center text-green-600">{standing.wins}</td>
               <td className="px-3 py-2 text-center text-red-600">{standing.losses}</td>
               <td className="px-3 py-2 text-center text-yellow-600">{standing.draws}</td>
               {isTcg ? (
                 <>
-                  <td className="px-3 py-2 text-center text-gray-500">{pct(standing.opponentMatchWinPct)}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{pct(standing.opponentMatchWinPct)}</td>
                   {config.useGameWinPct && (
                     <>
-                      <td className="px-3 py-2 text-center text-gray-500">{pct(standing.gameWinPct)}</td>
-                      <td className="px-3 py-2 text-center text-gray-500">{pct(standing.opponentGameWinPct)}</td>
+                      <td className="px-3 py-2 text-center text-muted-foreground">{pct(standing.gameWinPct)}</td>
+                      <td className="px-3 py-2 text-center text-muted-foreground">{pct(standing.opponentGameWinPct)}</td>
                     </>
                   )}
                 </>
               ) : (
                 <>
-                  <td className="px-3 py-2 text-center text-gray-500">{standing.buchholz}</td>
-                  <td className="px-3 py-2 text-center text-gray-500">{standing.medianBuchholz}</td>
-                  <td className="px-3 py-2 text-center text-gray-500">{standing.sonnebornBerger}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{standing.buchholz}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{standing.medianBuchholz}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{standing.sonnebornBerger}</td>
                 </>
               )}
             </tr>

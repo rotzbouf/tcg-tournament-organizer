@@ -81,14 +81,14 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
           <span className="text-sm font-medium text-green-600">{t('server.running')}</span>
         )}
         {!info.running && (
-          <span className="text-sm text-gray-400">{t('server.stopped')}</span>
+          <span className="text-sm text-muted-foreground">{t('server.stopped')}</span>
         )}
       </div>
 
       {info.running && url && (
-        <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+        <div className="space-y-4 rounded-lg border border-border p-4">
           <div>
-            <p className="text-sm font-medium text-gray-700">{t('server.address')}</p>
+            <p className="text-sm font-medium text-secondary-foreground">{t('server.address')}</p>
             <p className="mt-1 font-mono text-lg text-blue-600">{url}</p>
           </div>
 
@@ -97,7 +97,7 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
           </Button>
 
           {info.clientCount !== undefined && info.clientCount > 0 && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {t('server.connectedClients', { count: info.clientCount })}
             </p>
           )}

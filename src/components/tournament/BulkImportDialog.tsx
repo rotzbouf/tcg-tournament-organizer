@@ -32,19 +32,19 @@ export function BulkImportDialog({ open, onClose, tournamentId }: BulkImportDial
     <Dialog open={open} onClose={onClose} title={t('players.bulkImport')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="bulk-import" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="bulk-import" className="mb-1 block text-sm font-medium text-secondary-foreground">
             {t('players.bulkImportHint')}
           </label>
           <textarea
             id="bulk-import"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-input bg-card text-foreground px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             rows={8}
             value={text}
             onChange={e => setText(e.target.value)}
             autoFocus
           />
           {names.length > 0 && (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               {t('players.count', { count: names.length })}
             </p>
           )}

@@ -53,15 +53,15 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
         </div>
       )}
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-muted-foreground">
         {inProgress
           ? t('players.activeCount', { active: activePlayers.length, total: players.length })
           : t('players.count', { count: players.length })}
       </p>
 
-      <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+      <div className="divide-y divide-muted rounded-lg border border-border">
         {players.length === 0 ? (
-          <p className="p-4 text-center text-sm text-gray-400">{t('dashboard.empty')}</p>
+          <p className="p-4 text-center text-sm text-muted-foreground">{t('dashboard.empty')}</p>
         ) : (
           players.map((player, index) => (
             <div
@@ -72,15 +72,15 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
               )}
             >
               <div className="flex items-center gap-3">
-                <span className="w-6 text-right text-sm text-gray-400">{index + 1}</span>
+                <span className="w-6 text-right text-sm text-muted-foreground">{index + 1}</span>
                 <span className={cn(
                   'text-sm font-medium',
-                  player.droppedInRound !== null ? 'text-gray-400 line-through' : 'text-gray-900'
+                  player.droppedInRound !== null ? 'text-muted-foreground line-through' : 'text-foreground'
                 )}>
                   {player.name}
                 </span>
                 {ageDivisionsEnabled && createdAt && (
-                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
                     {DIVISION_LABELS[getPlayerDivision(player.dateOfBirth, createdAt)][i18n.language === 'de' ? 'de' : 'en']}
                   </span>
                 )}
@@ -88,10 +88,10 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
                   <span className="text-xs text-blue-400">[{player.playerId}]</span>
                 )}
                 {player.dateOfBirth && (
-                  <span className="text-xs text-gray-400">{player.dateOfBirth}</span>
+                  <span className="text-xs text-muted-foreground">{player.dateOfBirth}</span>
                 )}
                 {player.deckName && (
-                  <span className="text-xs text-gray-400">({player.deckName})</span>
+                  <span className="text-xs text-muted-foreground">({player.deckName})</span>
                 )}
                 {player.droppedInRound !== null && (
                   <span className="text-xs text-red-500">
@@ -109,7 +109,7 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
                       type: 'UPDATE_PLAYER',
                       payload: { tournamentId, playerId: player.id, deckName: e.target.value || null },
                     })}
-                    className="w-28 rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:border-blue-500 focus:outline-none"
+                    className="w-28 rounded border border-border bg-card px-2 py-1 text-xs text-secondary-foreground focus:border-blue-500 focus:outline-none"
                   />
                   <Button
                     variant="ghost"

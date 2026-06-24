@@ -5,6 +5,7 @@ export interface TimerState {
   remainingSeconds: number
   isRunning: boolean
   endTimestamp: number | null
+  notified: boolean
 }
 
 export interface TimerManager {
@@ -12,6 +13,9 @@ export interface TimerManager {
   startTimer: (id: string, durationMinutes: number) => void
   pauseTimer: (id: string) => void
   resetTimer: (id: string, durationMinutes: number) => void
+  setTournamentName: (id: string, name: string) => void
+  soundEnabled: boolean
+  toggleSound: () => void
 }
 
 export const TimerContext = createContext<TimerManager | null>(null)

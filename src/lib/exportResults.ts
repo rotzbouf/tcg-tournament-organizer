@@ -92,6 +92,37 @@ s{color:#94a3b8}
 </body></html>`
 }
 
+export function generatePairingsPdfHtml(tournament: Tournament, roundNumber: number): string {
+  const config = GAME_CONFIG[tournament.game]
+  const round = tournament.rounds.find(r => r.roundNumber === roundNumber)
+  if (!round) return ''
+  const date = new Date(tournament.createdAt).toLocaleDateString('de-CH')
+  const getName = (id: string) => tournament.players.find(p => p.id === id)?.name ?? '?'
+
+  const rows = round.matches.map(m => {
+    if (m.isBye) {
+      return `<tr><td style="text-align:center">—</td><td>${esc(getName(m.player1Id))}</td><td colspan="2" style="text-align:center;color:#64748b">Bye</td></tr>`
+    }
+    const result = m.result === 'player1_win' ? esc(getName(m.player1Id))
+      : m.result === 'player2_win' ? esc(getName(m.player2Id!))
+      : m.result === 'draw' ? 'Draw' : '—'
+    return `<tr><td style="text-align:center;font-weight:800">${m.tableNumber}</td><td>${esc(getName(m.player1Id))}</td><td>${esc(getName(m.player2Id!))}</td><td style="text-align:center">${result}</td></tr>`
+  }).join('')
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{font-family:-apple-system,system-ui,sans-serif;margin:32px;color:#1e293b}
+h1{font-size:22px;margin:0 0 4px}
+.meta{font-size:13px;color:#64748b;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px;background:#f1f5f9;font-weight:600;color:#475569;border-bottom:2px solid #cbd5e1}
+td{padding:6px 8px;border-bottom:1px solid #e2e8f0}
+</style></head><body>
+<h1>${esc(tournament.name)}</h1>
+<div class="meta">${esc(config.name)} — Runde ${roundNumber} — ${date} — ${tournament.players.length} Spieler</div>
+<table><thead><tr><th style="width:60px;text-align:center">Tisch</th><th>Spieler 1</th><th>Spieler 2</th><th style="width:120px;text-align:center">Ergebnis</th></tr></thead><tbody>${rows}</tbody></table>
+</body></html>`
+}
+
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { TimerContext, TimerState } from './useTimerManager'
+import { playAlarmSound, showTimerNotification, requestNotificationPermission } from '@/lib/alarm'
 
 export function TimerProvider({ children }: { children: ReactNode }) {
   const [timers, setTimers] = useState<Record<string, TimerState>>({})
@@ -8,6 +9,27 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     timersRef.current = timers
     window.electronAPI?.syncTimerState(JSON.stringify(timers))
   }, [timers])
+
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('tcg-timer-sound') !== 'off')
+  const soundEnabledRef = useRef(soundEnabled)
+  useEffect(() => { soundEnabledRef.current = soundEnabled }, [soundEnabled])
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev
+      localStorage.setItem('tcg-timer-sound', next ? 'on' : 'off')
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    requestNotificationPermission()
+  }, [])
+
+  const tournamentNamesRef = useRef<Record<string, string>>({})
+  const setTournamentName = useCallback((id: string, name: string) => {
+    tournamentNamesRef.current[id] = name
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,11 +42,17 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         const remaining = Math.max(0, Math.ceil((timer.endTimestamp - now) / 1000))
         if (remaining !== timer.remainingSeconds) {
           hasChanges = true
+          const expired = remaining === 0 && !timer.notified
           updated[id] = {
             ...timer,
             remainingSeconds: remaining,
             isRunning: remaining > 0,
             endTimestamp: remaining > 0 ? timer.endTimestamp : null,
+            notified: timer.notified || expired,
+          }
+          if (expired && soundEnabledRef.current) {
+            playAlarmSound()
+            showTimerNotification(tournamentNamesRef.current[id] || 'Turnier')
           }
         }
       }
@@ -50,6 +78,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           remainingSeconds,
           isRunning: true,
           endTimestamp: Date.now() + remainingSeconds * 1000,
+          notified: existing?.notified ?? false,
         },
       }
     })
@@ -83,12 +112,13 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         remainingSeconds: durationMinutes * 60,
         isRunning: false,
         endTimestamp: null,
+        notified: false,
       },
     }))
   }, [])
 
   return (
-    <TimerContext.Provider value={{ timers, startTimer, pauseTimer, resetTimer }}>
+    <TimerContext.Provider value={{ timers, startTimer, pauseTimer, resetTimer, setTournamentName, soundEnabled, toggleSound }}>
       {children}
     </TimerContext.Provider>
   )

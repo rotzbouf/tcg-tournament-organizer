@@ -10,15 +10,16 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen; Cross-Tournament-Tracking in der Spieler-Datenbank
 - **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools; Sichtbarkeits-Modi (Versteckt/Nur TO/Öffentlich); Kartenbank-Validierung (Kartenzahl, Kopien-Limit)
 - **Manuelle Paarungsänderung** — Spieler zwischen Matches per Klick tauschen
-- **Elo-Rankings** — Persistente Spieler-Datenbank mit Elo-Wertung über mehrere Turniere
+- **Elo-Rankings** — Persistente Spieler-Datenbank mit Elo-Wertung über mehrere Turniere, Elo-Verlauf-Graph, Statistik-Übersicht
 - **Spielerprofil** — TCG-spezifische Spieler-IDs hinterlegen (Konami-ID, Pokemon Player ID, etc.)
 - **Discord Webhook** — Paarungen, Standings und Ergebnisse automatisch in Discord posten
-- **Rundenzeit** — Auswählbar von 20 bis 90 Minuten, Timer in Sidebar sichtbar
+- **Dark Mode** — Hell, Dunkel oder System-Einstellung. Mobile-Seite folgt dem System-Theme
+- **Rundenzeit** — Auswählbar von 20 bis 90 Minuten, Timer in Sidebar sichtbar, Alarm (Sound + Notification + Vibration) bei Ablauf, stummschaltbar
 - **Rangliste mit Tiebreakern** — Buchholz, Median-Buchholz, Sonneborn-Berger
 - **Auto-Save** — Automatische Speicherung via localStorage
 - **Undo** — Aktionen rückgängig machen (Ctrl+Z)
 - **Bulk Import** — Spielerliste per Textarea einfügen
-- **Paarungen drucken** — Druckoptimierte Ansicht
+- **Paarungen drucken** — Druckoptimierte Ansicht mit Turnier-Header, PDF-Export für Paarungen und Standings
 - **QR-Code drucken** — QR-Code für mobile Spielerregistrierung ausdrucken
 - **Mobile Turnier-Navigation** — Registrierte Spieler können Paarungen und Rangliste direkt am Handy einsehen
 - **Tischnummern** — Automatische Nummerierung auf Match-Cards

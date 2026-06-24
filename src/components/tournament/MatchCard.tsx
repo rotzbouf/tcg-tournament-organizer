@@ -32,7 +32,7 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
     return (
       <Card className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900">{player1?.name}</span>
+          <span className="font-medium text-foreground">{player1?.name}</span>
           <Badge variant="info">{t('rounds.bye')}</Badge>
         </div>
         <Badge variant="success">3 {t('standings.points').toLowerCase()}</Badge>
@@ -59,29 +59,29 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
         <div className="flex-1">
           <div className="flex items-center gap-3">
             {match.tableNumber > 0 && (
-              <span className="text-xs font-semibold text-gray-400">{t('match.table', { number: match.tableNumber })}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{t('match.table', { number: match.tableNumber })}</span>
             )}
             <span
               className={cn(
                 'font-medium',
-                match.result === 'player1_win' ? 'text-green-700' : 'text-gray-900',
-                onPlayerClick && 'cursor-pointer rounded px-1 -mx-1 hover:bg-blue-50',
-                selectedPlayerId === match.player1Id && 'ring-2 ring-blue-500 bg-blue-50'
+                match.result === 'player1_win' ? 'text-green-700' : 'text-foreground',
+                onPlayerClick && 'cursor-pointer rounded px-1 -mx-1 hover:bg-muted',
+                selectedPlayerId === match.player1Id && 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
               )}
               onClick={onPlayerClick ? (e) => { e.stopPropagation(); onPlayerClick(match.id, match.player1Id) } : undefined}
             >
               {player1?.name}
             </span>
             {showGameScores && hasGameScores && (
-              <span className="text-xs font-semibold text-gray-500">{match.player1Games}-{match.player2Games}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{match.player1Games}-{match.player2Games}</span>
             )}
-            <span className="text-sm text-gray-400">{t('match.vs')}</span>
+            <span className="text-sm text-muted-foreground">{t('match.vs')}</span>
             <span
               className={cn(
                 'font-medium',
-                match.result === 'player2_win' ? 'text-green-700' : 'text-gray-900',
-                onPlayerClick && match.player2Id && 'cursor-pointer rounded px-1 -mx-1 hover:bg-blue-50',
-                selectedPlayerId === match.player2Id && 'ring-2 ring-blue-500 bg-blue-50'
+                match.result === 'player2_win' ? 'text-green-700' : 'text-foreground',
+                onPlayerClick && match.player2Id && 'cursor-pointer rounded px-1 -mx-1 hover:bg-muted',
+                selectedPlayerId === match.player2Id && 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
               )}
               onClick={onPlayerClick && match.player2Id ? (e) => { e.stopPropagation(); onPlayerClick(match.id, match.player2Id!) } : undefined}
             >
@@ -108,24 +108,24 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
         <div className="mt-3 space-y-2">
           {showGameScores && (
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">{t('match.games')}:</label>
+              <label className="text-xs text-muted-foreground">{t('match.games')}:</label>
               <input
                 type="number"
                 min={0}
                 max={9}
                 value={p1Games}
                 onChange={e => setP1Games(e.target.value)}
-                className="w-10 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
+                className="w-10 rounded border border-border bg-card text-foreground px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
                 placeholder="0"
               />
-              <span className="text-xs text-gray-400">-</span>
+              <span className="text-xs text-muted-foreground">-</span>
               <input
                 type="number"
                 min={0}
                 max={9}
                 value={p2Games}
                 onChange={e => setP2Games(e.target.value)}
-                className="w-10 rounded border border-gray-200 px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
+                className="w-10 rounded border border-border bg-card text-foreground px-1.5 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none"
                 placeholder="0"
               />
             </div>

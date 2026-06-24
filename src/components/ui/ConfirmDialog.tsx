@@ -21,7 +21,7 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
 
   return (
     <Dialog open={open} onClose={onClose} title={title}>
-      <p className="text-sm text-gray-600">{message}</p>
+      <p className="text-sm text-secondary-foreground">{message}</p>
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
           {t('common.cancel')}

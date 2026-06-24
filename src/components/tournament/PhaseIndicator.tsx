@@ -16,15 +16,15 @@ export function PhaseIndicator({ phases, currentPhaseIndex }: PhaseIndicatorProp
     <div className="flex items-center gap-1">
       {phases.map((phase, i) => (
         <div key={phase.id} className="flex items-center">
-          {i > 0 && <span className="mx-1 text-gray-300">→</span>}
+          {i > 0 && <span className="mx-1 text-muted-foreground">→</span>}
           <span
             className={cn(
               'rounded-full px-2.5 py-0.5 text-xs font-medium',
               i === currentPhaseIndex
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                 : i < currentPhaseIndex
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-500'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-muted text-muted-foreground'
             )}
           >
             {phase.name || t(`tournament.formatOptions.${phase.format}`)}

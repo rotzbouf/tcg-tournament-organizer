@@ -119,7 +119,9 @@
     "start": "Start",
     "pause": "Pause",
     "reset": "Reset",
-    "expired": "Time expired!"
+    "expired": "Time expired!",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off"
   },
   "fileio": {
     "exportSuccess": "Exported successfully",
@@ -234,7 +236,8 @@
   },
   "export": {
     "csv": "Export CSV",
-    "pdf": "Export PDF"
+    "pdf": "Export PDF",
+    "pairings": "Export Pairings"
   },
   "template": {
     "title": "Template",
@@ -242,6 +245,12 @@
     "save": "Save as template",
     "name": "Template name",
     "delete": "Delete template"
+  },
+  "stats": {
+    "totalPlayers": "Players",
+    "avgElo": "Avg Elo",
+    "mostActive": "Most Active",
+    "eloProgression": "Elo Progression"
   },
   "common": {
     "cancel": "Cancel",

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-24
+
+### Added
+- **Dark Mode** — Drei Modi: Hell, Dunkel, System. Toggle in der Sidebar, Theme-Wahl wird gespeichert. Mobile-Seite folgt dem System-Setting des Handys
+- **Timer-Alarm** — Sound (Web Audio Beep), Desktop-Notification und Mobile-Vibration bei Rundenende. Sound per Toggle stummschaltbar
+- **Elo-Verlauf-Graph** — SVG-Linien-Chart in der Spielerhistorie zeigt Elo-Entwicklung über alle Turniere mit Hover-Tooltips
+- **Statistik-Karten** — Rangliste zeigt Spieleranzahl, Durchschnitts-Elo und aktivsten Spieler als Übersicht
+- **Paarungen-PDF-Export** — Neue Export-Funktion für Paarungen mit Tischnummern, Spielernamen und Ergebnissen
+
+### Changed
+- Alle Farben auf semantische CSS-Variablen umgestellt für konsistentes Theming
+- Druckansicht verbessert: saubere Tabellen, versteckte Buttons, Seitenumbruch-Regeln, Print-Header mit Turniername und Rundennummer
+
+## [1.3.3] - 2026-06-23
+
+### Added
+- **Power Pairings** — Letzte Swiss-Runde paart innerhalb eines Punktebrackets nach Tiebreaker-Rang. Pro Turnier zu- und abschaltbar (Standard: an)
+- **Turnier-Vorlagen** — Wiederkehrende Turnierformate als Vorlage speichern und beim Erstellen laden
+- **Decklist-Sichtbarkeit bei Erstellung** — Sichtbarkeitsmodus direkt beim Turnier-Erstellen auswählbar
+
+### Changed
+- Game-Score-Felder (Spiele) werden nur noch bei TCGs mit GW%-Tiebreaker angezeigt (SWU, Lorcana, Altered, MTG), nicht mehr bei YGO, Pokémon und Riftbound
+
 ## [1.3.2] - 2026-06-23
 
 ### Added

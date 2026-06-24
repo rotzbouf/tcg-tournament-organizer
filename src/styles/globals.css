@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 @theme {
+  --color-background: var(--bg);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-foreground: var(--fg);
+  --color-secondary-foreground: var(--fg-secondary);
+  --color-muted-foreground: var(--fg-muted);
+  --color-border: var(--bd);
+  --color-input: var(--bd-input);
+
   --color-yugioh: #7B2D8B;
   --color-yugioh-light: #F5E6FF;
   --color-pokemon: #FFCB05;
@@ -11,12 +20,48 @@
   --color-riftbound-light: #E8F5E9;
 }
 
+:root {
+  --bg: #f9fafb;
+  --card: #ffffff;
+  --muted: #f3f4f6;
+  --fg: #111827;
+  --fg-secondary: #4b5563;
+  --fg-muted: #6b7280;
+  --bd: #e5e7eb;
+  --bd-input: #d1d5db;
+}
+
+.dark {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --muted: #334155;
+  --fg: #f1f5f9;
+  --fg-secondary: #cbd5e1;
+  --fg-muted: #94a3b8;
+  --bd: #334155;
+  --bd-input: #475569;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-background text-foreground antialiased;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 @media print {
   aside, nav, .print\:hidden { display: none !important; }
-  body { background: white; }
+  .hidden.print\:block { display: block !important; }
+  body { background: white !important; color: black !important; }
+  main { padding: 0 !important; overflow: visible !important; }
+
+  button, input, select, textarea { display: none !important; }
+  [class*="border-b-2"]:not(table *) { display: none !important; }
+
+  table { font-size: 11px !important; }
+  th { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  [class*="shadow"] { box-shadow: none !important; }
+
+  h2, h3 { page-break-after: avoid; }
+  tr { page-break-inside: avoid; }
+
+  @page { margin: 15mm; }
 }

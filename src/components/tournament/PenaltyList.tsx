@@ -24,23 +24,23 @@ export function PenaltyList({ tournamentId, penalties, players }: PenaltyListPro
   const { dispatch } = useTournamentContext()
 
   if (penalties.length === 0) {
-    return <p className="text-center text-sm text-gray-400">{t('penalties.noPenalties')}</p>
+    return <p className="text-center text-sm text-muted-foreground">{t('penalties.noPenalties')}</p>
   }
 
   const getPlayerName = (id: string) => players.find(p => p.id === id)?.name ?? '?'
 
   return (
-    <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+    <div className="divide-y divide-muted rounded-lg border border-border">
       {penalties.map(penalty => (
         <div key={penalty.id} className="flex items-center justify-between px-4 py-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-900">{getPlayerName(penalty.playerId)}</span>
+              <span className="text-sm font-medium text-foreground">{getPlayerName(penalty.playerId)}</span>
               <Badge variant={penaltyBadgeVariant[penalty.type]}>
                 {t(`penalties.type.${penalty.type}`)}
               </Badge>
             </div>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {t('penalties.issuedInRound', { round: penalty.roundNumber })} — {penalty.reason}
             </p>
           </div>

@@ -119,7 +119,9 @@
     "start": "Start",
     "pause": "Pause",
     "reset": "Zurücksetzen",
-    "expired": "Zeit abgelaufen!"
+    "expired": "Zeit abgelaufen!",
+    "soundOn": "Ton an",
+    "soundOff": "Ton aus"
   },
   "fileio": {
     "exportSuccess": "Erfolgreich exportiert",
@@ -234,7 +236,8 @@
   },
   "export": {
     "csv": "CSV exportieren",
-    "pdf": "PDF exportieren"
+    "pdf": "PDF exportieren",
+    "pairings": "Paarungen exportieren"
   },
   "template": {
     "title": "Vorlage",
@@ -242,6 +245,12 @@
     "save": "Als Vorlage speichern",
     "name": "Vorlagenname",
     "delete": "Vorlage löschen"
+  },
+  "stats": {
+    "totalPlayers": "Spieler",
+    "avgElo": "Ø Elo",
+    "mostActive": "Aktivster Spieler",
+    "eloProgression": "Elo-Verlauf"
   },
   "common": {
     "cancel": "Abbrechen",

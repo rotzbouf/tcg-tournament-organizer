@@ -32,16 +32,16 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-lg">{gameConfig.icon}</span>
-            <h3 className="font-semibold text-gray-900">{tournament.name}</h3>
+            <h3 className="font-semibold text-foreground">{tournament.name}</h3>
           </div>
-          <p className="mt-0.5 text-sm text-gray-500">{gameConfig.name}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{gameConfig.name}</p>
         </div>
         <Badge variant={statusBadgeVariant[tournament.status]}>
           {t(`tournament.status.${tournament.status}`)}
         </Badge>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-sm text-gray-600">
+      <div className="mt-3 flex items-center justify-between text-sm text-secondary-foreground">
         <div className="flex items-center gap-4">
           <span>{t('dashboard.players')}: {tournament.players.length}</span>
           {tournament.status !== 'registration' && (

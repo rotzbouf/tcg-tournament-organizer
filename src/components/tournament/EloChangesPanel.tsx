@@ -24,25 +24,25 @@ export function EloChangesPanel({ tournament }: EloChangesPanelProps) {
   ).sort((a, b) => b.eloAfter - a.eloAfter)
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="px-3 py-2 text-left font-medium text-gray-600">{t('standings.player')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('elo.before')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('elo.after')}</th>
-            <th className="px-3 py-2 text-center font-medium text-gray-600">{t('elo.change')}</th>
+          <tr className="border-b border-border bg-background">
+            <th className="px-3 py-2 text-left font-medium text-secondary-foreground">{t('standings.player')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('elo.before')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('elo.after')}</th>
+            <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('elo.change')}</th>
           </tr>
         </thead>
         <tbody>
           {updates.map(update => (
-            <tr key={update.playerId} className="border-b border-gray-100 last:border-0">
-              <td className="px-3 py-2 text-gray-900">{playerNameMap[update.playerId]}</td>
-              <td className="px-3 py-2 text-center text-gray-500">{update.eloBefore}</td>
-              <td className="px-3 py-2 text-center font-semibold text-gray-900">{update.eloAfter}</td>
+            <tr key={update.playerId} className="border-b border-muted last:border-0">
+              <td className="px-3 py-2 text-foreground">{playerNameMap[update.playerId]}</td>
+              <td className="px-3 py-2 text-center text-muted-foreground">{update.eloBefore}</td>
+              <td className="px-3 py-2 text-center font-semibold text-foreground">{update.eloAfter}</td>
               <td className={cn(
                 'px-3 py-2 text-center font-medium',
-                update.delta > 0 ? 'text-green-600' : update.delta < 0 ? 'text-red-600' : 'text-gray-400'
+                update.delta > 0 ? 'text-green-600' : update.delta < 0 ? 'text-red-600' : 'text-muted-foreground'
               )}>
                 {update.delta > 0 ? '+' : ''}{update.delta}
               </td>

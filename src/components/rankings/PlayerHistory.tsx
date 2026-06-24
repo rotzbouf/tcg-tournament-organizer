@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { DatabasePlayer } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { EloChart } from '@/components/ui/EloChart'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { cn } from '@/lib/utils'
 
@@ -31,15 +32,15 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
         <Button variant="secondary" size="sm" onClick={onBack}>
           ← {t('rankings.title')}
         </Button>
-        <h2 className="text-2xl font-bold text-gray-900">{player.name}</h2>
-        <span className="text-lg font-semibold text-gray-500">{player.elo} Elo</span>
+        <h2 className="text-2xl font-bold text-foreground">{player.name}</h2>
+        <span className="text-lg font-semibold text-muted-foreground">{player.elo} Elo</span>
       </div>
 
-      <div className="mb-4 rounded-lg border border-gray-200 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('rankings.profile')}</h3>
+      <div className="mb-4 rounded-lg border border-border p-4">
+        <h3 className="mb-3 text-sm font-semibold text-secondary-foreground">{t('rankings.profile')}</h3>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="w-24 text-sm text-gray-500">{t('rankings.playerId')}:</span>
+            <span className="w-24 text-sm text-muted-foreground">{t('rankings.playerId')}:</span>
             {editingId ? (
               <>
                 <Input
@@ -54,24 +55,24 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
               </>
             ) : (
               <>
-                <span className="text-sm text-gray-900">{player.playerId || '–'}</span>
+                <span className="text-sm text-foreground">{player.playerId || '–'}</span>
                 <Button variant="ghost" size="sm" onClick={() => setEditingId(true)}>{t('rankings.editProfile')}</Button>
               </>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-24 text-sm text-gray-500">{t('rankings.matches')}:</span>
-            <span className="text-sm text-gray-900">{player.matchesPlayed}</span>
+            <span className="w-24 text-sm text-muted-foreground">{t('rankings.matches')}:</span>
+            <span className="text-sm text-foreground">{player.matchesPlayed}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-24 text-sm text-gray-500">{t('rankings.tournaments')}:</span>
-            <span className="text-sm text-gray-900">{player.tournamentsPlayed}</span>
+            <span className="w-24 text-sm text-muted-foreground">{t('rankings.tournaments')}:</span>
+            <span className="text-sm text-foreground">{player.tournamentsPlayed}</span>
           </div>
         </div>
       </div>
 
       {(player.penalties?.length ?? 0) > 0 && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
           <h3 className="mb-3 text-sm font-semibold text-red-700">{t('penalties.history')}</h3>
           <div className="space-y-2">
             {[...(player.penalties ?? [])].reverse().map((p, i) => (
@@ -79,40 +80,53 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
                 <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
                   {t(`penalties.type.${p.type}`)}
                 </span>
-                <span className="text-gray-700">{p.reason}</span>
-                <span className="ml-auto text-xs text-gray-400">{p.tournamentName} — {new Date(p.date).toLocaleDateString()}</span>
+                <span className="text-secondary-foreground">{p.reason}</span>
+                <span className="ml-auto text-xs text-muted-foreground">{p.tournamentName} — {new Date(p.date).toLocaleDateString()}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {player.history.length >= 2 && (
+        <div className="mb-4 rounded-lg border border-border p-4">
+          <h3 className="mb-2 text-sm font-semibold text-secondary-foreground">{t('stats.eloProgression')}</h3>
+          <EloChart
+            data={player.history.map(e => ({
+              label: e.tournamentName,
+              value: e.eloAfter,
+              sublabel: `#${e.placement} — ${e.tournamentName}`,
+            }))}
+          />
+        </div>
+      )}
+
       {player.history.length === 0 ? (
-        <p className="text-center text-sm text-gray-400">{t('rankings.noHistory')}</p>
+        <p className="text-center text-sm text-muted-foreground">{t('rankings.noHistory')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-3 py-2 text-left font-medium text-gray-600">{t('tournament.name')}</th>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('standings.rank')}</th>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('elo.before')}</th>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('elo.after')}</th>
-                <th className="px-3 py-2 text-center font-medium text-gray-600">{t('elo.change')}</th>
+              <tr className="border-b border-border bg-background">
+                <th className="px-3 py-2 text-left font-medium text-secondary-foreground">{t('tournament.name')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.rank')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('elo.before')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('elo.after')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('elo.change')}</th>
               </tr>
             </thead>
             <tbody>
               {[...player.history].reverse().map((entry, i) => {
                 const delta = entry.eloAfter - entry.eloBefore
                 return (
-                  <tr key={i} className="border-b border-gray-100 last:border-0">
-                    <td className="px-3 py-2 text-gray-900">{entry.tournamentName}</td>
-                    <td className="px-3 py-2 text-center text-gray-500">#{entry.placement}</td>
-                    <td className="px-3 py-2 text-center text-gray-500">{entry.eloBefore}</td>
-                    <td className="px-3 py-2 text-center font-semibold text-gray-900">{entry.eloAfter}</td>
+                  <tr key={i} className="border-b border-muted last:border-0">
+                    <td className="px-3 py-2 text-foreground">{entry.tournamentName}</td>
+                    <td className="px-3 py-2 text-center text-muted-foreground">#{entry.placement}</td>
+                    <td className="px-3 py-2 text-center text-muted-foreground">{entry.eloBefore}</td>
+                    <td className="px-3 py-2 text-center font-semibold text-foreground">{entry.eloAfter}</td>
                     <td className={cn(
                       'px-3 py-2 text-center font-medium',
-                      delta > 0 ? 'text-green-600' : delta < 0 ? 'text-red-600' : 'text-gray-400'
+                      delta > 0 ? 'text-green-600' : delta < 0 ? 'text-red-600' : 'text-muted-foreground'
                     )}>
                       {delta > 0 ? '+' : ''}{delta}
                     </td>

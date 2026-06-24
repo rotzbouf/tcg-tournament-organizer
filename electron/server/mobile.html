@@ -5,51 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>TCG Tournament</title>
 <style>
+:root{--bg:#f8fafc;--card:#fff;--fg:#1e293b;--fg2:#64748b;--fg3:#475569;--fg-muted:#94a3b8;--bd:#e2e8f0;--bd-subtle:#f1f5f9;--accent:#1e40af;--success-bg:#dcfce7;--success-fg:#166534;--info-bg:#dbeafe;--my-match-bg:#eff6ff;--input-bg:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--card:#1e293b;--fg:#f1f5f9;--fg2:#94a3b8;--fg3:#cbd5e1;--fg-muted:#64748b;--bd:#334155;--bd-subtle:#1e293b;--accent:#3b82f6;--success-bg:#14532d;--success-fg:#86efac;--info-bg:#1e3a5f;--my-match-bg:#1e3a5f;--input-bg:#1e293b}}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,system-ui,sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh}
-.header{background:#1e40af;color:#fff;padding:12px 16px;font-size:18px;font-weight:700;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh}
+.header{background:var(--accent);color:#fff;padding:12px 16px;font-size:18px;font-weight:700;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
 .header button{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer}
 .container{padding:12px}
 .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
-.badge-active{background:#dcfce7;color:#166534}
-.badge-reg{background:#dbeafe;color:#1e40af}
-.tabs{display:flex;gap:2px;border-bottom:2px solid #e2e8f0;margin-bottom:12px;overflow-x:auto}
-.tab{padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;color:#64748b}
-.tab.active{color:#1e40af;border-bottom-color:#1e40af}
-.match{padding:10px;background:#fff;border-radius:8px;margin-bottom:8px;border:1px solid #e2e8f0}
+.badge-active{background:var(--success-bg);color:var(--success-fg)}
+.badge-reg{background:var(--info-bg);color:var(--accent)}
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--bd);margin-bottom:12px;overflow-x:auto}
+.tab{padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;color:var(--fg2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.match{padding:10px;background:var(--card);border-radius:8px;margin-bottom:8px;border:1px solid var(--bd)}
 .match-header{display:flex;align-items:center;justify-content:space-between}
-.match .table-num{font-size:20px;font-weight:800;color:#1e40af;min-width:50px;text-align:center}
+.match .table-num{font-size:20px;font-weight:800;color:var(--accent);min-width:50px;text-align:center}
 .match .names{flex:1;font-size:14px;font-weight:500}
-.match .score{font-size:13px;color:#64748b;font-weight:600;margin:0 6px}
-input[type=text],input[type=date],textarea{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:8px}
+.match .score{font-size:13px;color:var(--fg2);font-weight:600;margin:0 6px}
+input[type=text],input[type=date],textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:14px;margin-bottom:8px;background:var(--input-bg);color:var(--fg)}
 textarea{min-height:120px;font-family:monospace;font-size:13px}
-button.primary{width:100%;padding:12px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+button.primary{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
 button.primary:disabled{opacity:.5}
 button.primary:active{opacity:.8}
-button.secondary{width:100%;padding:10px;background:#fff;color:#1e40af;border:1px solid #1e40af;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+button.secondary{width:100%;padding:10px;background:var(--card);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
 button.judge{width:100%;padding:14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
 button.judge:active{opacity:.8}
 button.judge:disabled{opacity:.5}
 .standings-table{width:100%;font-size:12px;border-collapse:collapse}
-.standings-table th{text-align:left;padding:6px 8px;background:#f1f5f9;font-weight:600;color:#64748b}
-.standings-table td{padding:6px 8px;border-bottom:1px solid #f1f5f9}
+.standings-table th{text-align:left;padding:6px 8px;background:var(--bd-subtle);font-weight:600;color:var(--fg2)}
+.standings-table td{padding:6px 8px;border-bottom:1px solid var(--bd-subtle)}
 .timer-bar{background:#0f172a;color:#fff;text-align:center;padding:8px;font-family:monospace;font-size:20px;font-weight:700}
 .timer-bar.warn{background:#d97706}
 .timer-bar.danger{background:#dc2626}
 .timer-bar.expired{background:#dc2626;animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.6}}
 .msg{text-align:center;padding:8px;font-size:13px;color:#16a34a;font-weight:500}
-.filter input{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:10px}
-.reg-done{background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px}
-.reg-done .name{font-size:16px;font-weight:700;color:#166534;text-align:center}
-.reg-done .details{font-size:12px;color:#64748b;margin-top:6px}
+.filter input{width:100%;padding:8px 12px;border:1px solid var(--bd);border-radius:8px;font-size:14px;margin-bottom:10px;background:var(--input-bg);color:var(--fg)}
+.reg-done{background:var(--success-bg);border:1px solid var(--success-fg);border-radius:10px;padding:14px;margin-bottom:12px}
+.reg-done .name{font-size:16px;font-weight:700;color:var(--success-fg);text-align:center}
+.reg-done .details{font-size:12px;color:var(--fg2);margin-top:6px}
 .reg-done .details span{display:block;margin-top:2px}
-.form-label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:4px}
+.form-label{display:block;font-size:13px;font-weight:600;color:var(--fg3);margin-bottom:4px}
 .form-row{display:flex;gap:8px}
 .form-row>*{flex:1}
 .form-group{margin-bottom:4px}
-.optional{font-weight:400;color:#94a3b8;font-size:11px}
-.my-match{border:2px solid #1e40af;background:#eff6ff}
+.optional{font-weight:400;color:var(--fg-muted);font-size:11px}
+.my-match{border:2px solid var(--accent);background:var(--my-match-bg)}
 </style>
 </head>
 <body>
@@ -89,6 +91,7 @@ const T={
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
 let tournament=null,standings=null,timers=null,activeTab='pairings',boundTournamentId=null;
+let timerAlerted=false;
 let session=JSON.parse(localStorage.getItem('tcg-session')||'null');
 let needsFullRender=true;
 const app=document.getElementById('app');
@@ -155,11 +158,21 @@ function render(){
   else if(activeTab==='register')renderRegister(tc);
 }
 
+function playMobileAlarm(){
+  try{
+    const ctx=new AudioContext();const now=ctx.currentTime;
+    for(let i=0;i<3;i++){const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;o.type='square';g.gain.value=0.15;o.start(now+i*0.3);o.stop(now+i*0.3+0.2)}
+  }catch{}
+  if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);
+}
+
 function updateTimer(){
-  if(!timers||!tournament||tournament.status==='registration'||tournament.status==='completed'){timerRoot.innerHTML='';return}
-  const tm=timers[tournament.id];if(!tm){timerRoot.innerHTML='';return}
+  if(!timers||!tournament||tournament.status==='registration'||tournament.status==='completed'){timerRoot.innerHTML='';timerAlerted=false;return}
+  const tm=timers[tournament.id];if(!tm){timerRoot.innerHTML='';timerAlerted=false;return}
   let rem=tm.remainingSeconds;
   if(tm.isRunning&&tm.endTimestamp)rem=Math.max(0,Math.ceil((tm.endTimestamp-Date.now())/1000));
+  if(rem===0&&!timerAlerted){timerAlerted=true;playMobileAlarm()}
+  if(rem>0)timerAlerted=false;
   const cls=rem<=0?'expired':rem<=60?'danger':rem<=300?'warn':'';
   const str=`${String(Math.floor(rem/60)).padStart(2,'0')}:${String(rem%60).padStart(2,'0')}`;
   if(timerRoot.dataset.last===str)return;

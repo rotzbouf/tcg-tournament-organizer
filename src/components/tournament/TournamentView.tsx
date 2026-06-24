@@ -48,7 +48,7 @@ export function TournamentView() {
 
   if (!tournament) {
     return (
-      <div className="text-center text-gray-500">
+      <div className="text-center text-muted-foreground">
         <p>{t('tournament.notFound')}</p>
         <Button variant="secondary" className="mt-4" onClick={() => navigate('/')}>
           {t('nav.dashboard')}
@@ -136,8 +136,8 @@ export function TournamentView() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">{gameConfig.icon}</span>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{tournament.name}</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-2xl font-bold text-foreground">{tournament.name}</h2>
+              <p className="text-sm text-muted-foreground">
                 {gameConfig.name} — {t(`tournament.formatOptions.${tournament.format}`)}
                 {tournament.format === 'swiss_topcut' && tournament.topCut > 0 && ` (Top ${tournament.topCut})`}
                 {tournament.ageDivisionsEnabled && ` — ${t('tournament.ageDivisions')}`}
@@ -163,6 +163,7 @@ export function TournamentView() {
             <TimerDisplay
               tournamentId={tournament.id}
               durationMinutes={tournament.roundTimeMinutes}
+              tournamentName={tournament.name}
             />
           </div>
         )}
@@ -233,7 +234,7 @@ export function TournamentView() {
         message={t('confirm.deleteTournamentMessage')}
       />
 
-      <div className="mb-4 flex gap-1 border-b border-gray-200">
+      <div className="mb-4 flex gap-1 border-b border-border">
         {tabs
           .filter(tab => tab.show)
           .map(tab => (
@@ -244,7 +245,7 @@ export function TournamentView() {
                 'border-b-2 px-4 py-2 text-sm font-medium transition-colors',
                 activeTab === tab.key
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  : 'border-transparent text-muted-foreground hover:border-input hover:text-secondary-foreground'
               )}
             >
               {tab.label}
@@ -269,6 +270,7 @@ export function TournamentView() {
             round={currentRound}
             players={tournament.players}
             tournamentId={tournament.id}
+            tournamentName={tournament.name}
             canGenerate={canGenerate}
             isLastRound={isLastRound}
             isTopCut={isElimFormat}
@@ -302,7 +304,7 @@ export function TournamentView() {
                   if (divStandings.length === 0) return null
                   return (
                     <div key={div}>
-                      <h3 className="mb-2 text-lg font-bold text-gray-800">{DIVISION_LABELS[div][i18n.language === 'de' ? 'de' : 'en']}</h3>
+                      <h3 className="mb-2 text-lg font-bold text-foreground">{DIVISION_LABELS[div][i18n.language === 'de' ? 'de' : 'en']}</h3>
                       <StandingsTable standings={divStandings} game={tournament.game} />
                     </div>
                   )

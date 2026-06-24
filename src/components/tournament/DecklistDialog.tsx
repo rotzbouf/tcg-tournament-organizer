@@ -45,12 +45,12 @@ export function DecklistDialog({ open, onClose, tournamentId, player, readonly, 
     <Dialog open={open} onClose={onClose} title={`${t('decklist.title')} — ${player.name}`}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="decklist-text" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="decklist-text" className="mb-1 block text-sm font-medium text-secondary-foreground">
             {t('decklist.paste')}
           </label>
           <textarea
             id="decklist-text"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-input bg-card text-foreground px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             rows={10}
             value={text}
             onChange={e => setText(e.target.value)}
@@ -59,7 +59,7 @@ export function DecklistDialog({ open, onClose, tournamentId, player, readonly, 
           />
           {entries.length > 0 && (
             <div className="mt-1 space-y-1">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 {t('decklist.totalCards')}: {stats.totalCards}
                 {deckRules && deckRules.mainMax > 0 && `/${deckRules.mainMax}`}
                 {deckRules && deckRules.mainMax < 0 && ` (min ${deckRules.mainMin})`}

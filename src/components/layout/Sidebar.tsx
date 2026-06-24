@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { selectAllTournaments } from '@/state/selectors'
 import { useFileIO } from '@/hooks/useFileIO'
+import { useTheme } from '@/hooks/useTheme'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { Button } from '@/components/ui/Button'
 import { TimerDisplay } from '@/components/tournament/TimerDisplay'
@@ -15,14 +16,17 @@ export function Sidebar() {
   const tournaments = selectAllTournaments(state)
   const { exportState, importState, error, clearError } = useFileIO()
 
+  const { theme, cycleTheme } = useTheme()
+  const themeLabel = theme === 'light' ? '☀' : theme === 'dark' ? '☾' : '◐'
+
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === 'de' ? 'en' : 'de')
   }
 
   return (
-    <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
-      <div className="border-b border-gray-200 p-4">
-        <h1 className="text-lg font-bold text-gray-900">{t('app.title')}</h1>
+    <aside className="flex w-64 flex-col border-r border-border bg-card">
+      <div className="border-b border-border p-4">
+        <h1 className="text-lg font-bold text-foreground">{t('app.title')}</h1>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3">
@@ -31,8 +35,8 @@ export function Sidebar() {
           className={cn(
             'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
             location.pathname === '/'
-              ? 'bg-gray-100 text-gray-900'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              ? 'bg-muted text-foreground'
+              : 'text-secondary-foreground hover:bg-muted hover:text-foreground'
           )}
         >
           {t('nav.dashboard')}
@@ -43,8 +47,8 @@ export function Sidebar() {
           className={cn(
             'mt-1 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
             location.pathname === '/rankings'
-              ? 'bg-gray-100 text-gray-900'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              ? 'bg-muted text-foreground'
+              : 'text-secondary-foreground hover:bg-muted hover:text-foreground'
           )}
         >
           {t('rankings.title')}
@@ -52,7 +56,7 @@ export function Sidebar() {
 
         {tournaments.length > 0 && (
           <div className="mt-4">
-            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t('dashboard.title')}
             </p>
             {tournaments.map(tournament => {
@@ -66,8 +70,8 @@ export function Sidebar() {
                   className={cn(
                     'mt-0.5 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
                     isActive
-                      ? 'bg-gray-100 font-medium text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-muted font-medium text-foreground'
+                      : 'text-secondary-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   <span>{gameConfig.icon}</span>
@@ -86,9 +90,9 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="border-t border-gray-200 p-3 space-y-2">
+      <div className="border-t border-border p-3 space-y-2">
         {error && (
-          <div className="rounded-lg bg-red-50 p-2 text-xs text-red-600">
+          <div className="rounded-lg bg-red-50 p-2 text-xs text-red-600 dark:bg-red-950 dark:text-red-400">
             {error}
             <button onClick={clearError} className="ml-2 underline">x</button>
           </div>
@@ -101,12 +105,21 @@ export function Sidebar() {
             {t('nav.import')}
           </Button>
         </div>
-        <button
-          onClick={toggleLanguage}
-          className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-        >
-          {t('nav.language')}: {i18n.language.toUpperCase()}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={toggleLanguage}
+            className="flex flex-1 items-center rounded-lg px-3 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            {t('nav.language')}: {i18n.language.toUpperCase()}
+          </button>
+          <button
+            onClick={cycleTheme}
+            className="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title={theme}
+          >
+            {themeLabel}
+          </button>
+        </div>
       </div>
     </aside>
   )

@@ -67,7 +67,7 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
           onChange={e => setFormat(e.target.value as TournamentFormat)}
         />
         {format === 'swiss_topcut' && (
-          <p className="text-sm text-gray-500">{t('tournament.topCutAutoHint')}</p>
+          <p className="text-sm text-muted-foreground">{t('tournament.topCutAutoHint')}</p>
         )}
         <Select
           id="edit-tournament-round-time"

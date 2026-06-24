@@ -15,14 +15,14 @@ export function Dashboard() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h2>
         <Button onClick={() => setShowCreate(true)}>{t('nav.newTournament')}</Button>
       </div>
 
       {tournaments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
-          <p className="text-lg text-gray-500">{t('dashboard.empty')}</p>
-          <p className="mt-1 text-sm text-gray-400">{t('dashboard.createFirst')}</p>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-input p-12 text-center">
+          <p className="text-lg text-muted-foreground">{t('dashboard.empty')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.createFirst')}</p>
           <Button className="mt-4" onClick={() => setShowCreate(true)}>
             {t('nav.newTournament')}
           </Button>

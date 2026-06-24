@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTimerManager } from '@/hooks/useTimerManager'
 import { formatTime } from '@/lib/utils'
@@ -8,11 +9,16 @@ interface TimerDisplayProps {
   tournamentId: string
   durationMinutes: number
   compact?: boolean
+  tournamentName?: string
 }
 
-export function TimerDisplay({ tournamentId, durationMinutes, compact }: TimerDisplayProps) {
+export function TimerDisplay({ tournamentId, durationMinutes, compact, tournamentName }: TimerDisplayProps) {
   const { t } = useTranslation()
-  const { timers, startTimer, pauseTimer, resetTimer } = useTimerManager()
+  const { timers, startTimer, pauseTimer, resetTimer, setTournamentName, soundEnabled, toggleSound } = useTimerManager()
+
+  useEffect(() => {
+    if (tournamentName) setTournamentName(tournamentId, tournamentName)
+  }, [tournamentId, tournamentName, setTournamentName])
 
   const timer = timers[tournamentId]
   const remaining = timer?.remainingSeconds ?? durationMinutes * 60
@@ -25,7 +31,7 @@ export function TimerDisplay({ tournamentId, durationMinutes, compact }: TimerDi
       ? 'text-red-500'
       : remaining <= 300
         ? 'text-amber-500'
-        : 'text-gray-900'
+        : 'text-foreground'
 
   if (compact) {
     return (
@@ -60,6 +66,14 @@ export function TimerDisplay({ tournamentId, durationMinutes, compact }: TimerDi
           onClick={() => resetTimer(tournamentId, durationMinutes)}
         >
           {t('timer.reset')}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={toggleSound}
+          title={soundEnabled ? t('timer.soundOn') : t('timer.soundOff')}
+        >
+          {soundEnabled ? '🔊' : '🔇'}
         </Button>
       </div>
       {isExpired && (
