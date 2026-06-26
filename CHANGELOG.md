@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-06-26
+
+### Fixed
+- **Windows-Build: Dashboard leer** — BrowserRouter durch HashRouter ersetzt. Auf Windows wurde der `file://`-Pfad (`/C:/…/index.html`) nicht als Route `/` erkannt, wodurch der gesamte Dashboard-Inhalt (inkl. „Neues Turnier"-Button) nicht gerendert wurde
+
 ## [1.4.0] - 2026-06-24
 
 ### Added
