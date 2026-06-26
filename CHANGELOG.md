@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-26
+
+### Added
+- **Spieler Self-Reporting** — Spieler können ihr Matchergebnis direkt auf der Mobile-Seite eintragen. Der TO sieht einen Bestätigungs-Banner im Rundenbereich und muss das gemeldete Ergebnis explizit bestätigen, bevor es gespeichert wird
+- **Saison-Management** — Neue Saisons-Seite in der Navigation. Mehrere abgeschlossene Turniere können zu einer Saison zusammengefasst werden. Konfigurierbare Punkte-Tiers nach Platzierung (Standard: 1.=10, 2.=7, 3.–4.=5, 5.–8.=3, 9.–16.=1). Die Saison-Rangliste wird automatisch über alle verknüpften Turniere berechnet
+- **Elo Seeding** — Erste Runde optional nach Elo-Wertung paaren (S-Kurven-Methode: #1 vs. #N/2+1, #2 vs. #N/2+2 usw.). Aktivierbar pro Turnier beim Erstellen
+- **Visuelles Bracket** — Neuer „Bracket"-Tab erscheint sobald Top-Cut-Runden existieren. Zeigt den gesamten Eliminationsbaum mit Champion-Hervorhebung
+- **Turnier-Abschlussbericht** — HTML-Export nach Turnierende mit Champion-Box, Statistiken, vollständiger Rangliste und allen Rundenpaarungen
+
 ## [1.4.1] - 2026-06-26
 
 ### Fixed

@@ -10,6 +10,11 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen; Cross-Tournament-Tracking in der Spieler-Datenbank
 - **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools; Sichtbarkeits-Modi (Versteckt/Nur TO/Öffentlich); Kartenbank-Validierung (Kartenzahl, Kopien-Limit)
 - **Manuelle Paarungsänderung** — Spieler zwischen Matches per Klick tauschen
+- **Saison-Management** — Mehrere Turniere zu einer Saison zusammenfassen. Konfigurierbare Punkte-Tiers nach Platzierung. Automatische Saison-Rangliste über alle verknüpften Events
+- **Spieler Self-Reporting** — Spieler können Ergebnis auf der Mobile-Seite melden; TO bestätigt vor der Speicherung
+- **Elo Seeding** — Erste Runde optional nach Elo-Wertung per S-Kurve paaren
+- **Visuelles Bracket** — Grafische Top-Cut-Bracket-Ansicht mit Champion-Hervorhebung
+- **Turnier-Abschlussbericht** — HTML-Export mit Champion, Statistiken und allen Runden
 - **Elo-Rankings** — Persistente Spieler-Datenbank mit Elo-Wertung über mehrere Turniere, Elo-Verlauf-Graph, Statistik-Übersicht
 - **Spielerprofil** — TCG-spezifische Spieler-IDs hinterlegen (Konami-ID, Pokemon Player ID, etc.)
 - **Discord Webhook** — Paarungen, Standings und Ergebnisse automatisch in Discord posten
