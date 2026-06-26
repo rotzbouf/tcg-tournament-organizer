@@ -32,6 +32,7 @@ export interface Tournament {
   ageDivisionsEnabled: boolean
   decklistVisibility: DecklistVisibility
   powerPairings: boolean
+  eloSeeding: boolean
   discordWebhookUrl: string | null
   eloApplied: boolean
   createdAt: string

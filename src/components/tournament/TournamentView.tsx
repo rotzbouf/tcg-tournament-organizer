@@ -6,6 +6,7 @@ import { selectTournament, selectCurrentRound, selectStandings, selectDivisionSt
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { DIVISION_LABELS, DIVISION_ORDER } from '@/lib/ageDivision'
 import { generateCsv, generatePdfHtml } from '@/lib/exportResults'
+import { generateTournamentReport } from '@/lib/reportGenerator'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -19,12 +20,13 @@ import { StandingsTable } from './StandingsTable'
 import { RoundHistory } from './RoundHistory'
 import { TimerDisplay } from './TimerDisplay'
 import { EloChangesPanel } from './EloChangesPanel'
+import { BracketView } from './BracketView'
 import { DecklistOverview } from './DecklistOverview'
 import { DiscordSettings } from './DiscordSettings'
 import { ServerPanel } from './ServerPanel'
 import { cn } from '@/lib/utils'
 
-type Tab = 'players' | 'round' | 'standings' | 'history' | 'penalties' | 'decklists' | 'elo' | 'discord' | 'server'
+type Tab = 'players' | 'round' | 'standings' | 'bracket' | 'history' | 'penalties' | 'decklists' | 'elo' | 'discord' | 'server'
 
 const statusBadgeVariant = {
   registration: 'info' as const,
@@ -121,6 +123,7 @@ export function TournamentView() {
     { key: 'players', label: t('players.title'), show: true },
     { key: 'round', label: t('rounds.title'), show: tournament.status !== 'registration' },
     { key: 'standings', label: t('standings.title'), show: tournament.status !== 'registration' },
+    { key: 'bracket', label: t('bracket.title'), show: tournament.rounds.some(r => r.phase === 'top_cut') },
     { key: 'history', label: t('rounds.history'), show: tournament.rounds.some(r => r.isComplete) },
     { key: 'decklists', label: t('decklist.title'), show: true },
     { key: 'penalties', label: `${t('penalties.title')}${tournament.penalties.length > 0 ? ` (${tournament.penalties.length})` : ''}`, show: tournament.status !== 'registration' },
@@ -326,6 +329,14 @@ export function TournamentView() {
               }}>
                 {t('export.pdf')}
               </Button>
+              {tournament.status === 'completed' && (
+                <Button variant="secondary" size="sm" onClick={() => {
+                  const html = generateTournamentReport(tournament, standings)
+                  window.electronAPI?.savePdf(html, `${tournament.name.replace(/\s+/g, '-')}-bericht.pdf`)
+                }}>
+                  {t('export.report')}
+                </Button>
+              )}
             </div>
           </>
         )}
@@ -335,6 +346,9 @@ export function TournamentView() {
             players={tournament.players}
             visibility={tournament.decklistVisibility}
           />
+        )}
+        {activeTab === 'bracket' && (
+          <BracketView tournament={tournament} />
         )}
         {activeTab === 'history' && (
           <RoundHistory

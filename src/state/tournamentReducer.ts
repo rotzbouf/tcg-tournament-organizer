@@ -5,7 +5,7 @@ import { Match, Round } from '@/types/round'
 import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds, calculateTopCutSize } from '@/engine/scoring'
-import { generatePairings, generatePowerPairings, generateFirstRoundPairings } from '@/engine/swiss'
+import { generatePairings, generatePowerPairings, generateFirstRoundPairings, generateEloSeededPairings } from '@/engine/swiss'
 import { generateTopCutRound } from '@/engine/topcut'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
@@ -111,6 +111,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         ageDivisionsEnabled: action.payload.ageDivisionsEnabled ?? false,
         decklistVisibility: action.payload.decklistVisibility ?? 'hidden',
         powerPairings: action.payload.powerPairings ?? true,
+        eloSeeding: action.payload.eloSeeding ?? false,
         discordWebhookUrl: null,
         eloApplied: false,
         createdAt: now,
@@ -203,9 +204,22 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const totalRounds = useDivisions
         ? calculateDivisionTotalRounds(tournament.players, tournament.createdAt, minRounds)
         : calculateTotalRounds(tournament.players.length, minRounds)
+      const buildEloMap = () => {
+        const m = new Map<string, number>()
+        for (const p of tournament.players) {
+          const dbEntry = Object.values(state.playerDatabase).find(
+            d => d.name.toLowerCase() === p.name.toLowerCase() && d.game === tournament.game
+          )
+          if (dbEntry) m.set(p.id, dbEntry.elo)
+        }
+        return m
+      }
+      const eloMap = tournament.eloSeeding && !useDivisions ? buildEloMap() : new Map()
       const matches = useDivisions
         ? generateDivisionFirstRoundPairings(tournament.players, tournament.createdAt)
-        : generateFirstRoundPairings(tournament.players)
+        : eloMap.size > 0
+          ? generateEloSeededPairings(tournament.players, eloMap)
+          : generateFirstRoundPairings(tournament.players)
       const updatedPlayers = tournament.players.map(p => {
         const hasBye = matches.some(m => m.isBye && m.player1Id === p.id)
         return hasBye ? { ...p, hasBye: true } : p

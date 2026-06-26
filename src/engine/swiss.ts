@@ -266,3 +266,28 @@ export function generateFirstRoundPairings(players: Player[]): Match[] {
 
   return assignTableNumbers(matches)
 }
+
+// S-curve seeding: rank players by Elo, then pair #1 vs #(N/2+1), #2 vs #(N/2+2), etc.
+// Players without a DB entry get DEFAULT_ELO (1500).
+export function generateEloSeededPairings(players: Player[], eloMap: Map<string, number>): Match[] {
+  if (players.length < 2) return []
+
+  const sorted = [...players].sort((a, b) => (eloMap.get(b.id) ?? 1500) - (eloMap.get(a.id) ?? 1500))
+  const matches: Match[] = []
+
+  let pool = sorted
+
+  if (pool.length % 2 !== 0) {
+    // Lowest Elo gets the bye
+    const byePlayer = pool[pool.length - 1]
+    matches.push(createByeMatch(byePlayer.id, 1))
+    pool = pool.slice(0, -1)
+  }
+
+  const half = pool.length / 2
+  for (let i = 0; i < half; i++) {
+    matches.push(createMatch(pool[i].id, pool[half + i].id, 1))
+  }
+
+  return assignTableNumbers(matches)
+}

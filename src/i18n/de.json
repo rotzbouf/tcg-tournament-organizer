@@ -56,7 +56,9 @@
     "minPlayers": "Mindestens 2 Spieler benötigt",
     "notFound": "Turnier nicht gefunden",
     "powerPairings": "Power Pairings (letzte Runde nach Tiebreaker paaren)",
-    "powerPairingsHint": "In der letzten Swiss-Runde werden Spieler innerhalb eines Punktebrackets nach Tiebreaker-Rang gepaart"
+    "powerPairingsHint": "In der letzten Swiss-Runde werden Spieler innerhalb eines Punktebrackets nach Tiebreaker-Rang gepaart",
+    "eloSeeding": "Elo-Seeding (erste Runde nach Elo paaren)",
+    "eloSeedingHint": "Spieler werden nach Elo-Rang gesetzt und mit S-Kurven-Methode gepaart (#1 vs #N/2+1)"
   },
   "players": {
     "title": "Spieler",
@@ -237,7 +239,16 @@
   "export": {
     "csv": "CSV exportieren",
     "pdf": "PDF exportieren",
-    "pairings": "Paarungen exportieren"
+    "pairings": "Paarungen exportieren",
+    "report": "Abschlussbericht"
+  },
+  "bracket": {
+    "title": "Bracket",
+    "champion": "Sieger",
+    "roundOf": "Top {{n}}",
+    "semifinal": "Halbfinale",
+    "final": "Finale",
+    "tbd": "TBD"
   },
   "template": {
     "title": "Vorlage",

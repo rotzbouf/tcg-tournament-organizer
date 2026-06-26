@@ -56,7 +56,9 @@
     "minPlayers": "At least 2 players required",
     "notFound": "Tournament not found",
     "powerPairings": "Power Pairings (pair last round by tiebreaker)",
-    "powerPairingsHint": "In the last Swiss round, players within a point bracket are paired by tiebreaker rank"
+    "powerPairingsHint": "In the last Swiss round, players within a point bracket are paired by tiebreaker rank",
+    "eloSeeding": "Elo Seeding (pair first round by Elo)",
+    "eloSeedingHint": "Players are seeded by Elo rating and paired using S-curve method (#1 vs #N/2+1)"
   },
   "players": {
     "title": "Players",
@@ -237,7 +239,16 @@
   "export": {
     "csv": "Export CSV",
     "pdf": "Export PDF",
-    "pairings": "Export Pairings"
+    "pairings": "Export Pairings",
+    "report": "Tournament Report"
+  },
+  "bracket": {
+    "title": "Bracket",
+    "champion": "Champion",
+    "roundOf": "Top {{n}}",
+    "semifinal": "Semifinal",
+    "final": "Final",
+    "tbd": "TBD"
   },
   "template": {
     "title": "Template",

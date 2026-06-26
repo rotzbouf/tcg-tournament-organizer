@@ -10,4 +10,5 @@ export interface TournamentTemplate {
   grandFinalReset: boolean
   ageDivisionsEnabled: boolean
   powerPairings: boolean
+  eloSeeding?: boolean
 }

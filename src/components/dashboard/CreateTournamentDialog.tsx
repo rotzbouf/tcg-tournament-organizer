@@ -27,6 +27,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [ageDivisions, setAgeDivisions] = useState(true)
   const [decklistVisibility, setDecklistVisibility] = useState<DecklistVisibility>('hidden')
   const [powerPairings, setPowerPairings] = useState(true)
+  const [eloSeeding, setEloSeeding] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
 
@@ -42,6 +43,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setGrandFinalReset(tmpl.grandFinalReset)
     setAgeDivisions(tmpl.ageDivisionsEnabled)
     setPowerPairings(tmpl.powerPairings ?? true)
+    setEloSeeding(tmpl.eloSeeding ?? false)
   }
 
   const handleSaveTemplate = () => {
@@ -57,6 +59,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         grandFinalReset,
         ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions ? ageDivisions : false,
         powerPairings,
+        eloSeeding,
       },
     })
     setTemplateName('')
@@ -93,6 +96,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions ? ageDivisions : false,
         decklistVisibility,
         powerPairings,
+        eloSeeding,
       },
     })
     setName('')
@@ -103,6 +107,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setAgeDivisions(true)
     setDecklistVisibility('hidden')
     setPowerPairings(true)
+    setEloSeeding(false)
     onClose()
   }
 
@@ -175,15 +180,26 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           onChange={e => setRoundTime(Number(e.target.value))}
         />
         {(format === 'swiss' || format === 'swiss_topcut') && (
-          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
-            <input
-              type="checkbox"
-              checked={powerPairings}
-              onChange={e => setPowerPairings(e.target.checked)}
-              className="rounded border-input"
-            />
-            <span>{t('tournament.powerPairings')}</span>
-          </label>
+          <>
+            <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+              <input
+                type="checkbox"
+                checked={powerPairings}
+                onChange={e => setPowerPairings(e.target.checked)}
+                className="rounded border-input"
+              />
+              <span>{t('tournament.powerPairings')}</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+              <input
+                type="checkbox"
+                checked={eloSeeding}
+                onChange={e => setEloSeeding(e.target.checked)}
+                className="rounded border-input"
+              />
+              <span>{t('tournament.eloSeeding')}</span>
+            </label>
+          </>
         )}
         <Select
           id="tournament-decklist-visibility"
