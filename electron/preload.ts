@@ -18,4 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onJudgeCall: (callback: (data: string) => void) => {
     ipcRenderer.on('judge:call', (_event, data: string) => callback(data))
   },
+  onMatchReport: (callback: (data: string) => void) => {
+    ipcRenderer.on('match:report', (_event, data: string) => callback(data))
+  },
 })

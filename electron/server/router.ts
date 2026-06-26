@@ -2,7 +2,7 @@ import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall } from '../ipc/stateSync'
+import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport } from '../ipc/stateSync'
 import { addClient } from './sse'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
@@ -136,6 +136,19 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       const { playerName, tableNumber } = body as { playerName?: string; tableNumber?: number }
       if (!playerName) { jsonResponse(res, { error: 'name required' }, 400); return }
       sendJudgeCall({ playerName, tableNumber: tableNumber ?? 0 })
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
+  const reportMatch = reqPath.match(/^\/api\/matches\/([^/]+)\/report$/)
+  if (reportMatch && req.method === 'POST') {
+    readBody(req, (body) => {
+      const { result, reporterName } = body as { result?: string; reporterName?: string }
+      if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
+        jsonResponse(res, { error: 'invalid result' }, 400); return
+      }
+      sendMatchReport({ matchId: reportMatch[1], result, reporterName: reporterName ?? '?', tournamentId: boundTournamentId })
       jsonResponse(res, { ok: true })
     })
     return

@@ -72,7 +72,9 @@ const T={
     callJudge:'Call Judge',judgeCalled:'Judge has been called!',
     reportToTO:'Report results to the Tournament Organizer',
     dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.',
-    noDecklists:'No decklists available',cards:'cards'},
+    noDecklists:'No decklists available',cards:'cards',
+    reportResult:'Report Result',iWon:'I won',opponentWon:'Opponent won',itsDraw:'Draw',
+    resultReported:'Result reported — waiting for TO confirmation.',reportError:'Error reporting result.'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
     games:'Spiele',noData:'Laden...',
@@ -86,7 +88,9 @@ const T={
     callJudge:'Judge rufen',judgeCalled:'Judge wurde gerufen!',
     reportToTO:'Ergebnisse beim Turnierleiter melden',
     dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.',
-    noDecklists:'Keine Decklisten verfügbar',cards:'Karten'}
+    noDecklists:'Keine Decklisten verfügbar',cards:'Karten',
+    reportResult:'Ergebnis melden',iWon:'Ich habe gewonnen',opponentWon:'Gegner hat gewonnen',itsDraw:'Unentschieden',
+    resultReported:'Ergebnis gemeldet — TO bestätigt noch.',reportError:'Fehler beim Melden.'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
@@ -102,7 +106,7 @@ async function post(url,body){return fetch(API+url,{method:'POST',headers:{'Cont
 
 function connectSSE(){
   const es=new EventSource(API+'/api/events');
-  es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.timers)timers=d.timers;if(d.state)loadFromState(d.state);needsFullRender=true}catch{}};
+  es.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.timers)timers=d.timers;if(d.state){loadFromState(d.state);needsFullRender=true}}catch{}};
 }
 
 function loadFromState(state){
@@ -226,7 +230,30 @@ function renderJudgeButton(){
   const jc=document.getElementById('jc');if(!jc)return;
   const myInfo=getMyMatch();
   if(!myInfo){jc.innerHTML='';return}
-  jc.innerHTML=`<button class="judge" onclick="callJudge()">${t('callJudge')}</button><div id="jm" class="msg"></div>`;
+  const match=myInfo.match;
+  const isPending=match.result==='pending';
+  jc.innerHTML=`
+    ${isPending?`<div style="margin-top:12px">
+      <p style="font-size:12px;color:var(--fg2);margin-bottom:8px;text-align:center">${t('reportResult')}</p>
+      <div style="display:flex;gap:8px">
+        <button class="primary" style="flex:1;padding:10px;font-size:13px" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player1_win':'player2_win'}')">${t('iWon')}</button>
+        <button class="secondary" style="flex:1;padding:10px;font-size:13px;margin:0" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player2_win':'player1_win'}')">${t('opponentWon')}</button>
+      </div>
+      <button class="secondary" style="margin-top:6px;padding:8px;font-size:12px;color:var(--fg2);border-color:var(--bd)" onclick="reportResult('${match.id}','draw')">${t('itsDraw')}</button>
+      <div id="rr" class="msg"></div>
+    </div>`:''}
+    <button class="judge" style="margin-top:8px" onclick="callJudge()">${t('callJudge')}</button>
+    <div id="jm" class="msg"></div>`;
+}
+
+async function reportResult(matchId,result){
+  const myInfo=getMyMatch();if(!myInfo)return;
+  try{
+    await post('/api/matches/'+matchId+'/report',{result,reporterName:myInfo.playerName});
+    const rr=document.getElementById('rr');if(rr)rr.textContent=t('resultReported');
+  }catch{
+    const rr=document.getElementById('rr');if(rr)rr.textContent=t('reportError');
+  }
 }
 
 function renderDropButton(){

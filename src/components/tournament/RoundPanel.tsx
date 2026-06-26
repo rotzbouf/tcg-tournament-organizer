@@ -6,6 +6,7 @@ import { MatchCard } from './MatchCard'
 import { Button } from '@/components/ui/Button'
 import { useTournamentContext } from '@/state/TournamentContext'
 import { generatePairingsPdfHtml } from '@/lib/exportResults'
+import { usePendingReports } from '@/hooks/usePendingReports'
 
 interface RoundPanelProps {
   round: Round
@@ -31,6 +32,10 @@ export function RoundPanel({
   const { t } = useTranslation()
   const { state, dispatch } = useTournamentContext()
   const [selectedPlayer, setSelectedPlayer] = useState<{ matchId: string; playerId: string } | null>(null)
+  const { reports, dismiss } = usePendingReports()
+  const pendingForRound = reports.filter(r =>
+    r.tournamentId === tournamentId && round.matches.some(m => m.id === r.matchId)
+  )
 
   const allResultsIn = round.matches.every(m => m.result !== 'pending')
   const swapEnabled = !round.isComplete && !isTopCut
@@ -81,6 +86,38 @@ export function RoundPanel({
 
   return (
     <div className="space-y-4">
+      {pendingForRound.length > 0 && !round.isComplete && (
+        <div className="space-y-2">
+          {pendingForRound.map(report => {
+            const match = round.matches.find(m => m.id === report.matchId)
+            if (!match) return null
+            const p1 = players.find(p => p.id === match.player1Id)?.name ?? '?'
+            const p2 = match.player2Id ? players.find(p => p.id === match.player2Id)?.name ?? '?' : null
+            const winnerName = report.result === 'player1_win' ? p1 : report.result === 'player2_win' ? p2 : null
+            const resultLabel = winnerName
+              ? t('selfReport.claimsWin', { winner: winnerName, reporter: report.reporterName })
+              : t('selfReport.claimsDraw', { reporter: report.reporterName })
+            return (
+              <div key={report.matchId} className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm dark:border-amber-800 dark:bg-amber-950">
+                <span className="text-amber-900 dark:text-amber-200">
+                  <span className="font-semibold">{t('selfReport.title')}:</span> {resultLabel}
+                </span>
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button size="sm" onClick={() => {
+                    dispatch({ type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId, matchId: report.matchId, result: report.result as never } })
+                    dismiss(report.matchId)
+                  }}>
+                    {t('common.confirm')}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => dismiss(report.matchId)}>
+                    {t('common.dismiss')}
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
       {tournamentName && (
         <div className="hidden print:block mb-4">
           <h2 className="text-xl font-bold">{tournamentName}</h2>

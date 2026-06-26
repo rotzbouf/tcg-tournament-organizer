@@ -263,11 +263,40 @@
     "mostActive": "Aktivster Spieler",
     "eloProgression": "Elo-Verlauf"
   },
+  "selfReport": {
+    "title": "Ergebnis-Meldung",
+    "claimsWin": "{{reporter}} meldet Sieg für {{winner}}",
+    "claimsDraw": "{{reporter}} meldet Unentschieden"
+  },
+  "season": {
+    "title": "Saisons",
+    "create": "Saison erstellen",
+    "name": "Saison-Name",
+    "noSeasons": "Noch keine Saisons",
+    "tournaments": "Turniere",
+    "addTournament": "Turnier hinzufügen",
+    "removeTournament": "Entfernen",
+    "noCompleted": "Keine abgeschlossenen Turniere für dieses Spiel",
+    "ranking": "Saison-Rangliste",
+    "points": "Punkte",
+    "bestFinish": "Bestes Ergebnis",
+    "tournamentsPlayed": "Turniere",
+    "pointStructure": "Punktestruktur",
+    "rankRange": "Ränge",
+    "pointsLabel": "Punkte",
+    "addTier": "Stufe hinzufügen",
+    "delete": "Saison löschen",
+    "deleteConfirm": "Saison wirklich löschen?",
+    "noRanking": "Noch keine Daten (abgeschlossene Turniere werden gewertet)",
+    "export": "Saison exportieren",
+    "editTiers": "Bearbeiten"
+  },
   "common": {
     "cancel": "Abbrechen",
     "save": "Speichern",
     "confirm": "Bestätigen",
     "close": "Schliessen",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "dismiss": "Ignorieren"
   }
 }

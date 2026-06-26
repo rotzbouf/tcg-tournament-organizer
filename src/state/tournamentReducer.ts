@@ -19,6 +19,7 @@ export const initialState: AppState = {
   tournaments: {},
   playerDatabase: {},
   templates: [],
+  seasons: [],
 }
 
 function makeRound(partial: Omit<Round, 'phaseIndex'>, phaseIndex: number): Round {
@@ -810,8 +811,57 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       return { ...state, templates: (state.templates ?? []).filter(t => t.id !== action.payload.templateId) }
     }
 
+    case 'CREATE_SEASON': {
+      const season = {
+        id: generateId(),
+        name: action.payload.name,
+        game: action.payload.game,
+        tournamentIds: [],
+        pointTiers: action.payload.pointTiers,
+        createdAt: new Date().toISOString(),
+      }
+      return { ...state, seasons: [...(state.seasons ?? []), season] }
+    }
+
+    case 'DELETE_SEASON': {
+      return { ...state, seasons: (state.seasons ?? []).filter(s => s.id !== action.payload.seasonId) }
+    }
+
+    case 'ADD_TOURNAMENT_TO_SEASON': {
+      return {
+        ...state,
+        seasons: (state.seasons ?? []).map(s =>
+          s.id === action.payload.seasonId && !s.tournamentIds.includes(action.payload.tournamentId)
+            ? { ...s, tournamentIds: [...s.tournamentIds, action.payload.tournamentId] }
+            : s
+        ),
+      }
+    }
+
+    case 'REMOVE_TOURNAMENT_FROM_SEASON': {
+      return {
+        ...state,
+        seasons: (state.seasons ?? []).map(s =>
+          s.id === action.payload.seasonId
+            ? { ...s, tournamentIds: s.tournamentIds.filter(id => id !== action.payload.tournamentId) }
+            : s
+        ),
+      }
+    }
+
+    case 'UPDATE_SEASON': {
+      return {
+        ...state,
+        seasons: (state.seasons ?? []).map(s =>
+          s.id === action.payload.seasonId
+            ? { ...s, ...(action.payload.name !== undefined && { name: action.payload.name }), ...(action.payload.pointTiers !== undefined && { pointTiers: action.payload.pointTiers }) }
+            : s
+        ),
+      }
+    }
+
     case 'LOAD_STATE': {
-      return { ...action.payload, templates: action.payload.templates ?? [] }
+      return { ...action.payload, templates: action.payload.templates ?? [], seasons: action.payload.seasons ?? [] }
     }
 
     default:

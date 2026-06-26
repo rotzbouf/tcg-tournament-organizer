@@ -263,11 +263,40 @@
     "mostActive": "Most Active",
     "eloProgression": "Elo Progression"
   },
+  "selfReport": {
+    "title": "Result Report",
+    "claimsWin": "{{reporter}} reports win for {{winner}}",
+    "claimsDraw": "{{reporter}} reports a draw"
+  },
+  "season": {
+    "title": "Seasons",
+    "create": "Create Season",
+    "name": "Season Name",
+    "noSeasons": "No seasons yet",
+    "tournaments": "Tournaments",
+    "addTournament": "Add Tournament",
+    "removeTournament": "Remove",
+    "noCompleted": "No completed tournaments for this game",
+    "ranking": "Season Ranking",
+    "points": "Points",
+    "bestFinish": "Best Finish",
+    "tournamentsPlayed": "Events",
+    "pointStructure": "Point Structure",
+    "rankRange": "Ranks",
+    "pointsLabel": "Points",
+    "addTier": "Add Tier",
+    "delete": "Delete Season",
+    "deleteConfirm": "Delete this season?",
+    "noRanking": "No data yet (completed tournaments will be counted)",
+    "export": "Export Season",
+    "editTiers": "Edit"
+  },
   "common": {
     "cancel": "Cancel",
     "save": "Save",
     "confirm": "Confirm",
     "close": "Close",
-    "undo": "Undo"
+    "undo": "Undo",
+    "dismiss": "Dismiss"
   }
 }

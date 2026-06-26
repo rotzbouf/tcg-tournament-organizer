@@ -129,4 +129,10 @@ export function sendJudgeCall(data: { playerName: string; tableNumber: number })
   }
 }
 
+export function sendMatchReport(data: { matchId: string; result: string; reporterName: string; tournamentId: string }): void {
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    mainWindowRef.webContents.send('match:report', JSON.stringify(data))
+  }
+}
+
 export { getClientCount } from '../server/sse'
