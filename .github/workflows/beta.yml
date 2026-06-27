@@ -22,17 +22,7 @@ jobs:
 
   build:
     needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -46,17 +36,48 @@ jobs:
       - name: Build Vite + Electron
         run: npx vite build
 
-      - name: Package with electron-builder
-        run: npx electron-builder --${{ matrix.platform }} --publish never
+      - name: Package with electron-builder (Linux)
+        run: npx electron-builder --linux --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: beta-${{ matrix.platform }}
-          path: |
-            out/*.AppImage
-            out/*.zip
-            out/*.exe
+          name: beta-linux
+          path: out/*.AppImage
           if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: beta-linux
+          path: artifacts
+
+      - name: Force-update beta-latest tag
+        run: |
+          git tag -f beta-latest
+          git push -f origin beta-latest
+
+      - name: Update beta pre-release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: beta-latest
+          name: "Beta (latest)"
+          prerelease: true
+          make_latest: false
+          body: |
+            Automatischer Beta-Build vom Branch `beta`.
+
+            **Commit:** ${{ github.sha }}
+            **Zeitpunkt:** ${{ github.event.head_commit.timestamp }}
+
+            > Dies ist ein Entwicklungs-Build und kann instabil sein.
+          files: artifacts/*.AppImage
