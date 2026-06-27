@@ -135,6 +135,13 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     readBody(req, (body) => {
       const { playerName, tableNumber } = body as { playerName?: string; tableNumber?: number }
       if (!playerName) { jsonResponse(res, { error: 'name required' }, 400); return }
+      const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+      const player = state?.tournaments[boundTournamentId]?.players.find(
+        p => p.name.toLowerCase() === playerName.toLowerCase()
+      )
+      if (player?.droppedInRound !== null && player?.droppedInRound !== undefined) {
+        jsonResponse(res, { error: 'dropped' }, 403); return
+      }
       sendJudgeCall({ playerName, tableNumber: tableNumber ?? 0 })
       jsonResponse(res, { ok: true })
     })

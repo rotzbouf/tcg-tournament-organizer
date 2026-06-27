@@ -48,6 +48,9 @@ export function loadState(): AppState | null {
       if (typeof t.eloApplied !== 'boolean') {
         t.eloApplied = t.status === 'completed'
       }
+      if (typeof t.archived !== 'boolean') {
+        t.archived = false
+      }
       if (Array.isArray(t.players)) {
         for (const p of t.players as Record<string, unknown>[]) {
           if (p.decklist === undefined) p.decklist = null

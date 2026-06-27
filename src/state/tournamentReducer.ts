@@ -115,6 +115,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         eloSeeding: action.payload.eloSeeding ?? false,
         discordWebhookUrl: null,
         eloApplied: false,
+        archived: false,
         createdAt: now,
         updatedAt: now,
       }
@@ -127,6 +128,14 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'DELETE_TOURNAMENT': {
       const { [action.payload.tournamentId]: _, ...rest } = state.tournaments
       return { ...state, tournaments: rest }
+    }
+
+    case 'ARCHIVE_TOURNAMENT': {
+      return updateTournament(state, action.payload.tournamentId, { archived: true })
+    }
+
+    case 'UNARCHIVE_TOURNAMENT': {
+      return updateTournament(state, action.payload.tournamentId, { archived: false })
     }
 
     case 'ADD_PLAYER': {
@@ -158,12 +167,34 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'DROP_PLAYER': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament || tournament.status === 'registration' || tournament.status === 'completed') return state
+
+      const updatedPlayers = tournament.players.map(p =>
+        p.id === action.payload.playerId
+          ? { ...p, droppedInRound: tournament.currentRound }
+          : p
+      )
+
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      let updatedRounds = tournament.rounds
+
+      if (currentRound && !currentRound.isComplete) {
+        const match = currentRound.matches.find(
+          m => !m.isBye && m.result === 'pending' &&
+            (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
+        )
+        if (match) {
+          const result = match.player1Id === action.payload.playerId ? 'player2_win' as const : 'player1_win' as const
+          updatedRounds = tournament.rounds.map(r =>
+            r.roundNumber === currentRound.roundNumber
+              ? { ...r, matches: r.matches.map(m => m.id === match.id ? { ...m, result } : m) }
+              : r
+          )
+        }
+      }
+
       return updateTournament(state, action.payload.tournamentId, {
-        players: tournament.players.map(p =>
-          p.id === action.payload.playerId
-            ? { ...p, droppedInRound: tournament.currentRound }
-            : p
-        ),
+        players: updatedPlayers,
+        rounds: updatedRounds,
       })
     }
 

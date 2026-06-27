@@ -13,9 +13,12 @@
     "title": "Turniere",
     "empty": "Noch keine Turniere vorhanden",
     "createFirst": "Erstelle dein erstes Turnier!",
+    "emptyArchive": "Keine archivierten Turniere",
     "players": "Spieler",
     "round": "Runde",
-    "of": "von"
+    "of": "von",
+    "active": "Aktiv",
+    "archive": "Archiv"
   },
   "tournament": {
     "create": "Turnier erstellen",
@@ -40,6 +43,8 @@
     },
     "start": "Turnier starten",
     "delete": "Turnier löschen",
+    "archive": "Archivieren",
+    "unarchive": "Wiederherstellen",
     "complete": "Turnier beenden",
     "startTopCut": "Top Cut starten",
     "topCutLabel": "Top Cut",
@@ -266,7 +271,10 @@
   "selfReport": {
     "title": "Ergebnis-Meldung",
     "claimsWin": "{{reporter}} meldet Sieg für {{winner}}",
-    "claimsDraw": "{{reporter}} meldet Unentschieden"
+    "claimsDraw": "{{reporter}} meldet Unentschieden",
+    "conflict": "Widersprüchliche Meldungen – TO muss Ergebnis eintragen",
+    "bothAgreeWin": "Beide melden Sieg für {{winner}}",
+    "bothAgreeDraw": "Beide melden Unentschieden"
   },
   "season": {
     "title": "Saisons",

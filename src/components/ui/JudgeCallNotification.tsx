@@ -20,7 +20,10 @@ export function JudgeCallNotification() {
     window.electronAPI?.onJudgeCall((dataJson: string) => {
       try {
         const data = JSON.parse(dataJson) as { playerName: string; tableNumber: number }
-        setCalls(prev => [...prev, { ...data, timestamp: Date.now() }])
+        setCalls(prev => [
+          ...prev.filter(c => c.playerName !== data.playerName),
+          { ...data, timestamp: Date.now() },
+        ])
       } catch { /* ignore */ }
     })
   }, [])

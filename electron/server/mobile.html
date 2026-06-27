@@ -95,7 +95,7 @@ const T={
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
 let tournament=null,standings=null,timers=null,activeTab='pairings',boundTournamentId=null;
-let timerAlerted=false;
+let timerAlerted=false,pendingVibration=false;
 let session=JSON.parse(localStorage.getItem('tcg-session')||'null');
 let needsFullRender=true;
 const app=document.getElementById('app');
@@ -162,21 +162,29 @@ function render(){
   else if(activeTab==='register')renderRegister(tc);
 }
 
+function doVibrate(){
+  if(document.hidden){pendingVibration=true;return}
+  pendingVibration=false;
+  if(navigator.vibrate)navigator.vibrate([500,200,500,200,500]);
+}
 function playMobileAlarm(){
   try{
-    const ctx=new AudioContext();const now=ctx.currentTime;
+    const ctx=new AudioContext();
+    if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+    const now=ctx.currentTime;
     for(let i=0;i<3;i++){const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;o.type='square';g.gain.value=0.15;o.start(now+i*0.3);o.stop(now+i*0.3+0.2)}
   }catch{}
-  if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);
+  doVibrate();
 }
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pendingVibration)doVibrate()});
 
 function updateTimer(){
-  if(!timers||!tournament||tournament.status==='registration'||tournament.status==='completed'){timerRoot.innerHTML='';timerAlerted=false;return}
-  const tm=timers[tournament.id];if(!tm){timerRoot.innerHTML='';timerAlerted=false;return}
+  if(!timers||!tournament||tournament.status==='registration'||tournament.status==='completed'){timerRoot.innerHTML='';timerAlerted=false;pendingVibration=false;return}
+  const tm=timers[tournament.id];if(!tm){timerRoot.innerHTML='';timerAlerted=false;pendingVibration=false;return}
   let rem=tm.remainingSeconds;
   if(tm.isRunning&&tm.endTimestamp)rem=Math.max(0,Math.ceil((tm.endTimestamp-Date.now())/1000));
   if(rem===0&&!timerAlerted){timerAlerted=true;playMobileAlarm()}
-  if(rem>0)timerAlerted=false;
+  if(rem>0){timerAlerted=false;pendingVibration=false;}
   const cls=rem<=0?'expired':rem<=60?'danger':rem<=300?'warn':'';
   const str=`${String(Math.floor(rem/60)).padStart(2,'0')}:${String(rem%60).padStart(2,'0')}`;
   if(timerRoot.dataset.last===str)return;

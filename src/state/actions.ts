@@ -19,6 +19,8 @@ export type TournamentAction =
   | { type: 'COMPLETE_ROUND'; payload: { tournamentId: string } }
   | { type: 'START_TOP_CUT'; payload: { tournamentId: string } }
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }
+  | { type: 'ARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
+  | { type: 'UNARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility } }
   | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
   | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName?: string | null; decklist?: DecklistEntry[] | null } }

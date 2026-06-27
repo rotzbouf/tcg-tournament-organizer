@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { TimerDisplay } from '@/components/tournament/TimerDisplay'
 import { Tournament } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
+import { useTournamentContext } from '@/state/TournamentContext'
 
 interface TournamentCardProps {
   tournament: Tournament
@@ -20,7 +21,16 @@ const statusBadgeVariant = {
 export function TournamentCard({ tournament }: TournamentCardProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { dispatch } = useTournamentContext()
   const gameConfig = GAME_CONFIG[tournament.game]
+
+  function handleArchiveToggle(e: React.MouseEvent) {
+    e.stopPropagation()
+    dispatch({
+      type: tournament.archived ? 'UNARCHIVE_TOURNAMENT' : 'ARCHIVE_TOURNAMENT',
+      payload: { tournamentId: tournament.id },
+    })
+  }
 
   return (
     <Card
@@ -58,6 +68,17 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
           />
         )}
       </div>
+
+      {tournament.status === 'completed' && (
+        <div className="mt-3 flex justify-end border-t border-border pt-2">
+          <button
+            onClick={handleArchiveToggle}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {tournament.archived ? t('tournament.unarchive') : t('tournament.archive')}
+          </button>
+        </div>
+      )}
     </Card>
   )
 }

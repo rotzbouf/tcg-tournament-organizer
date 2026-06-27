@@ -35,6 +35,7 @@ export interface Tournament {
   eloSeeding: boolean
   discordWebhookUrl: string | null
   eloApplied: boolean
+  archived: boolean
   createdAt: string
   updatedAt: string
 }

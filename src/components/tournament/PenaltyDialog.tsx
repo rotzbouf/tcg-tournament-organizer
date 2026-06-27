@@ -20,11 +20,10 @@ const PENALTY_TYPES: PenaltyType[] = ['warning', 'game_loss', 'match_loss', 'dis
 export function PenaltyDialog({ open, onClose, tournamentId, players }: PenaltyDialogProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
-  const [playerId, setPlayerId] = useState('')
+  const activePlayers = players.filter(p => p.droppedInRound === null)
+  const [playerId, setPlayerId] = useState(activePlayers[0]?.id ?? '')
   const [type, setType] = useState<PenaltyType>('warning')
   const [reason, setReason] = useState('')
-
-  const activePlayers = players.filter(p => p.droppedInRound === null)
 
   const playerOptions = activePlayers.map(p => ({
     value: p.id,
@@ -43,7 +42,7 @@ export function PenaltyDialog({ open, onClose, tournamentId, players }: PenaltyD
       type: 'ISSUE_PENALTY',
       payload: { tournamentId, playerId, type, reason: reason.trim() },
     })
-    setPlayerId('')
+    setPlayerId(activePlayers[0]?.id ?? '')
     setType('warning')
     setReason('')
     onClose()

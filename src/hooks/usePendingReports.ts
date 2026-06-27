@@ -17,9 +17,11 @@ export function usePendingReports() {
       try {
         const data = JSON.parse(raw) as Omit<PendingReport, 'receivedAt'>
         setReports(prev => {
-          // Replace existing report for same match if any
-          const filtered = prev.filter(r => r.matchId !== data.matchId)
-          return [...filtered, { ...data, receivedAt: Date.now() }]
+          // Replace if same reporter updates their report, otherwise append
+          const withoutSameReporter = prev.filter(
+            r => !(r.matchId === data.matchId && r.reporterName === data.reporterName)
+          )
+          return [...withoutSameReporter, { ...data, receivedAt: Date.now() }]
         })
       } catch { /* ignore */ }
     })
@@ -33,5 +35,18 @@ export function usePendingReports() {
     setReports(prev => prev.filter(r => r.tournamentId !== tournamentId))
   }, [])
 
-  return { reports, dismiss, dismissForTournament }
+  const reportsByMatch = reports.reduce<Record<string, PendingReport[]>>((acc, r) => {
+    if (!acc[r.matchId]) acc[r.matchId] = []
+    acc[r.matchId].push(r)
+    return acc
+  }, {})
+
+  // A conflict exists when both players reported but disagree on the result
+  const conflictedMatchIds = new Set(
+    Object.entries(reportsByMatch)
+      .filter(([, rs]) => rs.length >= 2 && rs[0].result !== rs[1].result)
+      .map(([matchId]) => matchId)
+  )
+
+  return { reports, reportsByMatch, conflictedMatchIds, dismiss, dismissForTournament }
 }

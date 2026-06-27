@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-06-27
+
+### Fixed
+- **Strafen-Dialog: Button direkt aktiv** — Der „Strafe vergeben"-Button war beim ersten Öffnen des Dialogs deaktiviert, obwohl der erste Spieler bereits vorausgewählt war. Initialwert von `playerId` stimmt jetzt mit dem angezeigten Select-Eintrag überein
+- **Mobile-Vibration bei Timer-Ablauf** — `navigator.vibrate()` wird vom Browser ignoriert wenn die Seite nicht sichtbar ist (Bildschirm gesperrt / Tab im Hintergrund). Die Vibration wird jetzt nachgeholt sobald die Seite wieder sichtbar wird (`visibilitychange`-Listener). Vibrationsmuster verlängert (3× 500 ms). AudioContext wird vor der Wiedergabe explizit resumt um die Autoplay-Blockierung auf Mobile zu umgehen
+
+## [1.5.4] - 2026-06-27
+
+### Fixed
+- **Judge Call für gedroppte Spieler gesperrt** — Der Server lehnt Judge Calls von Spielern mit `droppedInRound !== null` mit HTTP 403 ab. Gedroppte Spieler können keinen Judge mehr rufen
+
+## [1.5.3] - 2026-06-27
+
+### Changed
+- **Auto-Sieg beim Drop** — Droppt ein Spieler während einer laufenden Runde und sein Match ist noch ausstehend, erhält der Gegner automatisch den Sieg. Bereits eingetragene Ergebnisse und Freilose bleiben unverändert
+
+## [1.5.2] - 2026-06-27
+
+### Fixed
+- **Judge-Call-Spam** — Wiederholt ein Spieler einen Judge Call bevor der TO bestätigt hat, wird der alte Eintrag ersetzt statt ein weiterer Banner anzuhängen. Pro Spieler ist immer nur ein offener Judge Call sichtbar
+
+## [1.5.1] - 2026-06-27
+
+### Added
+- **Turnier-Archiv** — Abgeschlossene Turniere können im Dashboard archiviert werden. Tab-Umschalter „Aktiv / Archiv" trennt laufende von archivierten Turnieren. Archivierung ist jederzeit rückgängig machbar („Wiederherstellen")
+- **Konflikt-Erkennung bei Self-Reporting** — Melden beide Spieler eines Matches ein widersprüchliches Ergebnis (beide Sieg oder beide Niederlage), erscheint ein rotes Warn-Banner. Der TO muss das Ergebnis dann manuell per Schaltfläche eintragen; automatisches Bestätigen ist gesperrt. Stimmen beide Meldungen überein, wird dies im gelben Banner als „Beide melden …" angezeigt
+
 ## [1.5.0] - 2026-06-26
 
 ### Added
