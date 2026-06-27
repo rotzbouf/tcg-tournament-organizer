@@ -1,6 +1,8 @@
 import { DecklistEntry } from '@/types/player'
 import { GameType } from '@/types/tournament'
 import { GAME_CONFIG, DeckRules } from './gameConfig'
+import { BanlistData } from '@/types/banlist'
+import { checkLegality, LegalityError } from './legalityChecker'
 
 export interface ValidationError {
   type: 'too_few_cards' | 'too_many_cards' | 'too_many_copies'
@@ -11,40 +13,40 @@ export interface ValidationError {
 export interface ValidationResult {
   valid: boolean
   errors: ValidationError[]
+  legalityErrors: LegalityError[]
 }
 
-export function validateDecklist(entries: DecklistEntry[], game: GameType): ValidationResult {
-  const rules = GAME_CONFIG[game].deckRules
-  if (!rules) return { valid: true, errors: [] }
+export function validateDecklist(entries: DecklistEntry[], game: GameType, gameFormat?: string | null, banlist?: BanlistData | null): ValidationResult {
+  const gameConfig = GAME_CONFIG[game]
+  const formatConfig = gameFormat ? gameConfig.formats.find(f => f.id === gameFormat) : null
+  const rules = formatConfig?.deckRulesOverride
+    ? { ...gameConfig.deckRules, ...formatConfig.deckRulesOverride } as DeckRules
+    : gameConfig.deckRules
 
   const errors: ValidationError[] = []
-  const totalCards = entries.reduce((sum, e) => sum + e.quantity, 0)
+  const legalityErrors: LegalityError[] = []
 
-  if (rules.mainMin > 0 && totalCards < rules.mainMin) {
-    errors.push({
-      type: 'too_few_cards',
-      message: `${totalCards}/${rules.mainMin}`,
-    })
-  }
+  if (rules) {
+    const totalCards = entries.reduce((sum, e) => sum + e.quantity, 0)
 
-  if (rules.mainMax > 0 && totalCards > rules.mainMax) {
-    errors.push({
-      type: 'too_many_cards',
-      message: `${totalCards}/${rules.mainMax}`,
-    })
-  }
-
-  for (const entry of entries) {
-    if (entry.quantity > rules.maxCopies) {
-      errors.push({
-        type: 'too_many_copies',
-        message: `${entry.quantity}x`,
-        cardName: entry.cardName,
-      })
+    if (rules.mainMin > 0 && totalCards < rules.mainMin) {
+      errors.push({ type: 'too_few_cards', message: `${totalCards}/${rules.mainMin}` })
+    }
+    if (rules.mainMax > 0 && totalCards > rules.mainMax) {
+      errors.push({ type: 'too_many_cards', message: `${totalCards}/${rules.mainMax}` })
+    }
+    for (const entry of entries) {
+      if (entry.quantity > rules.maxCopies) {
+        errors.push({ type: 'too_many_copies', message: `${entry.quantity}x`, cardName: entry.cardName })
+      }
     }
   }
 
-  return { valid: errors.length === 0, errors }
+  if (banlist) {
+    legalityErrors.push(...checkLegality(entries, banlist))
+  }
+
+  return { valid: errors.length === 0 && legalityErrors.length === 0, errors, legalityErrors }
 }
 
 export function getCardCountSummary(entries: DecklistEntry[], rules: DeckRules | null): string {

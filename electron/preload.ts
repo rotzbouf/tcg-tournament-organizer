@@ -21,4 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMatchReport: (callback: (data: string) => void) => {
     ipcRenderer.on('match:report', (_event, data: string) => callback(data))
   },
+  loadBanlists: () => ipcRenderer.invoke('banlist:load'),
+  fetchBanlist: (game: string, format: string) => ipcRenderer.invoke('banlist:fetch', game, format),
+  deleteBanlist: (game: string, format: string) => ipcRenderer.invoke('banlist:delete', game, format),
 })

@@ -14,6 +14,9 @@ interface ElectronAPI {
   openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string }) => Promise<void>
   onJudgeCall: (callback: (data: string) => void) => void
   onMatchReport: (callback: (data: string) => void) => void
+  loadBanlists: () => Promise<import('./types/banlist').BanlistStore>
+  fetchBanlist: (game: string, format: string) => Promise<import('./types/banlist').BanlistData>
+  deleteBanlist: (game: string, format: string) => Promise<void>
 }
 
 interface Window {

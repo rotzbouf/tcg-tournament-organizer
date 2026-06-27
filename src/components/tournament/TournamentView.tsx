@@ -264,6 +264,7 @@ export function TournamentView() {
             editable={tournament.status === 'registration'}
             inProgress={tournament.status === 'in_progress' || tournament.status === 'top_cut'}
             game={tournament.game}
+            gameFormat={tournament.gameFormat}
             ageDivisionsEnabled={tournament.ageDivisionsEnabled}
             createdAt={tournament.createdAt}
           />

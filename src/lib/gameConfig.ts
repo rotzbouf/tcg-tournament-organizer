@@ -17,6 +17,16 @@ export interface DeckRules {
   maxCopies: number
 }
 
+export type BanlistApiSource = 'ygoprodeck' | 'pokemontcg' | 'scryfall' | null
+
+export interface GameFormatConfig {
+  id: string
+  name: string
+  hasBanlist: boolean
+  apiSource: BanlistApiSource
+  deckRulesOverride?: Partial<DeckRules>
+}
+
 export interface GameConfig {
   name: string
   color: string
@@ -26,6 +36,7 @@ export interface GameConfig {
   hasAgeDivisions: boolean
   minSwissRounds: number
   deckRules: DeckRules | null
+  formats: GameFormatConfig[]
 }
 
 export const GAME_CONFIG: Record<GameType, GameConfig> = {
@@ -38,6 +49,10 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: false,
     minSwissRounds: 0,
     deckRules: { mainMin: 40, mainMax: 60, sideMin: 0, sideMax: 15, maxCopies: 3 },
+    formats: [
+      { id: 'advanced', name: 'Advanced Format', hasBanlist: true, apiSource: 'ygoprodeck' },
+      { id: 'traditional', name: 'Traditional Format', hasBanlist: true, apiSource: 'ygoprodeck' },
+    ],
   },
   pokemon: {
     name: 'Pokémon TCG',
@@ -48,6 +63,10 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: true,
     minSwissRounds: 0,
     deckRules: { mainMin: 60, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: true, apiSource: 'pokemontcg' },
+      { id: 'expanded', name: 'Expanded', hasBanlist: true, apiSource: 'pokemontcg' },
+    ],
   },
   star_wars_unlimited: {
     name: 'Star Wars: Unlimited',
@@ -58,6 +77,9 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: false,
     minSwissRounds: 0,
     deckRules: { mainMin: 50, mainMax: 50, sideMin: 0, sideMax: 10, maxCopies: 3 },
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null },
+    ],
   },
   riftbound: {
     name: 'Riftbound',
@@ -68,6 +90,9 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: false,
     minSwissRounds: 0,
     deckRules: null,
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null },
+    ],
   },
   lorcana: {
     name: 'Disney Lorcana',
@@ -78,6 +103,9 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: false,
     minSwissRounds: 4,
     deckRules: { mainMin: 60, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
+    formats: [
+      { id: 'core', name: 'Core', hasBanlist: false, apiSource: null },
+    ],
   },
   altered: {
     name: 'Altered',
@@ -88,6 +116,9 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: false,
     minSwissRounds: 0,
     deckRules: { mainMin: 40, mainMax: 40, sideMin: 0, sideMax: 0, maxCopies: 3 },
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null },
+    ],
   },
   mtg: {
     name: 'Magic: The Gathering',
@@ -98,5 +129,14 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     hasAgeDivisions: false,
     minSwissRounds: 4,
     deckRules: { mainMin: 60, mainMax: -1, sideMin: 0, sideMax: 15, maxCopies: 4 },
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: true, apiSource: 'scryfall' },
+      { id: 'pioneer', name: 'Pioneer', hasBanlist: true, apiSource: 'scryfall' },
+      { id: 'modern', name: 'Modern', hasBanlist: true, apiSource: 'scryfall' },
+      { id: 'legacy', name: 'Legacy', hasBanlist: true, apiSource: 'scryfall' },
+      { id: 'vintage', name: 'Vintage', hasBanlist: true, apiSource: 'scryfall' },
+      { id: 'commander', name: 'Commander (EDH)', hasBanlist: true, apiSource: 'scryfall', deckRulesOverride: { mainMin: 100, mainMax: 100, sideMin: 0, sideMax: 0, maxCopies: 1 } },
+      { id: 'pauper', name: 'Pauper', hasBanlist: true, apiSource: 'scryfall' },
+    ],
   },
 }

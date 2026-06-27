@@ -97,6 +97,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id,
         name: action.payload.name,
         game: action.payload.game,
+        gameFormat: action.payload.gameFormat ?? null,
         format: action.payload.format,
         status: 'registration',
         players: [],

@@ -117,4 +117,7 @@ function migrateTournament(t: Record<string, unknown> & { format?: unknown; pena
   if (typeof t.eloApplied !== 'boolean') {
     t.eloApplied = t.status === 'completed'
   }
+  if (t.gameFormat === undefined) {
+    t.gameFormat = null
+  }
 }

@@ -8,7 +8,7 @@ import { TournamentTemplate } from '@/types/template'
 import { Season, PointTier } from '@/types/season'
 
 export type TournamentAction =
-  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean; eloSeeding?: boolean } }
+  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; gameFormat?: string | null; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean; eloSeeding?: boolean } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string; playerId?: string | null; dateOfBirth?: string | null } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }

@@ -24,6 +24,7 @@
     "create": "Turnier erstellen",
     "name": "Turniername",
     "game": "Spiel",
+    "gameFormat": "Regelwerk / Format",
     "roundTime": "Rundenzeit",
     "minutesValue": "{{count}} Minuten",
     "format": "Format",
@@ -155,7 +156,10 @@
     "validation": {
       "tooFewCards": "Zu wenige Karten ({{count}})",
       "tooManyCards": "Zu viele Karten ({{count}})",
-      "tooManyCopies": "Zu viele Kopien von {{card}} ({{count}})"
+      "tooManyCopies": "Zu viele Kopien von {{card}} ({{count}})",
+      "forbidden": "Verboten: {{card}}",
+      "limitedExceeded": "Auf 1 begrenzt: {{card}} ({{count}}x eingereicht)",
+      "semiLimitedExceeded": "Auf 2 begrenzt: {{card}} ({{count}}x eingereicht)"
     }
   },
   "penalties": {
@@ -298,6 +302,20 @@
     "noRanking": "Noch keine Daten (abgeschlossene Turniere werden gewertet)",
     "export": "Saison exportieren",
     "editTiers": "Bearbeiten"
+  },
+  "banlist": {
+    "title": "Banlisten",
+    "description": "Lade die aktuellen Banlisten von den offiziellen Quellen. Die Daten werden lokal gespeichert und für die Decklisten-Prüfung verwendet.",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "forbidden": "Verboten",
+    "limited": "Limited",
+    "semiLimited": "Semi-Limited",
+    "notLoaded": "Noch nicht geladen",
+    "load": "Laden",
+    "update": "Aktualisieren",
+    "loading": "Wird geladen...",
+    "sources": "Datenquellen:",
+    "remove": "Entfernen"
   },
   "common": {
     "cancel": "Abbrechen",

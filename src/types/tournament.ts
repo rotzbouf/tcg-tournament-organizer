@@ -17,6 +17,7 @@ export interface Tournament {
   id: string
   name: string
   game: GameType
+  gameFormat: string | null
   format: TournamentFormat
   status: TournamentStatus
   players: Player[]

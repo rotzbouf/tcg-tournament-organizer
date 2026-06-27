@@ -24,6 +24,7 @@
     "create": "Create Tournament",
     "name": "Tournament Name",
     "game": "Game",
+    "gameFormat": "Ruleset / Format",
     "roundTime": "Round Time",
     "minutesValue": "{{count}} minutes",
     "format": "Format",
@@ -155,7 +156,10 @@
     "validation": {
       "tooFewCards": "Too few cards ({{count}})",
       "tooManyCards": "Too many cards ({{count}})",
-      "tooManyCopies": "Too many copies of {{card}} ({{count}})"
+      "tooManyCopies": "Too many copies of {{card}} ({{count}})",
+      "forbidden": "Forbidden: {{card}}",
+      "limitedExceeded": "Limited to 1 copy: {{card}} ({{count}}x submitted)",
+      "semiLimitedExceeded": "Limited to 2 copies: {{card}} ({{count}}x submitted)"
     }
   },
   "penalties": {
@@ -298,6 +302,20 @@
     "noRanking": "No data yet (completed tournaments will be counted)",
     "export": "Export Season",
     "editTiers": "Edit"
+  },
+  "banlist": {
+    "title": "Banlists",
+    "description": "Download the current banlists from official sources. Data is stored locally and used for decklist validation.",
+    "lastUpdated": "Last updated",
+    "forbidden": "Forbidden",
+    "limited": "Limited",
+    "semiLimited": "Semi-Limited",
+    "notLoaded": "Not loaded yet",
+    "load": "Load",
+    "update": "Update",
+    "loading": "Loading...",
+    "sources": "Data sources:",
+    "remove": "Remove"
   },
   "common": {
     "cancel": "Cancel",

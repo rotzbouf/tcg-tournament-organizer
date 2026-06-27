@@ -66,6 +66,18 @@ export function Sidebar() {
           {t('season.title')}
         </Link>
 
+        <Link
+          to="/banlists"
+          className={cn(
+            'mt-1 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            location.pathname.startsWith('/banlists')
+              ? 'bg-muted text-foreground'
+              : 'text-secondary-foreground hover:bg-muted hover:text-foreground'
+          )}
+        >
+          {t('banlist.title')}
+        </Link>
+
         {tournaments.length > 0 && (
           <div className="mt-4">
             <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

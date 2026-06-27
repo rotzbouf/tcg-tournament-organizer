@@ -21,6 +21,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const { state, dispatch } = useTournamentContext()
   const [name, setName] = useState('')
   const [game, setGame] = useState<GameType>('yugioh')
+  const [gameFormat, setGameFormat] = useState<string>(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
   const [format, setFormat] = useState<TournamentFormat>('swiss')
   const [roundTime, setRoundTime] = useState(50)
   const [grandFinalReset, setGrandFinalReset] = useState(false)
@@ -33,10 +34,16 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
 
   const templates = state.templates ?? []
 
+  const handleGameChange = (newGame: GameType) => {
+    setGame(newGame)
+    setGameFormat(GAME_CONFIG[newGame].formats[0]?.id ?? '')
+  }
+
   const applyTemplate = (templateId: string) => {
     const tmpl = templates.find(t => t.id === templateId)
     if (!tmpl) return
     setGame(tmpl.game)
+    setGameFormat(GAME_CONFIG[tmpl.game].formats[0]?.id ?? '')
     setFormat(tmpl.format)
     setRoundTime(tmpl.roundTimeMinutes)
     setDecklistVisibility(tmpl.decklistVisibility)
@@ -89,6 +96,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
       payload: {
         name: name.trim(),
         game,
+        gameFormat: gameFormat || null,
         format,
         roundTimeMinutes: roundTime,
         topCut: 0,
@@ -101,6 +109,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     })
     setName('')
     setGame('yugioh')
+    setGameFormat(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
     setFormat('swiss')
     setRoundTime(50)
     setGrandFinalReset(false)
@@ -138,8 +147,17 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           label={t('tournament.game')}
           options={gameOptions}
           value={game}
-          onChange={e => setGame(e.target.value as GameType)}
+          onChange={e => handleGameChange(e.target.value as GameType)}
         />
+        {GAME_CONFIG[game].formats.length > 1 && (
+          <Select
+            id="tournament-game-format"
+            label={t('tournament.gameFormat')}
+            options={GAME_CONFIG[game].formats.map(f => ({ value: f.id, label: f.name }))}
+            value={gameFormat}
+            onChange={e => setGameFormat(e.target.value)}
+          />
+        )}
         <Select
           id="tournament-format"
           label={t('tournament.format')}
