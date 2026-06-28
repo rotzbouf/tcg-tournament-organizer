@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.4] - 2026-06-28
 
 ### Fixed
-- **Scryfall Rate Limit** — 120 ms Pause zwischen paginierten API-Requests eingebaut; verhindert 429-Fehler beim Laden großer Formatlisten (z. B. MTG Standard mit ~12 Seiten)
+- **Scryfall Rate Limit** — 200 ms Pause zwischen paginierten Requests; bei 429-Antwort wird automatisch 65 Sekunden gewartet und bis zu 2× erneut versucht; HTTP-Timeout pro Request auf 60 s erhöht
 
 ## [1.6.3] - 2026-06-28
 
