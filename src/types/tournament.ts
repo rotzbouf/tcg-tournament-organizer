@@ -37,6 +37,7 @@ export interface Tournament {
   discordWebhookUrl: string | null
   eloApplied: boolean
   archived: boolean
+  countForSeason: boolean
   createdAt: string
   updatedAt: string
 }

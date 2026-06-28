@@ -117,6 +117,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         discordWebhookUrl: null,
         eloApplied: false,
         archived: false,
+        countForSeason: action.payload.countForSeason ?? true,
         createdAt: now,
         updatedAt: now,
       }

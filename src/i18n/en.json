@@ -291,6 +291,7 @@
     "endDate": "End date",
     "dateRange": "Date range",
     "editDates": "Edit",
+    "countForSeason": "Count for season",
     "autoTournaments": "All completed tournaments of this game within the date range are counted automatically.",
     "noTournamentsInRange": "No tournaments in the selected date range",
     "counted": "counted",

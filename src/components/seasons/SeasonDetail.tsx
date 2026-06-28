@@ -27,7 +27,10 @@ function getPointsForRank(rank: number, tiers: PointTier[]): number {
 function isInRange(tournament: Tournament, season: Season): boolean {
   if (!season.startDate || !season.endDate) return false
   const date = tournament.createdAt.slice(0, 10)
-  return tournament.game === season.game && date >= season.startDate && date <= season.endDate
+  return tournament.game === season.game &&
+    date >= season.startDate &&
+    date <= season.endDate &&
+    tournament.countForSeason !== false
 }
 
 function computeSeasonRanking(season: Season, tournaments: Tournament[]): SeasonEntry[] {

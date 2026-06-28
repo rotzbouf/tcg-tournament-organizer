@@ -291,6 +291,7 @@
     "endDate": "Enddatum",
     "dateRange": "Zeitraum",
     "editDates": "Bearbeiten",
+    "countForSeason": "Zur Saison werten",
     "autoTournaments": "Alle abgeschlossenen Turniere dieses Spiels im Zeitraum werden automatisch gewertet.",
     "noTournamentsInRange": "Keine Turniere im gewählten Zeitraum",
     "counted": "gewertet",

@@ -29,14 +29,21 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [decklistVisibility, setDecklistVisibility] = useState<DecklistVisibility>('hidden')
   const [powerPairings, setPowerPairings] = useState(true)
   const [eloSeeding, setEloSeeding] = useState(false)
+  const [countForSeason, setCountForSeason] = useState(true)
   const [templateName, setTemplateName] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
 
   const templates = state.templates ?? []
 
+  const today = new Date().toISOString().slice(0, 10)
+  const hasActiveSeason = (state.seasons ?? []).some(
+    s => s.game === game && !!s.startDate && !!s.endDate && today >= s.startDate && today <= s.endDate
+  )
+
   const handleGameChange = (newGame: GameType) => {
     setGame(newGame)
     setGameFormat(GAME_CONFIG[newGame].formats[0]?.id ?? '')
+    setCountForSeason(true)
   }
 
   const applyTemplate = (templateId: string) => {
@@ -105,6 +112,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         decklistVisibility,
         powerPairings,
         eloSeeding,
+        countForSeason,
       },
     })
     setName('')
@@ -117,6 +125,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setDecklistVisibility('hidden')
     setPowerPairings(true)
     setEloSeeding(false)
+    setCountForSeason(true)
     onClose()
   }
 
@@ -230,6 +239,18 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           value={decklistVisibility}
           onChange={e => setDecklistVisibility(e.target.value as DecklistVisibility)}
         />
+        {hasActiveSeason && (
+          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+            <input
+              type="checkbox"
+              checked={countForSeason}
+              onChange={e => setCountForSeason(e.target.checked)}
+              className="rounded border-input"
+            />
+            <span>{t('season.countForSeason')}</span>
+          </label>
+        )}
+
         <div className="flex items-center justify-between border-t border-muted pt-3">
           {showSaveTemplate ? (
             <div className="flex items-center gap-2">
