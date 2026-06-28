@@ -16,11 +16,23 @@ interface Props {
 
 const GAME_OPTIONS: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
 
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function oneYearLaterStr(): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + 1)
+  return d.toISOString().slice(0, 10)
+}
+
 export function CreateSeasonDialog({ open, onClose }: Props) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
   const [name, setName] = useState('')
   const [game, setGame] = useState<GameType>('yugioh')
+  const [startDate, setStartDate] = useState(todayStr)
+  const [endDate, setEndDate] = useState(oneYearLaterStr)
   const [tiers, setTiers] = useState<PointTier[]>(DEFAULT_POINT_TIERS)
 
   const gameOptions = GAME_OPTIONS.map(g => ({ value: g, label: GAME_CONFIG[g].name }))
@@ -39,10 +51,12 @@ export function CreateSeasonDialog({ open, onClose }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
-    dispatch({ type: 'CREATE_SEASON', payload: { name: name.trim(), game, pointTiers: tiers } })
+    if (!name.trim() || !startDate || !endDate) return
+    dispatch({ type: 'CREATE_SEASON', payload: { name: name.trim(), game, startDate, endDate, pointTiers: tiers } })
     setName('')
     setGame('yugioh')
+    setStartDate(todayStr())
+    setEndDate(oneYearLaterStr())
     setTiers(DEFAULT_POINT_TIERS)
     onClose()
   }
@@ -58,6 +72,30 @@ export function CreateSeasonDialog({ open, onClose }: Props) {
           value={game}
           onChange={e => setGame(e.target.value as GameType)}
         />
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1 block text-sm font-medium text-secondary-foreground">{t('season.startDate')}</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <label className="mb-1 block text-sm font-medium text-secondary-foreground">{t('season.endDate')}</label>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              required
+            />
+          </div>
+        </div>
 
         <div>
           <p className="mb-2 text-sm font-medium text-secondary-foreground">{t('season.pointStructure')}</p>
@@ -94,7 +132,7 @@ export function CreateSeasonDialog({ open, onClose }: Props) {
 
         <div className="flex justify-end gap-2 border-t border-muted pt-3">
           <Button type="button" variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
-          <Button type="submit" disabled={!name.trim()}>{t('season.create')}</Button>
+          <Button type="submit" disabled={!name.trim() || !startDate || !endDate}>{t('season.create')}</Button>
         </div>
       </form>
     </Dialog>

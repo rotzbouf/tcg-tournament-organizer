@@ -10,7 +10,8 @@ export interface Season {
   id: string
   name: string
   game: GameType
-  tournamentIds: string[]
+  startDate: string
+  endDate: string
   pointTiers: PointTier[]
   createdAt: string
 }

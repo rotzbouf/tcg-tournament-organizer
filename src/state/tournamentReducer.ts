@@ -848,7 +848,8 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id: generateId(),
         name: action.payload.name,
         game: action.payload.game,
-        tournamentIds: [],
+        startDate: action.payload.startDate,
+        endDate: action.payload.endDate,
         pointTiers: action.payload.pointTiers,
         createdAt: new Date().toISOString(),
       }
@@ -859,34 +860,12 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       return { ...state, seasons: (state.seasons ?? []).filter(s => s.id !== action.payload.seasonId) }
     }
 
-    case 'ADD_TOURNAMENT_TO_SEASON': {
-      return {
-        ...state,
-        seasons: (state.seasons ?? []).map(s =>
-          s.id === action.payload.seasonId && !s.tournamentIds.includes(action.payload.tournamentId)
-            ? { ...s, tournamentIds: [...s.tournamentIds, action.payload.tournamentId] }
-            : s
-        ),
-      }
-    }
-
-    case 'REMOVE_TOURNAMENT_FROM_SEASON': {
-      return {
-        ...state,
-        seasons: (state.seasons ?? []).map(s =>
-          s.id === action.payload.seasonId
-            ? { ...s, tournamentIds: s.tournamentIds.filter(id => id !== action.payload.tournamentId) }
-            : s
-        ),
-      }
-    }
-
     case 'UPDATE_SEASON': {
       return {
         ...state,
         seasons: (state.seasons ?? []).map(s =>
           s.id === action.payload.seasonId
-            ? { ...s, ...(action.payload.name !== undefined && { name: action.payload.name }), ...(action.payload.pointTiers !== undefined && { pointTiers: action.payload.pointTiers }) }
+            ? { ...s, ...(action.payload.name !== undefined && { name: action.payload.name }), ...(action.payload.startDate !== undefined && { startDate: action.payload.startDate }), ...(action.payload.endDate !== undefined && { endDate: action.payload.endDate }), ...(action.payload.pointTiers !== undefined && { pointTiers: action.payload.pointTiers }) }
             : s
         ),
       }

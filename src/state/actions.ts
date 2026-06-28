@@ -35,11 +35,9 @@ export type TournamentAction =
   | { type: 'SWAP_PLAYERS'; payload: { tournamentId: string; matchId1: string; playerId1: string; matchId2: string; playerId2: string } }
   | { type: 'SAVE_TEMPLATE'; payload: Omit<TournamentTemplate, 'id'> }
   | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } }
-  | { type: 'CREATE_SEASON'; payload: { name: string; game: GameType; pointTiers: PointTier[] } }
+  | { type: 'CREATE_SEASON'; payload: { name: string; game: GameType; startDate: string; endDate: string; pointTiers: PointTier[] } }
   | { type: 'DELETE_SEASON'; payload: { seasonId: string } }
-  | { type: 'ADD_TOURNAMENT_TO_SEASON'; payload: { seasonId: string; tournamentId: string } }
-  | { type: 'REMOVE_TOURNAMENT_FROM_SEASON'; payload: { seasonId: string; tournamentId: string } }
-  | { type: 'UPDATE_SEASON'; payload: { seasonId: string; name?: string; pointTiers?: PointTier[] } }
+  | { type: 'UPDATE_SEASON'; payload: { seasonId: string; name?: string; startDate?: string; endDate?: string; pointTiers?: PointTier[] } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {
