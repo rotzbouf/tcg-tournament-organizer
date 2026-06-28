@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-06-28
+
+### Changed
+- **Banlist-Strategie pro Format** — Jedes Format deklariert jetzt einen Validierungstyp: `legal_list` (MTG Standard, Pauper: vollständige legale Kartenliste von Scryfall), `rotation` (Pokémon Standard: Set-Code-Whitelist für Pokémon-Karten; Trainer/Energie werden übersprungen da Namens-basiert) oder `banlist` (alle anderen: explizite Verboten/Limited/Semi-Limited-Listen). MTG Vintage lädt zusätzlich die Restricted-List (max. 1 Kopie). Die Banlist-Ansicht zeigt für jedes Format den passenden Badge und die entsprechenden Statistiken
+
 ## [1.6.2] - 2026-06-28
 
 ### Added
