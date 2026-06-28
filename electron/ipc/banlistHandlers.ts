@@ -33,29 +33,34 @@ function httpsGet(url: string): Promise<string> {
       res.on('error', reject)
     })
     req.on('error', reject)
-    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Request timed out')) })
+    req.setTimeout(60000, () => { req.destroy(); reject(new Error('Request timed out')) })
   })
 }
 
 // ── Scryfall ──────────────────────────────────────────────────────────────────
 
-type ScryfallPage = { object?: string; data?: { name: string }[]; has_more?: boolean; next_page?: string }
+type ScryfallPage = { object?: string; code?: string; data?: { name: string }[]; has_more?: boolean; next_page?: string }
 
-async function scryfallPage(url: string): Promise<ScryfallPage> {
+function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
+
+async function scryfallPage(url: string, attempt = 0): Promise<ScryfallPage> {
   const body = await httpsGet(url)
   const json = JSON.parse(body) as ScryfallPage
+  if (json.code === 'rate_limited') {
+    if (attempt >= 2) throw new Error('Scryfall rate limit — bitte 60 Sekunden warten und erneut versuchen')
+    await sleep(65000)
+    return scryfallPage(url, attempt + 1)
+  }
   if (!Array.isArray(json.data)) throw new Error(`Scryfall error: ${body.slice(0, 200)}`)
   return json
 }
-
-function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
 
 async function scryfallFetchNames(query: string): Promise<string[]> {
   const names: string[] = []
   let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name`
   let first = true
   while (url) {
-    if (!first) await sleep(120)
+    if (!first) await sleep(200)
     first = false
     const json = await scryfallPage(url)
     for (const card of json.data!) names.push(card.name)
