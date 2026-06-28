@@ -32,11 +32,11 @@ export function checkLegality(entries: DecklistEntry[], banlist: BanlistData): L
 
   if (banlist.legalSetCodes && banlist.legalSetCodes.length > 0) {
     const legalCodes = new Set(banlist.legalSetCodes.map(c => c.toUpperCase()))
-    const legalTrainers = banlist.legalTrainerNames ? new Set(banlist.legalTrainerNames.map(normalize)) : null
     for (const entry of entries) {
+      // Only Pokémon cards are printing-specific; Trainer/Energy legality is name-based
+      // and cannot be checked without a full reprint lookup, so skip them here
+      if (entry.section !== 'pokemon') continue
       if (!entry.setCode || legalCodes.has(entry.setCode.toUpperCase())) continue
-      // Set is rotated out — Trainer/Energy cards are legal if reprinted in a current set
-      if (entry.section !== 'pokemon' && legalTrainers?.has(normalize(entry.cardName))) continue
       errors.push({ type: 'out_of_rotation', cardName: entry.cardName, quantity: entry.quantity, maxAllowed: 0, setCode: entry.setCode })
     }
   }

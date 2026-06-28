@@ -8,7 +8,6 @@ export interface BanlistData {
   limited: string[]
   semiLimited: string[]
   legalSetCodes?: string[]
-  legalTrainerNames?: string[]
   legalCardNames?: string[]
 }
 

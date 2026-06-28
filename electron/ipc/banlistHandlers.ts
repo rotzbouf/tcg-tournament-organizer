@@ -88,21 +88,6 @@ async function fetchYgoprodeck(format: string): Promise<BanlistData> {
   return { game: 'yugioh', format, lastUpdated: new Date().toISOString(), forbidden, limited, semiLimited }
 }
 
-async function fetchPokemonLegalTrainerNames(): Promise<string[]> {
-  const names = new Set<string>()
-  for (const supertype of ['Trainer', 'Energy']) {
-    let url: string | null = `https://api.pokemontcg.io/v2/cards?q=legalities.standard:Legal+supertype:${supertype}&pageSize=250&page=1`
-    while (url) {
-      const body = await httpsGet(url)
-      const json = JSON.parse(body) as { data: { name: string }[]; page: number; pageSize: number; count: number; totalCount: number }
-      for (const card of json.data) names.add(card.name)
-      const fetched = json.page * json.pageSize
-      url = fetched < json.totalCount ? url.replace(/page=\d+/, `page=${json.page + 1}`) : null
-    }
-  }
-  return [...names]
-}
-
 async function fetchPokemonLegalSetCodes(legality: 'standard' | 'expanded'): Promise<string[]> {
   const setCodes: string[] = []
   let url: string | null = `https://api.pokemontcg.io/v2/sets?q=legalities.${legality}:Legal&pageSize=250&page=1`
@@ -134,15 +119,11 @@ async function fetchPokemontcg(format: string): Promise<BanlistData> {
   }
 
   let legalSetCodes: string[] | undefined
-  let legalTrainerNames: string[] | undefined
   if (format === 'standard') {
-    ;[legalSetCodes, legalTrainerNames] = await Promise.all([
-      fetchPokemonLegalSetCodes('standard'),
-      fetchPokemonLegalTrainerNames(),
-    ])
+    legalSetCodes = await fetchPokemonLegalSetCodes('standard')
   }
 
-  return { game: 'pokemon', format, lastUpdated: new Date().toISOString(), forbidden, limited: [], semiLimited: [], legalSetCodes, legalTrainerNames }
+  return { game: 'pokemon', format, lastUpdated: new Date().toISOString(), forbidden, limited: [], semiLimited: [], legalSetCodes }
 }
 
 async function fetchScryfall(game: GameType, format: string): Promise<BanlistData> {
