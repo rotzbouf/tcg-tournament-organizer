@@ -13,7 +13,7 @@ export function Sidebar() {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const { state } = useTournamentContext()
-  const tournaments = selectAllTournaments(state)
+  const tournaments = selectAllTournaments(state).filter(t => !t.archived)
   const { exportState, importState, error, clearError } = useFileIO()
 
   const { theme, cycleTheme } = useTheme()
