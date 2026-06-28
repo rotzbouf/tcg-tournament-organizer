@@ -49,6 +49,18 @@ async function scryfallSearchAll(query: string): Promise<string[]> {
   return names
 }
 
+async function scryfallStandardLegalNames(): Promise<string[]> {
+  const names: string[] = []
+  let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent('legal:standard')}&unique=cards&order=name`
+  while (url) {
+    const body = await httpsGet(url)
+    const json = JSON.parse(body) as { data: { name: string }[]; has_more: boolean; next_page?: string }
+    for (const card of json.data) names.push(card.name)
+    url = json.has_more && json.next_page ? json.next_page : null
+  }
+  return names
+}
+
 async function fetchYgoprodeck(format: string): Promise<BanlistData> {
   const body = await httpsGet('https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=tcg')
   const json = JSON.parse(body) as { data: { name: string; ban_tcg?: string }[] }
@@ -67,6 +79,36 @@ async function fetchYgoprodeck(format: string): Promise<BanlistData> {
   return { game: 'yugioh', format, lastUpdated: new Date().toISOString(), forbidden, limited, semiLimited }
 }
 
+async function fetchPokemonLegalTrainerNames(): Promise<string[]> {
+  const names = new Set<string>()
+  for (const supertype of ['Trainer', 'Energy']) {
+    let url: string | null = `https://api.pokemontcg.io/v2/cards?q=legalities.standard:Legal+supertype:${supertype}&pageSize=250&page=1`
+    while (url) {
+      const body = await httpsGet(url)
+      const json = JSON.parse(body) as { data: { name: string }[]; page: number; pageSize: number; count: number; totalCount: number }
+      for (const card of json.data) names.add(card.name)
+      const fetched = json.page * json.pageSize
+      url = fetched < json.totalCount ? url.replace(/page=\d+/, `page=${json.page + 1}`) : null
+    }
+  }
+  return [...names]
+}
+
+async function fetchPokemonLegalSetCodes(legality: 'standard' | 'expanded'): Promise<string[]> {
+  const setCodes: string[] = []
+  let url: string | null = `https://api.pokemontcg.io/v2/sets?q=legalities.${legality}:Legal&pageSize=250&page=1`
+  while (url) {
+    const body = await httpsGet(url)
+    const json = JSON.parse(body) as { data: { ptcgoCode?: string }[]; page: number; pageSize: number; count: number; totalCount: number }
+    for (const set of json.data) {
+      if (set.ptcgoCode) setCodes.push(set.ptcgoCode.toUpperCase())
+    }
+    const fetched = json.page * json.pageSize
+    url = fetched < json.totalCount ? url.replace(/page=\d+/, `page=${json.page + 1}`) : null
+  }
+  return setCodes
+}
+
 async function fetchPokemontcg(format: string): Promise<BanlistData> {
   const legality = format === 'standard' ? 'standard' : 'expanded'
   let url: string | null = `https://api.pokemontcg.io/v2/cards?q=legalities.${legality}:Banned&pageSize=250&page=1`
@@ -81,7 +123,17 @@ async function fetchPokemontcg(format: string): Promise<BanlistData> {
     const fetched = json.page * json.pageSize
     url = fetched < json.totalCount ? url.replace(/page=\d+/, `page=${json.page + 1}`) : null
   }
-  return { game: 'pokemon', format, lastUpdated: new Date().toISOString(), forbidden, limited: [], semiLimited: [] }
+
+  let legalSetCodes: string[] | undefined
+  let legalTrainerNames: string[] | undefined
+  if (format === 'standard') {
+    ;[legalSetCodes, legalTrainerNames] = await Promise.all([
+      fetchPokemonLegalSetCodes('standard'),
+      fetchPokemonLegalTrainerNames(),
+    ])
+  }
+
+  return { game: 'pokemon', format, lastUpdated: new Date().toISOString(), forbidden, limited: [], semiLimited: [], legalSetCodes, legalTrainerNames }
 }
 
 async function fetchScryfall(game: GameType, format: string): Promise<BanlistData> {
@@ -100,7 +152,12 @@ async function fetchScryfall(game: GameType, format: string): Promise<BanlistDat
     forbidden.push(...banned)
   }
 
-  return { game, format, lastUpdated: new Date().toISOString(), forbidden, limited, semiLimited: [] }
+  let legalCardNames: string[] | undefined
+  if (format === 'standard') {
+    legalCardNames = await scryfallStandardLegalNames()
+  }
+
+  return { game, format, lastUpdated: new Date().toISOString(), forbidden, limited, semiLimited: [], legalCardNames }
 }
 
 export function registerBanlistHandlers() {

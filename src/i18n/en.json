@@ -159,7 +159,8 @@
       "tooManyCopies": "Too many copies of {{card}} ({{count}})",
       "forbidden": "Forbidden: {{card}}",
       "limitedExceeded": "Limited to 1 copy: {{card}} ({{count}}x submitted)",
-      "semiLimitedExceeded": "Limited to 2 copies: {{card}} ({{count}}x submitted)"
+      "semiLimitedExceeded": "Limited to 2 copies: {{card}} ({{count}}x submitted)",
+      "outOfRotation": "Not in current rotation: {{card}}{{set}}"
     }
   },
   "penalties": {
@@ -310,6 +311,8 @@
     "forbidden": "Forbidden",
     "limited": "Limited",
     "semiLimited": "Semi-Limited",
+    "legalSets": "legal sets",
+    "legalCards": "legal cards",
     "notLoaded": "Not loaded yet",
     "load": "Load",
     "update": "Update",

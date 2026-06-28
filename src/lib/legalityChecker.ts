@@ -2,10 +2,11 @@ import { DecklistEntry } from '@/types/player'
 import { BanlistData } from '@/types/banlist'
 
 export interface LegalityError {
-  type: 'forbidden' | 'limited_exceeded' | 'semi_limited_exceeded'
+  type: 'forbidden' | 'limited_exceeded' | 'semi_limited_exceeded' | 'out_of_rotation'
   cardName: string
   quantity: number
   maxAllowed: number
+  setCode?: string
 }
 
 function normalize(name: string): string {
@@ -28,5 +29,26 @@ export function checkLegality(entries: DecklistEntry[], banlist: BanlistData): L
       errors.push({ type: 'semi_limited_exceeded', cardName: entry.cardName, quantity: entry.quantity, maxAllowed: 2 })
     }
   }
+
+  if (banlist.legalSetCodes && banlist.legalSetCodes.length > 0) {
+    const legalCodes = new Set(banlist.legalSetCodes.map(c => c.toUpperCase()))
+    const legalTrainers = banlist.legalTrainerNames ? new Set(banlist.legalTrainerNames.map(normalize)) : null
+    for (const entry of entries) {
+      if (!entry.setCode || legalCodes.has(entry.setCode.toUpperCase())) continue
+      // Set is rotated out — Trainer/Energy cards are legal if reprinted in a current set
+      if (entry.section !== 'pokemon' && legalTrainers?.has(normalize(entry.cardName))) continue
+      errors.push({ type: 'out_of_rotation', cardName: entry.cardName, quantity: entry.quantity, maxAllowed: 0, setCode: entry.setCode })
+    }
+  }
+
+  if (banlist.legalCardNames && banlist.legalCardNames.length > 0) {
+    const legalNames = new Set(banlist.legalCardNames.map(normalize))
+    for (const entry of entries) {
+      if (!legalNames.has(normalize(entry.cardName))) {
+        errors.push({ type: 'out_of_rotation', cardName: entry.cardName, quantity: entry.quantity, maxAllowed: 0 })
+      }
+    }
+  }
+
   return errors
 }

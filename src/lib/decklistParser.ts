@@ -3,6 +3,8 @@ import { DecklistEntry } from '@/types/player'
 const SECTION_WITH_COLON = /^(?:Pok[eé]mon|Trainer|Energy|Monster|Spell|Trap|Extra Deck|Side Deck|Main Deck|Extra|Side)\s*:\s*\d*$/i
 const SECTION_STANDALONE = /^(?:Deck|Sideboard|Commander|#main|#extra|!side)$/i
 const POKEMON_SECTION = /^Pok[eé]mon\s*:/i
+const TRAINER_SECTION = /^(?:Trainer|Item|Supporter|Stadium)\s*:/i
+const ENERGY_SECTION = /^Energy\s*:/i
 
 const PTCGL_LINE = /^\*\s*(\d+)\s+(.+?)\s+([A-Z][A-Z0-9]{1,4}\s+\d+)\s*$/
 const MTGA_LINE = /^(\d+)\s*[xX]?\s+(.+?)\s+(\([A-Z0-9]{2,5}\)\s+\d+)\s*$/
@@ -12,15 +14,20 @@ const BASIC_LINE = /^(\d+)\s*[xX]?\s+(.+)$/
 export function parseDecklistText(text: string): DecklistEntry[] {
   const lines = text.split('\n').map(line => line.trim())
   const entries: DecklistEntry[] = []
-  let keepSetInfo = false
+  let section: DecklistEntry['section']
 
   for (const line of lines) {
     if (!line) continue
     if (isSectionHeader(line)) {
-      keepSetInfo = POKEMON_SECTION.test(line)
+      if (POKEMON_SECTION.test(line)) section = 'pokemon'
+      else if (TRAINER_SECTION.test(line)) section = 'trainer'
+      else if (ENERGY_SECTION.test(line)) section = 'energy'
+      else section = undefined
       continue
     }
-    entries.push(parseLine(line, keepSetInfo))
+    const entry = parseLine(line)
+    if (section) entry.section = section
+    entries.push(entry)
   }
 
   return entries
@@ -30,25 +37,25 @@ function isSectionHeader(line: string): boolean {
   return SECTION_WITH_COLON.test(line) || SECTION_STANDALONE.test(line)
 }
 
-function parseLine(line: string, keepSetInfo: boolean): DecklistEntry {
+function parseLine(line: string): DecklistEntry {
   let match: RegExpMatchArray | null
 
   match = line.match(PTCGL_LINE)
   if (match) {
-    const name = keepSetInfo ? `${match[2].trim()} ${match[3]}` : match[2].trim()
-    return { quantity: parseInt(match[1], 10), cardName: name }
+    const parts = match[3].trim().split(/\s+/)
+    return { quantity: parseInt(match[1], 10), cardName: match[2].trim(), setCode: parts[0] }
   }
 
   match = line.match(MTGA_LINE)
   if (match) {
-    const name = keepSetInfo ? `${match[2].trim()} ${match[3]}` : match[2].trim()
-    return { quantity: parseInt(match[1], 10), cardName: name }
+    const setCodeMatch = match[3].match(/\(([A-Z0-9]{2,5})\)/)
+    return { quantity: parseInt(match[1], 10), cardName: match[2].trim(), setCode: setCodeMatch?.[1] }
   }
 
   match = line.match(SET_SUFFIX_LINE)
   if (match) {
-    const name = keepSetInfo ? `${match[2].trim()} ${match[3]}` : match[2].trim()
-    return { quantity: parseInt(match[1], 10), cardName: name }
+    const parts = match[3].trim().split(/\s+/)
+    return { quantity: parseInt(match[1], 10), cardName: match[2].trim(), setCode: parts[0] }
   }
 
   match = line.match(BASIC_LINE)

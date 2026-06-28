@@ -35,6 +35,8 @@ export function BanlistView() {
               <span className="text-red-600 dark:text-red-400">{data.forbidden.length} {t('banlist.forbidden')}</span>
               {data.limited.length > 0 && <span className="text-yellow-600 dark:text-yellow-400">{data.limited.length} {t('banlist.limited')}</span>}
               {data.semiLimited.length > 0 && <span className="text-blue-600 dark:text-blue-400">{data.semiLimited.length} {t('banlist.semiLimited')}</span>}
+              {data.legalSetCodes && data.legalSetCodes.length > 0 && <span className="text-green-600 dark:text-green-400">{data.legalSetCodes.length} {t('banlist.legalSets')}</span>}
+              {data.legalCardNames && data.legalCardNames.length > 0 && <span className="text-green-600 dark:text-green-400">{data.legalCardNames.length} {t('banlist.legalCards')}</span>}
             </div>
           ) : (
             <p className="mt-0.5 text-xs text-muted-foreground">{t('banlist.notLoaded')}</p>

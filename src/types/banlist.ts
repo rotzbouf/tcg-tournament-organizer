@@ -7,6 +7,9 @@ export interface BanlistData {
   forbidden: string[]
   limited: string[]
   semiLimited: string[]
+  legalSetCodes?: string[]
+  legalTrainerNames?: string[]
+  legalCardNames?: string[]
 }
 
 export type BanlistStore = Partial<Record<string, BanlistData>>

@@ -87,6 +87,7 @@ export function DecklistDialog({ open, onClose, tournamentId, player, readonly, 
                       {err.type === 'forbidden' && t('decklist.validation.forbidden', { card: err.cardName })}
                       {err.type === 'limited_exceeded' && t('decklist.validation.limitedExceeded', { card: err.cardName, count: err.quantity })}
                       {err.type === 'semi_limited_exceeded' && t('decklist.validation.semiLimitedExceeded', { card: err.cardName, count: err.quantity })}
+                      {err.type === 'out_of_rotation' && t('decklist.validation.outOfRotation', { card: err.cardName, set: err.setCode ? ` (${err.setCode})` : '' })}
                     </p>
                   ))}
                 </div>
