@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-06-28
+
+### Fixed
+- **Pokémon Standard Banlist-Laden** — Trainer-Namen-Fetch entfernt, der ~18 API-Requests erzeugte und ins Timeout lief. Rotations-Check gilt jetzt nur für Pokémon-Karten (set-code-basiert); Trainer und Energie werden übersprungen, da reprinted Karten ohne vollständige Datenbank nicht zuverlässig geprüft werden können
+- **Scryfall API-Fehler** — `Accept: application/json`-Header ergänzt, der von der Scryfall API zwingend vorausgesetzt wird
+- **Scryfall Fehler-Response** — Ungültige API-Responses (kein `data`-Array) werfen jetzt einen lesbaren Fehler statt einem `TypeError: data is not iterable`
+
 ## [1.6.0] - 2026-06-28
 
 ### Added
