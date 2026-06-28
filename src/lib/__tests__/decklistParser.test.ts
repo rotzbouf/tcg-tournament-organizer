@@ -36,19 +36,19 @@ describe('parseDecklistText', () => {
     expect(result).toHaveLength(2)
   })
 
-  it('strips set codes in MTGA format', () => {
+  it('extracts set code from MTGA format', () => {
     const result = parseDecklistText('4 Lightning Bolt (STA) 62')
-    expect(result).toEqual([{ quantity: 4, cardName: 'Lightning Bolt' }])
+    expect(result).toEqual([{ quantity: 4, cardName: 'Lightning Bolt', setCode: 'STA' }])
   })
 
-  it('strips set codes in Limitless format', () => {
+  it('extracts set code from Limitless format', () => {
     const result = parseDecklistText('4 Comfey LOR 79')
-    expect(result).toEqual([{ quantity: 4, cardName: 'Comfey' }])
+    expect(result).toEqual([{ quantity: 4, cardName: 'Comfey', setCode: 'LOR' }])
   })
 
   it('parses PTCGL format with asterisk', () => {
     const result = parseDecklistText('* 4 Comfey LOR 79')
-    expect(result).toEqual([{ quantity: 4, cardName: 'Comfey' }])
+    expect(result).toEqual([{ quantity: 4, cardName: 'Comfey', setCode: 'LOR' }])
   })
 
   it('skips section headers but keeps card names starting with section words', () => {
@@ -67,13 +67,13 @@ describe('parseDecklistText', () => {
     expect(result[1]).toEqual({ quantity: 2, cardName: 'Rest in Peace' })
   })
 
-  it('keeps set ID for Pokémon section, strips for Trainer/Energy', () => {
+  it('tracks section and extracts set codes for all Pokémon sections', () => {
     const text = 'Pokémon: 2\n* 4 Comfey LOR 79\nTrainer: 1\n* 4 Nest Ball SVI 181\nEnergy: 1\n* 4 Psychic Energy SVE 5'
     const result = parseDecklistText(text)
     expect(result).toHaveLength(3)
-    expect(result[0]).toEqual({ quantity: 4, cardName: 'Comfey LOR 79' })
-    expect(result[1]).toEqual({ quantity: 4, cardName: 'Nest Ball' })
-    expect(result[2]).toEqual({ quantity: 4, cardName: 'Psychic Energy' })
+    expect(result[0]).toEqual({ quantity: 4, cardName: 'Comfey', setCode: 'LOR', section: 'pokemon' })
+    expect(result[1]).toEqual({ quantity: 4, cardName: 'Nest Ball', setCode: 'SVI', section: 'trainer' })
+    expect(result[2]).toEqual({ quantity: 4, cardName: 'Psychic Energy', setCode: 'SVE', section: 'energy' })
   })
 })
 
