@@ -22,7 +22,7 @@ function saveStore(store: BanlistStore): void {
 
 function httpsGet(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'TCG-Tournament-Organizer/1.0' } }, res => {
+    const req = https.get(url, { headers: { 'User-Agent': 'TCG-Tournament-Organizer/1.0', 'Accept': 'application/json' } }, res => {
       if (res.statusCode === 301 || res.statusCode === 302) {
         const location = res.headers.location
         if (location) { resolve(httpsGet(location)); return }
