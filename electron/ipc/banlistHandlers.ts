@@ -37,13 +37,23 @@ function httpsGet(url: string): Promise<string> {
   })
 }
 
+type ScryfallResponse = { object?: string; data?: { name: string; set?: string }[]; has_more?: boolean; next_page?: string }
+
+async function scryfallPage(url: string): Promise<ScryfallResponse> {
+  const body = await httpsGet(url)
+  const json = JSON.parse(body) as ScryfallResponse
+  if (!Array.isArray(json.data)) {
+    throw new Error(`Scryfall error: ${body.slice(0, 200)}`)
+  }
+  return json
+}
+
 async function scryfallSearchAll(query: string): Promise<string[]> {
   const names: string[] = []
   let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=name&unique=cards`
   while (url) {
-    const body = await httpsGet(url)
-    const json = JSON.parse(body) as { data: { name: string }[]; has_more: boolean; next_page?: string }
-    for (const card of json.data) names.push(card.name)
+    const json = await scryfallPage(url)
+    for (const card of json.data!) names.push(card.name)
     url = json.has_more && json.next_page ? json.next_page : null
   }
   return names
@@ -53,9 +63,8 @@ async function scryfallStandardLegalNames(): Promise<string[]> {
   const names: string[] = []
   let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent('legal:standard')}&unique=cards&order=name`
   while (url) {
-    const body = await httpsGet(url)
-    const json = JSON.parse(body) as { data: { name: string }[]; has_more: boolean; next_page?: string }
-    for (const card of json.data) names.push(card.name)
+    const json = await scryfallPage(url)
+    for (const card of json.data!) names.push(card.name)
     url = json.has_more && json.next_page ? json.next_page : null
   }
   return names
