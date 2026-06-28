@@ -33,24 +33,24 @@ function httpsGet(url: string): Promise<string> {
       res.on('error', reject)
     })
     req.on('error', reject)
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Request timed out')) })
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Request timed out')) })
   })
 }
 
-type ScryfallResponse = { object?: string; data?: { name: string; set?: string }[]; has_more?: boolean; next_page?: string }
+// ── Scryfall ──────────────────────────────────────────────────────────────────
 
-async function scryfallPage(url: string): Promise<ScryfallResponse> {
+type ScryfallPage = { object?: string; data?: { name: string }[]; has_more?: boolean; next_page?: string }
+
+async function scryfallPage(url: string): Promise<ScryfallPage> {
   const body = await httpsGet(url)
-  const json = JSON.parse(body) as ScryfallResponse
-  if (!Array.isArray(json.data)) {
-    throw new Error(`Scryfall error: ${body.slice(0, 200)}`)
-  }
+  const json = JSON.parse(body) as ScryfallPage
+  if (!Array.isArray(json.data)) throw new Error(`Scryfall error: ${body.slice(0, 200)}`)
   return json
 }
 
-async function scryfallSearchAll(query: string): Promise<string[]> {
+async function scryfallFetchNames(query: string): Promise<string[]> {
   const names: string[] = []
-  let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&order=name&unique=cards`
+  let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name`
   while (url) {
     const json = await scryfallPage(url)
     for (const card of json.data!) names.push(card.name)
@@ -59,16 +59,34 @@ async function scryfallSearchAll(query: string): Promise<string[]> {
   return names
 }
 
-async function scryfallStandardLegalNames(): Promise<string[]> {
-  const names: string[] = []
-  let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent('legal:standard')}&unique=cards&order=name`
-  while (url) {
-    const json = await scryfallPage(url)
-    for (const card of json.data!) names.push(card.name)
-    url = json.has_more && json.next_page ? json.next_page : null
+// Formats where we fetch the full legal-card whitelist instead of a banlist
+const SCRYFALL_LEGAL_LIST_FORMATS = new Set(['standard', 'pauper'])
+
+async function fetchScryfall(game: GameType, format: string): Promise<BanlistData> {
+  const now = new Date().toISOString()
+
+  if (SCRYFALL_LEGAL_LIST_FORMATS.has(format)) {
+    // Rotating or rarity-restricted: store all legal card names as a whitelist.
+    // Scryfall's legal:<format> already accounts for bans and restrictions.
+    const legalCards = await scryfallFetchNames(`legal:${format}`)
+    return { game, format, lastUpdated: now, forbidden: [], limited: [], semiLimited: [], legalCards }
   }
-  return names
+
+  if (format === 'vintage') {
+    // Vintage has both a banned list and a restricted list (max 1 copy)
+    const [forbidden, limited] = await Promise.all([
+      scryfallFetchNames('banned:vintage'),
+      scryfallFetchNames('restricted:vintage'),
+    ])
+    return { game, format, lastUpdated: now, forbidden, limited, semiLimited: [] }
+  }
+
+  // pioneer, modern, legacy, commander: explicit banned list only
+  const forbidden = await scryfallFetchNames(`banned:${format}`)
+  return { game, format, lastUpdated: now, forbidden, limited: [], semiLimited: [] }
 }
+
+// ── YGOProDeck ────────────────────────────────────────────────────────────────
 
 async function fetchYgoprodeck(format: string): Promise<BanlistData> {
   const body = await httpsGet('https://db.ygoprodeck.com/api/v7/cardinfo.php?banlist=tcg')
@@ -87,6 +105,8 @@ async function fetchYgoprodeck(format: string): Promise<BanlistData> {
   }
   return { game: 'yugioh', format, lastUpdated: new Date().toISOString(), forbidden, limited, semiLimited }
 }
+
+// ── Pokémon TCG ───────────────────────────────────────────────────────────────
 
 async function fetchPokemonLegalSetCodes(legality: 'standard' | 'expanded'): Promise<string[]> {
   const setCodes: string[] = []
@@ -111,13 +131,13 @@ async function fetchPokemontcg(format: string): Promise<BanlistData> {
     const body = await httpsGet(url)
     const json = JSON.parse(body) as { data: { name: string }[]; page: number; pageSize: number; count: number; totalCount: number }
     for (const card of json.data) {
-      const name = card.name
-      if (!forbidden.includes(name)) forbidden.push(name)
+      if (!forbidden.includes(card.name)) forbidden.push(card.name)
     }
     const fetched = json.page * json.pageSize
     url = fetched < json.totalCount ? url.replace(/page=\d+/, `page=${json.page + 1}`) : null
   }
 
+  // Standard uses set-code rotation; Expanded has no rotation (all BW+ sets legal)
   let legalSetCodes: string[] | undefined
   if (format === 'standard') {
     legalSetCodes = await fetchPokemonLegalSetCodes('standard')
@@ -126,29 +146,7 @@ async function fetchPokemontcg(format: string): Promise<BanlistData> {
   return { game: 'pokemon', format, lastUpdated: new Date().toISOString(), forbidden, limited: [], semiLimited: [], legalSetCodes }
 }
 
-async function fetchScryfall(game: GameType, format: string): Promise<BanlistData> {
-  const forbidden: string[] = []
-  const limited: string[] = []
-
-  if (format === 'vintage') {
-    const [banned, restricted] = await Promise.all([
-      scryfallSearchAll('banned:vintage'),
-      scryfallSearchAll('restricted:vintage'),
-    ])
-    forbidden.push(...banned)
-    limited.push(...restricted)
-  } else {
-    const banned = await scryfallSearchAll(`banned:${format}`)
-    forbidden.push(...banned)
-  }
-
-  let legalCardNames: string[] | undefined
-  if (format === 'standard') {
-    legalCardNames = await scryfallStandardLegalNames()
-  }
-
-  return { game, format, lastUpdated: new Date().toISOString(), forbidden, limited, semiLimited: [], legalCardNames }
-}
+// ── IPC handlers ──────────────────────────────────────────────────────────────
 
 export function registerBanlistHandlers() {
   ipcMain.handle('banlist:load', () => loadStore())

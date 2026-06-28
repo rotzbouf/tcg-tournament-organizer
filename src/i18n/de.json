@@ -324,7 +324,10 @@
     "update": "Aktualisieren",
     "loading": "Wird geladen...",
     "sources": "Datenquellen:",
-    "remove": "Entfernen"
+    "remove": "Entfernen",
+    "typeBanlist": "Banlist",
+    "typeLegalList": "Legale Karten",
+    "typeRotation": "Rotation"
   },
   "common": {
     "cancel": "Abbrechen",

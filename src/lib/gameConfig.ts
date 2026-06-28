@@ -19,11 +19,17 @@ export interface DeckRules {
 
 export type BanlistApiSource = 'ygoprodeck' | 'pokemontcg' | 'scryfall' | null
 
+// banlist    – explicit forbidden/limited/semi-limited list
+// legal_list – whitelist of all legal card names (rotating or rarity-restricted formats)
+// rotation   – Pokémon-style: legal set codes + explicit bans
+export type FormatValidationType = 'banlist' | 'legal_list' | 'rotation'
+
 export interface GameFormatConfig {
   id: string
   name: string
   hasBanlist: boolean
   apiSource: BanlistApiSource
+  validationType: FormatValidationType
   deckRulesOverride?: Partial<DeckRules>
 }
 
@@ -50,8 +56,8 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 0,
     deckRules: { mainMin: 40, mainMax: 60, sideMin: 0, sideMax: 15, maxCopies: 3 },
     formats: [
-      { id: 'advanced', name: 'Advanced Format', hasBanlist: true, apiSource: 'ygoprodeck' },
-      { id: 'traditional', name: 'Traditional Format', hasBanlist: true, apiSource: 'ygoprodeck' },
+      { id: 'advanced', name: 'Advanced Format', hasBanlist: true, apiSource: 'ygoprodeck', validationType: 'banlist' },
+      { id: 'traditional', name: 'Traditional Format', hasBanlist: true, apiSource: 'ygoprodeck', validationType: 'banlist' },
     ],
   },
   pokemon: {
@@ -64,8 +70,8 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 0,
     deckRules: { mainMin: 60, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
     formats: [
-      { id: 'standard', name: 'Standard', hasBanlist: true, apiSource: 'pokemontcg' },
-      { id: 'expanded', name: 'Expanded', hasBanlist: true, apiSource: 'pokemontcg' },
+      { id: 'standard', name: 'Standard', hasBanlist: true, apiSource: 'pokemontcg', validationType: 'rotation' },
+      { id: 'expanded', name: 'Expanded', hasBanlist: true, apiSource: 'pokemontcg', validationType: 'banlist' },
     ],
   },
   star_wars_unlimited: {
@@ -78,7 +84,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 0,
     deckRules: { mainMin: 50, mainMax: 50, sideMin: 0, sideMax: 10, maxCopies: 3 },
     formats: [
-      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null },
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null, validationType: 'banlist' },
     ],
   },
   riftbound: {
@@ -91,7 +97,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 0,
     deckRules: null,
     formats: [
-      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null },
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null, validationType: 'banlist' },
     ],
   },
   lorcana: {
@@ -104,7 +110,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 4,
     deckRules: { mainMin: 60, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
     formats: [
-      { id: 'core', name: 'Core', hasBanlist: false, apiSource: null },
+      { id: 'core', name: 'Core', hasBanlist: false, apiSource: null, validationType: 'banlist' },
     ],
   },
   altered: {
@@ -117,7 +123,7 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 0,
     deckRules: { mainMin: 40, mainMax: 40, sideMin: 0, sideMax: 0, maxCopies: 3 },
     formats: [
-      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null },
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null, validationType: 'banlist' },
     ],
   },
   mtg: {
@@ -130,13 +136,13 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
     minSwissRounds: 4,
     deckRules: { mainMin: 60, mainMax: -1, sideMin: 0, sideMax: 15, maxCopies: 4 },
     formats: [
-      { id: 'standard', name: 'Standard', hasBanlist: true, apiSource: 'scryfall' },
-      { id: 'pioneer', name: 'Pioneer', hasBanlist: true, apiSource: 'scryfall' },
-      { id: 'modern', name: 'Modern', hasBanlist: true, apiSource: 'scryfall' },
-      { id: 'legacy', name: 'Legacy', hasBanlist: true, apiSource: 'scryfall' },
-      { id: 'vintage', name: 'Vintage', hasBanlist: true, apiSource: 'scryfall' },
-      { id: 'commander', name: 'Commander (EDH)', hasBanlist: true, apiSource: 'scryfall', deckRulesOverride: { mainMin: 100, mainMax: 100, sideMin: 0, sideMax: 0, maxCopies: 1 } },
-      { id: 'pauper', name: 'Pauper', hasBanlist: true, apiSource: 'scryfall' },
+      { id: 'standard', name: 'Standard', hasBanlist: true, apiSource: 'scryfall', validationType: 'legal_list' },
+      { id: 'pioneer', name: 'Pioneer', hasBanlist: true, apiSource: 'scryfall', validationType: 'banlist' },
+      { id: 'modern', name: 'Modern', hasBanlist: true, apiSource: 'scryfall', validationType: 'banlist' },
+      { id: 'legacy', name: 'Legacy', hasBanlist: true, apiSource: 'scryfall', validationType: 'banlist' },
+      { id: 'vintage', name: 'Vintage', hasBanlist: true, apiSource: 'scryfall', validationType: 'banlist' },
+      { id: 'commander', name: 'Commander (EDH)', hasBanlist: true, apiSource: 'scryfall', validationType: 'banlist', deckRulesOverride: { mainMin: 100, mainMax: 100, sideMin: 0, sideMax: 0, maxCopies: 1 } },
+      { id: 'pauper', name: 'Pauper', hasBanlist: true, apiSource: 'scryfall', validationType: 'legal_list' },
     ],
   },
 }

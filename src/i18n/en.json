@@ -324,7 +324,10 @@
     "update": "Update",
     "loading": "Loading...",
     "sources": "Data sources:",
-    "remove": "Remove"
+    "remove": "Remove",
+    "typeBanlist": "Banlist",
+    "typeLegalList": "Legal Cards",
+    "typeRotation": "Rotation"
   },
   "common": {
     "cancel": "Cancel",

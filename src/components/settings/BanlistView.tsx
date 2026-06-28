@@ -16,6 +16,14 @@ export function BanlistView() {
     return new Date(iso).toLocaleString()
   }
 
+  function typeLabel(fmt: GameFormatConfig): string {
+    switch (fmt.validationType) {
+      case 'legal_list': return t('banlist.typeLegalList')
+      case 'rotation':   return t('banlist.typeRotation')
+      default:           return t('banlist.typeBanlist')
+    }
+  }
+
   function BanlistRow({ game, fmt }: { game: GameType; fmt: GameFormatConfig }) {
     const key = `${game}:${fmt.id}`
     const data = store[key]
@@ -28,15 +36,26 @@ export function BanlistView() {
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground">{GAME_CONFIG[game].icon} {GAME_CONFIG[game].name}</span>
             <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{fmt.name}</span>
+            <span className="rounded bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">{typeLabel(fmt)}</span>
           </div>
           {data ? (
-            <div className="mt-0.5 flex gap-3 text-xs text-muted-foreground">
+            <div className="mt-0.5 flex flex-wrap gap-3 text-xs text-muted-foreground">
               <span>{t('banlist.lastUpdated')}: {formatDate(data.lastUpdated)}</span>
-              <span className="text-red-600 dark:text-red-400">{data.forbidden.length} {t('banlist.forbidden')}</span>
-              {data.limited.length > 0 && <span className="text-yellow-600 dark:text-yellow-400">{data.limited.length} {t('banlist.limited')}</span>}
-              {data.semiLimited.length > 0 && <span className="text-blue-600 dark:text-blue-400">{data.semiLimited.length} {t('banlist.semiLimited')}</span>}
-              {data.legalSetCodes && data.legalSetCodes.length > 0 && <span className="text-green-600 dark:text-green-400">{data.legalSetCodes.length} {t('banlist.legalSets')}</span>}
-              {data.legalCardNames && data.legalCardNames.length > 0 && <span className="text-green-600 dark:text-green-400">{data.legalCardNames.length} {t('banlist.legalCards')}</span>}
+              {data.legalCards && data.legalCards.length > 0 && (
+                <span className="text-green-600 dark:text-green-400">{data.legalCards.length} {t('banlist.legalCards')}</span>
+              )}
+              {data.legalSetCodes && data.legalSetCodes.length > 0 && (
+                <span className="text-green-600 dark:text-green-400">{data.legalSetCodes.length} {t('banlist.legalSets')}</span>
+              )}
+              {data.forbidden.length > 0 && (
+                <span className="text-red-600 dark:text-red-400">{data.forbidden.length} {t('banlist.forbidden')}</span>
+              )}
+              {data.limited.length > 0 && (
+                <span className="text-yellow-600 dark:text-yellow-400">{data.limited.length} {t('banlist.limited')}</span>
+              )}
+              {data.semiLimited.length > 0 && (
+                <span className="text-blue-600 dark:text-blue-400">{data.semiLimited.length} {t('banlist.semiLimited')}</span>
+              )}
             </div>
           ) : (
             <p className="mt-0.5 text-xs text-muted-foreground">{t('banlist.notLoaded')}</p>
@@ -44,21 +63,11 @@ export function BanlistView() {
           {error && <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{error}</p>}
         </div>
         <div className="ml-3 flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => fetchBanlist(game, fmt.id)}
-            disabled={isLoading}
-          >
+          <Button size="sm" variant="secondary" onClick={() => fetchBanlist(game, fmt.id)} disabled={isLoading}>
             {isLoading ? t('banlist.loading') : data ? t('banlist.update') : t('banlist.load')}
           </Button>
           {data && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => deleteBanlist(game, fmt.id)}
-              disabled={isLoading}
-            >
+            <Button size="sm" variant="ghost" onClick={() => deleteBanlist(game, fmt.id)} disabled={isLoading}>
               {t('banlist.remove')}
             </Button>
           )}
