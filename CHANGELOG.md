@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-28
+
+### Added
+- **Rotations-Validierung für Pokémon TCG Standard** — Beim Laden der Banlist werden jetzt auch die aktuell legalen Standard-Sets (via pokemontcg.io) sowie alle legalen Trainer- und Energie-Karten-Namen geladen. Pokémon-Karten werden printing-basiert geprüft (Set-Code muss in der aktuellen Rotation sein); Trainer- und Energie-Karten sind legal wenn ihr Name in einem Standard-legalen Set vorkommt — unabhängig vom Druck
+- **Rotations-Validierung für MTG Standard** — Beim Laden der Standard-Banlist von Scryfall wird eine vollständige Liste aller Standard-legalen Karten-Namen heruntergeladen. Die Prüfung ist namensbasiert, sodass Reprints in älteren Sets korrekt als legal erkannt werden
+- **Set-Code im Parser** — Der Decklist-Parser extrahiert jetzt den Set-Code (`setCode`) als eigenes Feld aus PTCGL- und MTGA-Exportformaten. Karten-Namen enthalten keine Set-Info mehr. Der Parser erkennt außerdem den Abschnittstyp (`section`: pokemon / trainer / energy) für Pokémon-Decklisten
+
 ## [1.5.5] - 2026-06-27
 
 ### Fixed
