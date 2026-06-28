@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-06-28
+
+### Added
+- **Saison-Zeitraum** — Beim Erstellen einer Saison wird ein Start- und Enddatum festgelegt. Alle abgeschlossenen Turniere desselben Spiels, deren Erstellungsdatum im Zeitraum liegt, werden automatisch zur Saison gewertet — kein manuelles Hinzufügen mehr nötig. Der Zeitraum ist nachträglich editierbar
+- **Saison-Opt-out bei Turniererstellung** — Existiert eine aktive Saison für das gewählte Spiel, erscheint beim Erstellen eines Turniers die Checkbox „Zur Saison werten" (Standard: angehakt). Wird sie deaktiviert, wird das Turnier nicht in der Saison-Wertung berücksichtigt
+- **Archivierte Turniere aus Sidebar entfernt** — Archivierte Turniere erscheinen nicht mehr in der Navigation
+
 ## [1.6.1] - 2026-06-28
 
 ### Fixed
