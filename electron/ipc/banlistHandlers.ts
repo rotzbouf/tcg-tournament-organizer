@@ -48,10 +48,15 @@ async function scryfallPage(url: string): Promise<ScryfallPage> {
   return json
 }
 
+function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
+
 async function scryfallFetchNames(query: string): Promise<string[]> {
   const names: string[] = []
   let url: string | null = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name`
+  let first = true
   while (url) {
+    if (!first) await sleep(120)
+    first = false
     const json = await scryfallPage(url)
     for (const card of json.data!) names.push(card.name)
     url = json.has_more && json.next_page ? json.next_page : null
