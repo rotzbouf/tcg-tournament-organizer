@@ -157,6 +157,7 @@
       "tooFewCards": "Too few cards ({{count}})",
       "tooManyCards": "Too many cards ({{count}})",
       "tooManyCopies": "Too many copies of {{card}} ({{count}})",
+      "tooManySideCards": "Too many sideboard cards ({{count}})",
       "forbidden": "Forbidden: {{card}}",
       "limitedExceeded": "Limited to 1 copy: {{card}} ({{count}}x submitted)",
       "semiLimitedExceeded": "Limited to 2 copies: {{card}} ({{count}}x submitted)",

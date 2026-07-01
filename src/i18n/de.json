@@ -157,6 +157,7 @@
       "tooFewCards": "Zu wenige Karten ({{count}})",
       "tooManyCards": "Zu viele Karten ({{count}})",
       "tooManyCopies": "Zu viele Kopien von {{card}} ({{count}})",
+      "tooManySideCards": "Zu viele Side-Deck-Karten ({{count}})",
       "forbidden": "Verboten: {{card}}",
       "limitedExceeded": "Auf 1 begrenzt: {{card}} ({{count}}x eingereicht)",
       "semiLimitedExceeded": "Auf 2 begrenzt: {{card}} ({{count}}x eingereicht)",

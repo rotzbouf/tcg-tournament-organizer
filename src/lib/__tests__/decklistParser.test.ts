@@ -59,12 +59,12 @@ describe('parseDecklistText', () => {
     expect(result[1]).toEqual({ quantity: 1, cardName: 'Dark Hole' })
   })
 
-  it('skips standalone section headers', () => {
+  it('skips standalone section headers and tags the sideboard', () => {
     const text = 'Deck\n4 Lightning Bolt\nSideboard\n2 Rest in Peace'
     const result = parseDecklistText(text)
     expect(result).toHaveLength(2)
     expect(result[0]).toEqual({ quantity: 4, cardName: 'Lightning Bolt' })
-    expect(result[1]).toEqual({ quantity: 2, cardName: 'Rest in Peace' })
+    expect(result[1]).toEqual({ quantity: 2, cardName: 'Rest in Peace', sideboard: true })
   })
 
   it('tracks section and extracts set codes for all Pokémon sections', () => {
@@ -74,6 +74,25 @@ describe('parseDecklistText', () => {
     expect(result[0]).toEqual({ quantity: 4, cardName: 'Comfey', setCode: 'LOR', section: 'pokemon' })
     expect(result[1]).toEqual({ quantity: 4, cardName: 'Nest Ball', setCode: 'SVI', section: 'trainer' })
     expect(result[2]).toEqual({ quantity: 4, cardName: 'Psychic Energy', setCode: 'SVE', section: 'energy' })
+  })
+})
+
+describe('parseDecklistText — sideboard tagging (Bug 3)', () => {
+  it('tags cards after a "Sideboard" header', () => {
+    const result = parseDecklistText('Deck\n4 Lightning Bolt\n\nSideboard\n2 Duress')
+    expect(result.find(e => e.cardName === 'Lightning Bolt')?.sideboard).toBeUndefined()
+    expect(result.find(e => e.cardName === 'Duress')?.sideboard).toBe(true)
+  })
+
+  it('tags cards after a YGO "Side Deck:" header', () => {
+    const result = parseDecklistText('Side Deck:\n3 Ash Blossom & Joyous Spring')
+    expect(result[0].sideboard).toBe(true)
+  })
+
+  it('switches back to main deck on a following main header', () => {
+    const result = parseDecklistText('Sideboard\n2 Duress\nDeck\n4 Llanowar Elves')
+    expect(result.find(e => e.cardName === 'Duress')?.sideboard).toBe(true)
+    expect(result.find(e => e.cardName === 'Llanowar Elves')?.sideboard).toBeUndefined()
   })
 })
 

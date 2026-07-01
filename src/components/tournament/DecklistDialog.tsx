@@ -28,6 +28,8 @@ export function DecklistDialog({ open, onClose, tournamentId, player, readonly, 
 
   const entries = parseDecklistText(text)
   const stats = getDecklistStats(entries)
+  const mainCards = entries.reduce((sum, e) => sum + (e.sideboard ? 0 : e.quantity), 0)
+  const sideCards = stats.totalCards - mainCards
   const banlist = (game && gameFormat) ? getBanlist(game, gameFormat) : null
   const validation = game ? validateDecklist(entries, game, gameFormat, banlist) : null
   const gameConfig = game ? GAME_CONFIG[game] : null
@@ -68,9 +70,10 @@ export function DecklistDialog({ open, onClose, tournamentId, player, readonly, 
           {entries.length > 0 && (
             <div className="mt-1 space-y-1">
               <p className="text-xs text-muted-foreground">
-                {t('decklist.totalCards')}: {stats.totalCards}
+                {t('decklist.totalCards')}: {mainCards}
                 {deckRules && deckRules.mainMax > 0 && `/${deckRules.mainMax}`}
                 {deckRules && deckRules.mainMax < 0 && ` (min ${deckRules.mainMin})`}
+                {sideCards > 0 && ` (+${sideCards} SB)`}
                 {' — '}{t('decklist.uniqueCards')}: {stats.uniqueCards}
               </p>
               {validation && (!validation.valid || validation.legalityErrors.length > 0) && (
@@ -80,6 +83,7 @@ export function DecklistDialog({ open, onClose, tournamentId, player, readonly, 
                       {err.type === 'too_few_cards' && t('decklist.validation.tooFewCards', { count: err.message })}
                       {err.type === 'too_many_cards' && t('decklist.validation.tooManyCards', { count: err.message })}
                       {err.type === 'too_many_copies' && t('decklist.validation.tooManyCopies', { card: err.cardName, count: err.message })}
+                      {err.type === 'too_many_side_cards' && t('decklist.validation.tooManySideCards', { count: err.message })}
                     </p>
                   ))}
                   {validation.legalityErrors.map((err, i) => (

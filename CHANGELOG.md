@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.4] - 2026-06-28
 
 ### Fixed
+- **Sideboard getrennt gewertet** — Der Decklist-Parser markiert Karten nach einem Sideboard-Header (`Sideboard`, `Side Deck:`, `!side`) als Side-Deck. Die Validierung zählt Main-Deck und Sideboard jetzt getrennt: Side-Karten blähen die Main-Deck-Zahl nicht mehr auf (kein falsches „zu viele Karten" mehr), und die Sideboard-Größe wird gegen das Limit geprüft (`Zu viele Side-Deck-Karten`). Das Kopienlimit gilt weiterhin über Main + Side zusammen
+- **Doppelseitige Karten (DFC/Split) gegen Whitelist** — Bei Whitelist-Formaten (Magic Standard/Pauper) werden `Front // Back`-Karten korrekt erkannt, auch wenn der Export nur die Vorderseite listet — kein falsches „nicht im Format" mehr
+- **Kopien-Limit über die ganze Liste** — Die Deck-Validierung summiert jetzt Kopien einer Karte über alle Einträge (z.B. Main + Side Deck), statt jede Zeile einzeln zu prüfen. Eine Karte, die auf zwei Zeilen verteilt das Limit überschreitet (z.B. 3× + 2× bei Limit 4), wird korrekt als Verstoß erkannt — betrifft sowohl das Format-Kopienlimit als auch Limited/Semi-Limited-Banlisten
+- **Basic Lands / Basic Energy vom Kopienlimit ausgenommen** — Beliebig viele Standard-Länder (Magic: Plains/Island/Swamp/Mountain/Forest/Wastes inkl. Snow-Covered) und Basis-Energien (Pokémon) lösen keinen „zu viele Kopien"-Fehler mehr aus. Special Energy bleibt limitiert
 - **Scryfall Rate Limit** — 200 ms Pause zwischen paginierten Requests; bei 429-Antwort wird automatisch 65 Sekunden gewartet und bis zu 2× erneut versucht; HTTP-Timeout pro Request auf 60 s erhöht
 
 ## [1.6.3] - 2026-06-28

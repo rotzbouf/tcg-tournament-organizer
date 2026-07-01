@@ -3,6 +3,7 @@ export interface DecklistEntry {
   cardName: string
   setCode?: string
   section?: 'pokemon' | 'trainer' | 'energy'
+  sideboard?: boolean
 }
 
 export interface Player {
