@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.4] - 2026-06-28
 
 ### Fixed
+- **Mobile-Server gibt nur noch das eigene Turnier preis** — Der lokale Webserver (`/api/state` und der SSE-Stream) sendete bisher den kompletten App-State an jedes verbundene Gerät, inklusive Spieler-Datenbank (Elo, Strafen-Historie, Geburtsdaten, Spieler-IDs) und aller anderen Turniere. Jetzt wird pro Client nur das gebundene Turnier ausgeliefert; die Datenbank verlässt das Gerät nicht mehr
+- **SSE-Clients pro Turnier getrennt** — Bei mehreren gleichzeitigen Turnier-Servern erhält jeder Client nur die Updates seines Turniers, das Stoppen eines Servers trennt nur dessen Verbindungen, und der Client-Zähler zählt pro Turnier
+- **Request-Größe begrenzt** — POST-Anfragen an den Mobile-Server sind auf 1 MB gedeckelt (Schutz vor Speicher-Erschöpfung)
 - **Sideboard getrennt gewertet** — Der Decklist-Parser markiert Karten nach einem Sideboard-Header (`Sideboard`, `Side Deck:`, `!side`) als Side-Deck. Die Validierung zählt Main-Deck und Sideboard jetzt getrennt: Side-Karten blähen die Main-Deck-Zahl nicht mehr auf (kein falsches „zu viele Karten" mehr), und die Sideboard-Größe wird gegen das Limit geprüft (`Zu viele Side-Deck-Karten`). Das Kopienlimit gilt weiterhin über Main + Side zusammen
 - **Doppelseitige Karten (DFC/Split) gegen Whitelist** — Bei Whitelist-Formaten (Magic Standard/Pauper) werden `Front // Back`-Karten korrekt erkannt, auch wenn der Export nur die Vorderseite listet — kein falsches „nicht im Format" mehr
 - **Kopien-Limit über die ganze Liste** — Die Deck-Validierung summiert jetzt Kopien einer Karte über alle Einträge (z.B. Main + Side Deck), statt jede Zeile einzeln zu prüfen. Eine Karte, die auf zwei Zeilen verteilt das Limit überschreitet (z.B. 3× + 2× bei Limit 4), wird korrekt als Verstoß erkannt — betrifft sowohl das Format-Kopienlimit als auch Limited/Semi-Limited-Banlisten

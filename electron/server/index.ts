@@ -46,7 +46,7 @@ export async function startServer(tournamentId: string): Promise<{ address: stri
 export async function stopServer(tournamentId: string): Promise<void> {
   const instance = servers.get(tournamentId)
   if (!instance) return
-  closeAll()
+  closeAll(tournamentId)
   return new Promise((resolve) => {
     instance.server.close(() => {
       servers.delete(tournamentId)
@@ -67,7 +67,7 @@ export async function stopAllServers(): Promise<void> {
 export function getServerInfo(tournamentId: string): { running: boolean; address?: string; port?: number; clientCount?: number } {
   const instance = servers.get(tournamentId)
   if (!instance) return { running: false }
-  return { running: true, address: instance.address, port: instance.port, clientCount: getClientCount() }
+  return { running: true, address: instance.address, port: instance.port, clientCount: getClientCount(tournamentId) }
 }
 
 function getLocalIP(): string {

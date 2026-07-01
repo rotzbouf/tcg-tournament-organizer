@@ -1,4 +1,4 @@
-import { DecklistEntry } from '@/types/player'
+import { DecklistEntry } from '../types/player'
 
 const SECTION_WITH_COLON = /^(?:Pok[eé]mon|Trainer|Energy|Monster|Spell|Trap|Extra Deck|Side Deck|Main Deck|Extra|Side)\s*:\s*\d*$/i
 const SECTION_STANDALONE = /^(?:Deck|Sideboard|Commander|#main|#extra|!side)$/i

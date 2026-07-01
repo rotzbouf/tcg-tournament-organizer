@@ -1,9 +1,9 @@
-import { Player } from '@/types/player'
-import { Round } from '@/types/round'
-import { Standing } from '@/types/standing'
-import { GameType } from '@/types/tournament'
+import { Player } from '../types/player'
+import { Round } from '../types/round'
+import { Standing } from '../types/standing'
+import { GameType } from '../types/tournament'
 import { calculateMatchPoints, getPlayerRecord } from './scoring'
-import { GAME_CONFIG, TiebreakerConfig } from '@/lib/gameConfig'
+import { GAME_CONFIG, TiebreakerConfig } from '../lib/gameConfig'
 
 export function calculateStandings(players: Player[], rounds: Round[], game?: GameType, playerFilter?: Set<string>): Standing[] {
   const filteredPlayers = playerFilter ? players.filter(p => playerFilter.has(p.id)) : players

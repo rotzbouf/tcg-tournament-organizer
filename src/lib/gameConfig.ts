@@ -1,4 +1,4 @@
-import { GameType } from '@/types/tournament'
+import { GameType } from '../types/tournament'
 
 export type TiebreakerSystem = 'chess' | 'tcg'
 

@@ -1,4 +1,4 @@
-import { Match, Round } from '@/types/round'
+import { Match, Round } from '../types/round'
 
 export const WIN_POINTS = 3
 export const DRAW_POINTS = 1

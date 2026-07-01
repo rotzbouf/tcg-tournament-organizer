@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport } from '../ipc/stateSync'
-import { addClient } from './sse'
+import { addClient, sanitizeTournament } from './sse'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
 
@@ -63,12 +63,18 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   if (reqPath === '/api/events' && req.method === 'GET') {
     const state = getCurrentState()
     const timers = getCurrentTimers()
-    addClient(res, state ? { type: 'state', state, timers } : undefined)
+    addClient(res, boundTournamentId, state ? { state, timers } : undefined)
     return
   }
 
   if (reqPath === '/api/state' && req.method === 'GET') {
-    jsonResponse(res, { state: getCurrentState(), timers: getCurrentTimers(), tournamentId: boundTournamentId })
+    const full = getCurrentState() as { tournaments?: Record<string, unknown> } | null
+    const tournament = full?.tournaments?.[boundTournamentId]
+    jsonResponse(res, {
+      state: { tournaments: tournament ? { [boundTournamentId]: sanitizeTournament(tournament) } : {} },
+      timers: getCurrentTimers(),
+      tournamentId: boundTournamentId,
+    })
     return
   }
 
@@ -77,7 +83,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     const tournament = state?.tournaments[boundTournamentId]
     if (!tournament) { jsonResponse(res, { error: 'not found' }, 404); return }
     const standings = calculateStandings(tournament.players as never[], tournament.rounds as never[], tournament.game as never)
-    jsonResponse(res, { tournament, standings, timers: getCurrentTimers() })
+    jsonResponse(res, { tournament: sanitizeTournament(tournament), standings, timers: getCurrentTimers() })
     return
   }
 
@@ -94,7 +100,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   }
 
   if (reqPath === '/api/register' && req.method === 'POST') {
-    readBody(req, (body) => {
+    readBody(req, res, (body) => {
       const { playerName, playerId, dateOfBirth } = body as { playerName?: string; playerId?: string; dateOfBirth?: string }
       if (!playerName?.trim()) { jsonResponse(res, { error: 'name required' }, 400); return }
       const payload: Record<string, unknown> = { tournamentId: boundTournamentId, playerName: playerName.trim() }
@@ -108,7 +114,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   const decklistMatch = reqPath.match(/^\/api\/players\/([^/]+)\/decklist$/)
   if (decklistMatch && req.method === 'POST') {
-    readBody(req, (body) => {
+    readBody(req, res, (body) => {
       const { decklistText } = body as { decklistText?: string }
       if (!decklistText) { jsonResponse(res, { error: 'decklist required' }, 400); return }
       const entries = parseDecklistText(decklistText)
@@ -132,7 +138,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   }
 
   if (reqPath === '/api/judge-call' && req.method === 'POST') {
-    readBody(req, (body) => {
+    readBody(req, res, (body) => {
       const { playerName, tableNumber } = body as { playerName?: string; tableNumber?: number }
       if (!playerName) { jsonResponse(res, { error: 'name required' }, 400); return }
       const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
@@ -150,7 +156,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   const reportMatch = reqPath.match(/^\/api\/matches\/([^/]+)\/report$/)
   if (reportMatch && req.method === 'POST') {
-    readBody(req, (body) => {
+    readBody(req, res, (body) => {
       const { result, reporterName } = body as { result?: string; reporterName?: string }
       if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
         jsonResponse(res, { error: 'invalid result' }, 400); return
@@ -163,7 +169,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   const resultMatch = reqPath.match(/^\/api\/matches\/([^/]+)\/result$/)
   if (resultMatch && req.method === 'POST') {
-    readBody(req, (body) => {
+    readBody(req, res, (body) => {
       const { result, player1Games, player2Games } = body as { result?: string; player1Games?: number; player2Games?: number }
       if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
         jsonResponse(res, { error: 'invalid result' }, 400); return
@@ -187,10 +193,22 @@ function jsonResponse(res: http.ServerResponse, data: unknown, status = 200): vo
   res.end(JSON.stringify(data))
 }
 
-function readBody(req: http.IncomingMessage, callback: (body: unknown) => void): void {
+const MAX_BODY_BYTES = 1_000_000 // 1 MB — mobile payloads are tiny; cap to avoid memory exhaustion
+
+function readBody(req: http.IncomingMessage, res: http.ServerResponse, callback: (body: unknown) => void): void {
   let data = ''
-  req.on('data', (chunk: Buffer) => { data += chunk.toString() })
+  let aborted = false
+  req.on('data', (chunk: Buffer) => {
+    if (aborted) return
+    data += chunk.toString()
+    if (data.length > MAX_BODY_BYTES) {
+      aborted = true
+      jsonResponse(res, { error: 'payload too large' }, 413)
+      req.destroy()
+    }
+  })
   req.on('end', () => {
+    if (aborted) return
     try { callback(JSON.parse(data)) }
     catch { callback({}) }
   })

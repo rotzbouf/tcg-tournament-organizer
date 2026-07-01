@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow, screen } from 'electron'
 import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
-import { broadcast, getClientCount } from '../server/sse'
+import { broadcastState, broadcastTimers } from '../server/sse'
 
 let currentState: string | null = null
 let currentTimers: string | null = null
@@ -14,14 +14,14 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
     currentState = state
     stateListeners.forEach(fn => fn())
     try {
-      broadcast({ type: 'state', state: JSON.parse(state), timers: currentTimers ? JSON.parse(currentTimers) : null })
+      broadcastState(JSON.parse(state), currentTimers ? JSON.parse(currentTimers) : null)
     } catch { /* ignore */ }
   })
 
   ipcMain.on('timer:sync', (_event, timers: string) => {
     currentTimers = timers
     try {
-      broadcast({ type: 'timers', timers: JSON.parse(timers) })
+      broadcastTimers(JSON.parse(timers))
     } catch { /* ignore */ }
   })
 
@@ -82,8 +82,7 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('server:getInfo', (_event, tournamentId: string) => {
-    const info = getServerInfo(tournamentId)
-    return { ...info, clientCount: getClientCount() }
+    return getServerInfo(tournamentId)
   })
 }
 
