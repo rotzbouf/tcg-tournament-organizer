@@ -21,7 +21,7 @@ Findings from the full code review (2026-07-01). Grouped by severity. Check off 
   receives the whole database in real time.
   *Fix:* serve only the bound tournament, filtered; never expose `playerDatabase`.
 
-- [ ] **H2 — Discord round-1 pairings don't match the real pairings.**
+- [x] **H2 — Discord round-1 pairings don't match the real pairings.**
   `src/state/TournamentContext.tsx:35` runs `tournamentReducer(state, action)` a
   second time to build the Discord message, but the reducer is non-deterministic
   (`generateFirstRoundPairings` shuffles randomly — `src/engine/swiss.ts:252`), so
@@ -42,29 +42,29 @@ Findings from the full code review (2026-07-01). Grouped by severity. Check off 
   one server (`closeAll()`) drops all SSE connections; `getClientCount()` is global.
   *Fix:* key clients by `tournamentId`.
 
-- [ ] **M2 — `COMPLETE_TOURNAMENT` has no re-entry guard (double Elo).**
+- [x] **M2 — `COMPLETE_TOURNAMENT` has no re-entry guard (double Elo).**
   `UPDATE_ELO_RATINGS` guards on `status !== 'completed' || eloApplied`
   (`src/state/tournamentReducer.ts:683`); `COMPLETE_TOURNAMENT`
   (`tournamentReducer.ts:413`) does not, so a double dispatch applies Elo twice.
   *Fix:* add `if (tournament.status === 'completed') return state`.
 
-- [ ] **M3 — Elo/penalty DB matching is name-only.**
+- [x] **M3 — Elo/penalty DB matching is name-only.**
   Matching uses `name.toLowerCase()` (`tournamentReducer.ts:435`, `:596`, `:772`);
   `playerId` is ignored, so same-name players merge history.
   *Fix:* prefer `playerId` when present.
 
-- [ ] **M4 — `/api/matches/:id/result` bypasses TO confirmation.**
+- [x] **M4 — `/api/matches/:id/result` bypasses TO confirmation.**
   `/report` (`router.ts:151`) goes through the confirmation queue, but
   `/api/matches/:id/result` (`router.ts:164`) dispatches `SUBMIT_MATCH_RESULT`
   directly — any LAN client can finalize any match.
   *Fix:* remove if legacy, otherwise gate it.
 
-- [ ] **M5 — ~60 lines of duplicated Elo/DB update logic.**
+- [x] **M5 — ~60 lines of duplicated Elo/DB update logic.**
   `COMPLETE_TOURNAMENT` (`tournamentReducer.ts:413-476`) and `UPDATE_ELO_RATINGS`
   (`:681-739`) are near-identical and have already diverged (see M2).
   *Fix:* extract a shared helper.
 
-- [ ] **M6 — Migration logic diverges between load paths.**
+- [x] **M6 — Migration logic diverges between load paths.**
   `src/lib/storage.ts` (localStorage) sets defaults for `ageDivisionsEnabled`,
   `archived`, `rounds[].phaseIndex`, and player fields; `migrateTournament` in
   `src/lib/serialization.ts` (file import) does not, so imported files can miss

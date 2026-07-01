@@ -1,5 +1,6 @@
 import { AppState } from '@/state/actions'
-import { Tournament, GameType, TournamentStatus, TournamentFormat } from '@/types/tournament'
+import { Tournament, GameType, TournamentStatus } from '@/types/tournament'
+import { migrateTournament, migrateDatabasePlayer } from './migration'
 
 interface ExportData {
   version: string
@@ -13,7 +14,6 @@ const APP_NAME = 'TCG Tournament Organizer'
 
 const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
 const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'top_cut', 'completed']
-const VALID_FORMATS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
 
 export function serializeState(state: AppState): string {
   const exportData: ExportData = {
@@ -60,6 +60,10 @@ export function deserializeState(json: string): AppState {
 
   if (!appState.playerDatabase || typeof appState.playerDatabase !== 'object') {
     appState.playerDatabase = {}
+  } else {
+    for (const p of Object.values(appState.playerDatabase) as Record<string, unknown>[]) {
+      migrateDatabasePlayer(p)
+    }
   }
 
   return appState as unknown as AppState
@@ -93,31 +97,3 @@ function validateTournament(id: string, value: unknown): asserts value is Tourna
   }
 }
 
-function migrateTournament(t: Record<string, unknown> & { format?: unknown; penalties?: unknown; topCut?: unknown }): void {
-  if (!t.format || !VALID_FORMATS.includes(t.format as TournamentFormat)) {
-    const topCut = typeof t.topCut === 'number' ? t.topCut : 0
-    t.format = topCut > 0 ? 'swiss_topcut' : 'swiss'
-  }
-
-  if (!Array.isArray(t.penalties)) {
-    t.penalties = []
-  }
-  if (!Array.isArray(t.phases)) {
-    t.phases = []
-  }
-  if (typeof t.currentPhaseIndex !== 'number') {
-    t.currentPhaseIndex = 0
-  }
-  if (typeof t.grandFinalReset !== 'boolean') {
-    t.grandFinalReset = false
-  }
-  if (t.discordWebhookUrl === undefined) {
-    t.discordWebhookUrl = null
-  }
-  if (typeof t.eloApplied !== 'boolean') {
-    t.eloApplied = t.status === 'completed'
-  }
-  if (t.gameFormat === undefined) {
-    t.gameFormat = null
-  }
-}

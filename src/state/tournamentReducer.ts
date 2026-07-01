@@ -11,7 +11,7 @@ import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roun
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
 import { calculateEloChanges } from '@/engine/elo'
-import { DatabasePenalty, EloHistoryEntry } from '@/types/database'
+import { DatabasePenalty, DatabasePlayer, EloHistoryEntry } from '@/types/database'
 import { getPlayerDivision, DIVISION_ORDER, AgeDivision } from '@/lib/ageDivision'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
@@ -86,6 +86,85 @@ function calculateDivisionTotalRounds(players: Player[], createdAt: string, minR
     if (divPlayers.length >= 2) max = Math.max(max, calculateTotalRounds(divPlayers.length, minRounds))
   }
   return max
+}
+
+type PlayerDatabase = Record<string, DatabasePlayer>
+
+// Find a database entry for a tournament player, matching by external player ID
+// first (so two different people who share a name don't merge), then by name.
+function findDatabasePlayer(
+  db: PlayerDatabase,
+  player: { name: string; playerId: string | null },
+  game: string,
+): DatabasePlayer | undefined {
+  const entries = Object.values(db).filter(p => p.game === game)
+  if (player.playerId) {
+    const byId = entries.find(p => p.playerId === player.playerId)
+    if (byId) return byId
+  }
+  const nameKey = player.name.toLowerCase()
+  return entries.find(p => p.name.toLowerCase() === nameKey)
+}
+
+// Apply a completed tournament's Elo changes, match/tournament counts, and a
+// history entry to the player database. Shared by COMPLETE_TOURNAMENT and
+// UPDATE_ELO_RATINGS.
+function applyTournamentResults(db: PlayerDatabase, tournament: Tournament): PlayerDatabase {
+  const playerIds = tournament.players.map(p => p.id)
+  const playerNameMap: Record<string, string> = {}
+  const playerIdMap: Record<string, string | null> = {}
+  tournament.players.forEach(p => {
+    playerNameMap[p.id] = p.name
+    playerIdMap[p.id] = p.playerId ?? null
+  })
+
+  const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, db, playerNameMap, tournament.game, playerIdMap)
+  const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
+  const now = new Date().toISOString()
+
+  const updatedDb: PlayerDatabase = { ...db }
+  for (const update of eloUpdates) {
+    const player = tournament.players.find(p => p.id === update.playerId)
+    const standing = standings.find(s => s.playerId === update.playerId)
+    if (!player || !standing) continue
+
+    const historyEntry: EloHistoryEntry = {
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      date: now,
+      eloBefore: update.eloBefore,
+      eloAfter: update.eloAfter,
+      placement: standing.rank ?? 0,
+    }
+    const gamesPlayed = standing.wins + standing.losses + standing.draws
+    const existing = findDatabasePlayer(updatedDb, player, tournament.game)
+
+    if (existing) {
+      updatedDb[existing.id] = {
+        ...existing,
+        elo: update.eloAfter,
+        matchesPlayed: existing.matchesPlayed + gamesPlayed,
+        tournamentsPlayed: existing.tournamentsPlayed + 1,
+        history: [...existing.history, historyEntry],
+        lastUpdated: now,
+      }
+    } else {
+      const id = generateId()
+      updatedDb[id] = {
+        id,
+        name: player.name,
+        game: tournament.game,
+        playerId: player.playerId ?? null,
+        elo: update.eloAfter,
+        matchesPlayed: gamesPlayed,
+        tournamentsPlayed: 1,
+        history: [historyEntry],
+        penalties: [],
+        lastUpdated: now,
+      }
+    }
+  }
+  return updatedDb
 }
 
 export function tournamentReducer(state: AppState, action: TournamentAction): AppState {
@@ -241,9 +320,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const buildEloMap = () => {
         const m = new Map<string, number>()
         for (const p of tournament.players) {
-          const dbEntry = Object.values(state.playerDatabase).find(
-            d => d.name.toLowerCase() === p.name.toLowerCase() && d.game === tournament.game
-          )
+          const dbEntry = findDatabasePlayer(state.playerDatabase, p, tournament.game)
           if (dbEntry) m.set(p.id, dbEntry.elo)
         }
         return m
@@ -413,65 +490,14 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'COMPLETE_TOURNAMENT': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
+      if (tournament.status === 'completed') return state // already finalized — don't re-apply Elo
 
       const completedState = updateTournament(state, action.payload.tournamentId, {
         status: 'completed',
         eloApplied: true,
       })
 
-      const playerIds = tournament.players.map(p => p.id)
-      const playerNameMap: Record<string, string> = {}
-      tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
-
-      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, completedState.playerDatabase, playerNameMap, tournament.game)
-      const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
-      const now = new Date().toISOString()
-
-      const updatedDb = { ...completedState.playerDatabase }
-      for (const update of eloUpdates) {
-        const player = tournament.players.find(p => p.id === update.playerId)
-        if (!player) continue
-        const nameKey = player.name.toLowerCase()
-        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
-        const standing = standings.find(s => s.playerId === update.playerId)
-
-        const historyEntry: EloHistoryEntry = {
-          tournamentId: tournament.id,
-          tournamentName: tournament.name,
-          date: now,
-          eloBefore: update.eloBefore,
-          eloAfter: update.eloAfter,
-          placement: standing?.rank ?? 0,
-        }
-
-        if (existing) {
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[existing.id] = {
-            ...existing,
-            elo: update.eloAfter,
-            matchesPlayed: existing.matchesPlayed + s.wins + s.losses + s.draws,
-            tournamentsPlayed: existing.tournamentsPlayed + 1,
-            history: [...existing.history, historyEntry],
-            lastUpdated: now,
-          }
-        } else {
-          const id = generateId()
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[id] = {
-            id,
-            name: player.name,
-            game: tournament.game,
-            playerId: player.playerId ?? null,
-            elo: update.eloAfter,
-            matchesPlayed: s.wins + s.losses + s.draws,
-            tournamentsPlayed: 1,
-            history: [historyEntry],
-            penalties: [],
-            lastUpdated: now,
-          }
-        }
-      }
-
+      const updatedDb = applyTournamentResults(completedState.playerDatabase, tournament)
       return { ...completedState, playerDatabase: updatedDb }
     }
 
@@ -592,8 +618,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (action.payload.type !== 'note') {
         const player = tournament.players.find(p => p.id === action.payload.playerId)
         if (player) {
-          const nameKey = player.name.toLowerCase()
-          const dbPlayer = Object.values(updatedState.playerDatabase).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
+          const dbPlayer = findDatabasePlayer(updatedState.playerDatabase, player, tournament.game)
           if (dbPlayer) {
             const dbPenalty: DatabasePenalty = {
               tournamentId: tournament.id,
@@ -682,59 +707,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament || tournament.status !== 'completed' || tournament.eloApplied) return state
 
-      const playerIds = tournament.players.map(p => p.id)
-      const playerNameMap: Record<string, string> = {}
-      tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
-
-      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, state.playerDatabase, playerNameMap, tournament.game)
-      const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
-      const now = new Date().toISOString()
-
-      const updatedDb = { ...state.playerDatabase }
-      for (const update of eloUpdates) {
-        const player = tournament.players.find(p => p.id === update.playerId)
-        if (!player) continue
-        const nameKey = player.name.toLowerCase()
-        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
-        const standing = standings.find(s => s.playerId === update.playerId)
-
-        const historyEntry: EloHistoryEntry = {
-          tournamentId: tournament.id,
-          tournamentName: tournament.name,
-          date: now,
-          eloBefore: update.eloBefore,
-          eloAfter: update.eloAfter,
-          placement: standing?.rank ?? 0,
-        }
-
-        if (existing) {
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[existing.id] = {
-            ...existing,
-            elo: update.eloAfter,
-            matchesPlayed: existing.matchesPlayed + s.wins + s.losses + s.draws,
-            tournamentsPlayed: existing.tournamentsPlayed + 1,
-            history: [...existing.history, historyEntry],
-            lastUpdated: now,
-          }
-        } else {
-          const id = generateId()
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[id] = {
-            id,
-            name: player.name,
-            game: tournament.game,
-            playerId: player.playerId ?? null,
-            elo: update.eloAfter,
-            matchesPlayed: s.wins + s.losses + s.draws,
-            tournamentsPlayed: 1,
-            history: [historyEntry],
-            penalties: [],
-            lastUpdated: now,
-          }
-        }
-      }
-
+      const updatedDb = applyTournamentResults(state.playerDatabase, tournament)
       return { ...state, playerDatabase: updatedDb }
     }
 

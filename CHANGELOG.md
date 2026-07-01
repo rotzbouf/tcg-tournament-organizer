@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.4] - 2026-06-28
 
 ### Fixed
+- **Elo/Strafen-Zuordnung bevorzugt Spieler-ID** — Rückkehrende Spieler werden jetzt zuerst über ihre hinterlegte Spieler-ID (Konami-ID etc.) mit dem Datenbank-Eintrag verknüpft, statt nur über den Namen. Zwei verschiedene Personen mit gleichem Namen teilen sich dadurch nicht mehr versehentlich Elo- und Strafen-Historie
+- **Kein doppeltes Elo mehr beim Turnierabschluss** — Ein erneuter Abschluss eines bereits abgeschlossenen Turniers verändert die Wertung nicht mehr (Guard gegen doppelte Elo-Anwendung)
+- **Direktes Ergebnis-Schreiben vom Handy entfernt** — Der ungenutzte Endpoint, über den ein Match-Ergebnis ohne TO-Bestätigung gesetzt werden konnte, wurde entfernt; Spieler melden Ergebnisse ausschließlich über den bestätigungspflichtigen Weg
+- **Einheitliche Datenmigration** — Laden aus dem Speicher und Datei-Import nutzen jetzt dieselbe Migrationslogik; importierte Dateien können keine Felder mehr verpassen
+- **Discord-Paarungen stimmen mit der echten Runde überein** — Die Discord-Benachrichtigung wurde bisher aus einem zweiten, separaten Reducer-Durchlauf gebaut; da die erste Runde zufällig ausgelost wird, wichen die geposteten Paarungen von den tatsächlich gespeicherten ab. Die Nachricht wird jetzt aus dem echten Turnierzustand nach dem Dispatch erzeugt
 - **Mobile-Server gibt nur noch das eigene Turnier preis** — Der lokale Webserver (`/api/state` und der SSE-Stream) sendete bisher den kompletten App-State an jedes verbundene Gerät, inklusive Spieler-Datenbank (Elo, Strafen-Historie, Geburtsdaten, Spieler-IDs) und aller anderen Turniere. Jetzt wird pro Client nur das gebundene Turnier ausgeliefert; die Datenbank verlässt das Gerät nicht mehr
 - **SSE-Clients pro Turnier getrennt** — Bei mehreren gleichzeitigen Turnier-Servern erhält jeder Client nur die Updates seines Turniers, das Stoppen eines Servers trennt nur dessen Verbindungen, und der Client-Zähler zählt pro Turnier
 - **Request-Größe begrenzt** — POST-Anfragen an den Mobile-Server sind auf 1 MB gedeckelt (Schutz vor Speicher-Erschöpfung)

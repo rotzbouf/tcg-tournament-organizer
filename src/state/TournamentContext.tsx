@@ -20,51 +20,26 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   const [state, rawDispatch] = useReducer(tournamentReducer, initialState, () => loadState() ?? initialState)
   const [history, setHistory] = useState<AppState[]>([])
 
+  const pendingDiscord = useRef<{ type: TournamentAction['type']; tournamentId: string; url: string } | null>(null)
+
   const dispatch = useCallback((action: TournamentAction) => {
     if (action.type !== 'LOAD_STATE') {
       setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), state])
     }
-    rawDispatch(action)
 
+    // Queue a Discord notification to be sent from the *resulting* state (handled
+    // in the effect below). Building it here would require re-running the reducer,
+    // which is non-deterministic — first-round pairings are shuffled — so the
+    // posted pairings would differ from what actually gets stored.
     if ('payload' in action && action.payload && typeof action.payload === 'object' && 'tournamentId' in action.payload) {
       const tournamentId = action.payload.tournamentId as string
-      const tournament = state.tournaments[tournamentId]
-      if (tournament?.discordWebhookUrl) {
-        const url = tournament.discordWebhookUrl
-        if (action.type === 'START_TOURNAMENT') {
-          const newState = tournamentReducer(state, action)
-          const t = newState.tournaments[tournamentId]
-          if (t) {
-            const round = selectCurrentRound(t)
-            if (round) sendDiscordMessage(url, formatPairingsMessage(t, round, t.players))
-          }
-        }
-        if (action.type === 'COMPLETE_ROUND') {
-          const newState = tournamentReducer(state, action)
-          const t = newState.tournaments[tournamentId]
-          if (t) {
-            const standings = selectStandings(t)
-            sendDiscordMessage(url, formatStandingsMessage(t, standings))
-          }
-        }
-        if (action.type === 'COMPLETE_TOURNAMENT') {
-          const newState = tournamentReducer(state, action)
-          const t = newState.tournaments[tournamentId]
-          if (t) {
-            const standings = selectStandings(t)
-            sendDiscordMessage(url, formatCompletionMessage(t, standings))
-          }
-        }
-        if (action.type === 'GENERATE_ROUND') {
-          const newState = tournamentReducer(state, action)
-          const t = newState.tournaments[tournamentId]
-          if (t) {
-            const round = selectCurrentRound(t)
-            if (round) sendDiscordMessage(url, formatPairingsMessage(t, round, t.players))
-          }
-        }
-      }
+      const url = state.tournaments[tournamentId]?.discordWebhookUrl
+      const notifies = action.type === 'START_TOURNAMENT' || action.type === 'GENERATE_ROUND' ||
+        action.type === 'COMPLETE_ROUND' || action.type === 'COMPLETE_TOURNAMENT'
+      if (url && notifies) pendingDiscord.current = { type: action.type, tournamentId, url }
     }
+
+    rawDispatch(action)
   }, [state])
 
   const undo = useCallback(() => {
@@ -77,6 +52,28 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const canUndo = history.length > 0
+
+  useEffect(() => {
+    const pending = pendingDiscord.current
+    if (!pending) return
+    pendingDiscord.current = null
+    const t = state.tournaments[pending.tournamentId]
+    if (!t) return
+    switch (pending.type) {
+      case 'START_TOURNAMENT':
+      case 'GENERATE_ROUND': {
+        const round = selectCurrentRound(t)
+        if (round) sendDiscordMessage(pending.url, formatPairingsMessage(t, round, t.players))
+        break
+      }
+      case 'COMPLETE_ROUND':
+        sendDiscordMessage(pending.url, formatStandingsMessage(t, selectStandings(t)))
+        break
+      case 'COMPLETE_TOURNAMENT':
+        if (t.status === 'completed') sendDiscordMessage(pending.url, formatCompletionMessage(t, selectStandings(t)))
+        break
+    }
+  }, [state])
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 

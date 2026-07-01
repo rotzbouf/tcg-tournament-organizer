@@ -167,23 +167,9 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return
   }
 
-  const resultMatch = reqPath.match(/^\/api\/matches\/([^/]+)\/result$/)
-  if (resultMatch && req.method === 'POST') {
-    readBody(req, res, (body) => {
-      const { result, player1Games, player2Games } = body as { result?: string; player1Games?: number; player2Games?: number }
-      if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
-        jsonResponse(res, { error: 'invalid result' }, 400); return
-      }
-      const payload: Record<string, unknown> = {
-        tournamentId: boundTournamentId, matchId: resultMatch[1], result,
-      }
-      if (player1Games !== undefined) payload.player1Games = player1Games
-      if (player2Games !== undefined) payload.player2Games = player2Games
-      dispatchToRenderer({ type: 'SUBMIT_MATCH_RESULT', payload })
-      jsonResponse(res, { ok: true })
-    })
-    return
-  }
+  // Note: players submit results via /api/matches/:id/report, which requires TO
+  // confirmation before the result is stored. There is deliberately no direct
+  // result-writing endpoint from the mobile client.
 
   jsonResponse(res, { error: 'not found' }, 404)
 }

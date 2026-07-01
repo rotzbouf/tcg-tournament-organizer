@@ -249,4 +249,53 @@ describe('tournamentReducer', () => {
       expect(Object.keys(result.tournaments)).toHaveLength(0)
     })
   })
+
+  describe('COMPLETE_TOURNAMENT — Elo application', () => {
+    // Play a minimal 2-player, 1-round tournament to completion.
+    function playToCompletion(seedDb: AppState['playerDatabase'] = {}, aliceExternalId: string | null = null): AppState {
+      let state: AppState = { ...createTournament(), playerDatabase: seedDb }
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Alice', playerId: aliceExternalId } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Bob' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const matchId = getTournament(state).rounds[0].matches[0].id
+      state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId, result: 'player1_win' } })
+      state = dispatch(state, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+      return dispatch(state, { type: 'COMPLETE_TOURNAMENT', payload: { tournamentId: id } })
+    }
+
+    it('applies Elo once and creates database entries', () => {
+      const state = playToCompletion()
+      const entries = Object.values(state.playerDatabase)
+      expect(entries).toHaveLength(2)
+      for (const e of entries) {
+        expect(e.tournamentsPlayed).toBe(1)
+        expect(e.history).toHaveLength(1)
+      }
+    })
+
+    it('does not re-apply Elo when dispatched again (M2)', () => {
+      const state = playToCompletion()
+      const id = getTournament(state).id
+      const again = dispatch(state, { type: 'COMPLETE_TOURNAMENT', payload: { tournamentId: id } })
+      expect(again).toBe(state) // guard returns the same reference — no double count
+    })
+
+    it('matches an existing database player by external player ID, not name (M3)', () => {
+      // A returning player registered under a slightly different name but the same ID.
+      const seed: AppState['playerDatabase'] = {
+        db1: {
+          id: 'db1', name: 'Alicia', game: 'yugioh', playerId: 'KONAMI-1',
+          elo: 1500, matchesPlayed: 5, tournamentsPlayed: 1, history: [], penalties: [], lastUpdated: '2026-01-01',
+        },
+      }
+      const state = playToCompletion(seed, 'KONAMI-1')
+      // No new "Alice" entry — the existing db1 entry was updated instead.
+      expect(Object.values(state.playerDatabase).filter(p => p.name === 'Alice')).toHaveLength(0)
+      const updated = state.playerDatabase.db1
+      expect(updated.tournamentsPlayed).toBe(2)
+      expect(updated.matchesPlayed).toBe(6) // 5 prior + 1 game this event
+      expect(updated.elo).not.toBe(1500)
+    })
+  })
 })
