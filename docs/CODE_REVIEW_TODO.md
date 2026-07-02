@@ -4,13 +4,17 @@ Findings from the full code review (2026-07-01). Grouped by severity. Check off 
 
 ## 🔴 High
 
-- [ ] **H1b — Inline decklists still broadcast regardless of visibility.**
-  `sanitizeTournament` (`electron/server/sse.ts`) now strips `dateOfBirth`/`playerId`,
-  but each player's `decklist` is still in the scoped state / `/api/tournament`, so a
-  client can read hidden/`to_only` decklists from SSE, bypassing `decklistVisibility`.
-  Not stripped yet because the mobile page pre-fills a player's *own* deck from state
-  (`mobile.html:317`). *Fix needs a decision:* drop the pre-fill and strip decklists,
-  or add a per-session token so only the owner sees their list.
+- [x] **H1b — Inline decklists still broadcast regardless of visibility.**
+  Fixed with the token approach: `sanitizeTournament` now strips `decklist`;
+  `/api/register` issues a per-session token (`electron/server/sessions.ts`),
+  the own-deck pre-fill uses the token-gated `GET /api/my-decklist`, and
+  `POST /api/players/:id/decklist` and `/api/players/:id/drop` require a token
+  matching the target player.
+  Re-claiming an existing name while registration is open issues a fresh token
+  without creating a duplicate player (covers desk-registered players and
+  cleared phone storage). Known limit: identity is name-based, so during the
+  registration phase someone who knows a player's name could claim a token for
+  it; after registration closes no new tokens are issued.
 
 - [x] **H1 — Full app state leaked to every LAN device.** (player DB + other
   tournaments + PII removed; see H1b for the remaining decklist case)

@@ -17,9 +17,11 @@ interface TournamentLike {
   [key: string]: unknown
 }
 
-// Remove per-player personal data (date of birth, external player IDs) before a
-// tournament leaves the app. The mobile page reads these from the local session,
-// not from the shared state, so stripping them here has no functional impact.
+// Remove per-player personal data (date of birth, external player IDs) and
+// decklists before a tournament leaves the app. The mobile page reads personal
+// data from the local session; a player's own decklist comes from the
+// token-gated /api/my-decklist endpoint, and public decklists from
+// /api/decklists — so nothing here may bypass `decklistVisibility`.
 export function sanitizeTournament(tournament: unknown): unknown {
   const t = tournament as TournamentLike | null
   if (!t || !Array.isArray(t.players)) return tournament
@@ -29,6 +31,7 @@ export function sanitizeTournament(tournament: unknown): unknown {
       const clone = { ...player }
       delete clone.dateOfBirth
       delete clone.playerId
+      delete clone.decklist
       return clone
     }),
   }

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { app } from 'electron'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport } from '../ipc/stateSync'
 import { addClient, sanitizeTournament } from './sse'
+import { createSession, getSessionPlayerName } from './sessions'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
 
@@ -46,7 +47,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204)
@@ -102,18 +103,47 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   if (reqPath === '/api/register' && req.method === 'POST') {
     readBody(req, res, (body) => {
       const { playerName, playerId, dateOfBirth } = body as { playerName?: string; playerId?: string; dateOfBirth?: string }
-      if (!playerName?.trim()) { jsonResponse(res, { error: 'name required' }, 400); return }
-      const payload: Record<string, unknown> = { tournamentId: boundTournamentId, playerName: playerName.trim() }
-      if (playerId?.trim()) payload.playerId = playerId.trim()
-      if (dateOfBirth?.trim()) payload.dateOfBirth = dateOfBirth.trim()
-      dispatchToRenderer({ type: 'ADD_PLAYER', payload })
-      jsonResponse(res, { ok: true })
+      const name = playerName?.trim()
+      if (!name) { jsonResponse(res, { error: 'name required' }, 400); return }
+      const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+      const tournament = state?.tournaments[boundTournamentId]
+      if (!tournament || tournament.status !== 'registration') {
+        jsonResponse(res, { error: 'registration closed' }, 403); return
+      }
+      // Re-claiming an existing name (e.g. the TO registered the player at the
+      // desk, or the phone lost its session) must not create a duplicate.
+      const exists = tournament.players.some(p => p.name.toLowerCase() === name.toLowerCase())
+      if (!exists) {
+        const payload: Record<string, unknown> = { tournamentId: boundTournamentId, playerName: name }
+        if (playerId?.trim()) payload.playerId = playerId.trim()
+        if (dateOfBirth?.trim()) payload.dateOfBirth = dateOfBirth.trim()
+        dispatchToRenderer({ type: 'ADD_PLAYER', payload })
+      }
+      jsonResponse(res, { ok: true, token: createSession(boundTournamentId, name) })
     })
+    return
+  }
+
+  // A player's own decklist, gated by the session token from /api/register —
+  // decklists are stripped from the broadcast state so hidden/to_only lists
+  // never reach other devices.
+  if (reqPath === '/api/my-decklist' && req.method === 'GET') {
+    const sessionName = getSessionPlayerName(getBearerToken(req), boundTournamentId)
+    if (!sessionName) { jsonResponse(res, { error: 'invalid session' }, 401); return }
+    const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+    const player = state?.tournaments[boundTournamentId]?.players.find(
+      p => p.name.toLowerCase() === sessionName
+    )
+    if (!player) { jsonResponse(res, { error: 'not found' }, 404); return }
+    jsonResponse(res, { playerId: player.id, deckName: player.deckName, decklist: player.decklist })
     return
   }
 
   const decklistMatch = reqPath.match(/^\/api\/players\/([^/]+)\/decklist$/)
   if (decklistMatch && req.method === 'POST') {
+    if (!isOwnPlayer(req, boundTournamentId, decklistMatch[1])) {
+      jsonResponse(res, { error: 'invalid session' }, 401); return
+    }
     readBody(req, res, (body) => {
       const { decklistText } = body as { decklistText?: string }
       if (!decklistText) { jsonResponse(res, { error: 'decklist required' }, 400); return }
@@ -129,6 +159,9 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   const dropMatch = reqPath.match(/^\/api\/players\/([^/]+)\/drop$/)
   if (dropMatch && req.method === 'POST') {
+    if (!isOwnPlayer(req, boundTournamentId, dropMatch[1])) {
+      jsonResponse(res, { error: 'invalid session' }, 401); return
+    }
     dispatchToRenderer({
       type: 'DROP_PLAYER',
       payload: { tournamentId: boundTournamentId, playerId: dropMatch[1] },
@@ -172,6 +205,22 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   // result-writing endpoint from the mobile client.
 
   jsonResponse(res, { error: 'not found' }, 404)
+}
+
+function getBearerToken(req: http.IncomingMessage): string | null {
+  const auth = req.headers.authorization
+  return auth?.startsWith('Bearer ') ? auth.slice(7) : null
+}
+
+// True if the request carries a session token that belongs to the player with
+// the given id in the bound tournament — guards self-service writes (decklist,
+// drop) so one device cannot act for another player.
+function isOwnPlayer(req: http.IncomingMessage, boundTournamentId: string, playerId: string): boolean {
+  const sessionName = getSessionPlayerName(getBearerToken(req), boundTournamentId)
+  if (!sessionName) return false
+  const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+  const target = state?.tournaments[boundTournamentId]?.players.find(p => p.id === playerId)
+  return !!target && target.name.toLowerCase() === sessionName
 }
 
 function jsonResponse(res: http.ServerResponse, data: unknown, status = 200): void {

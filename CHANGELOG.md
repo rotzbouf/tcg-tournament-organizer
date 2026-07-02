@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.6.4] - 2026-06-28
 
 ### Fixed
+- **Verdeckte Decklisten nicht mehr über den Mobile-Server lesbar** — Der SSE-Stream und die API des Mobile-Servers enthielten die vollständigen Decklisten aller Spieler, auch bei Sichtbarkeit „versteckt" oder „nur TO". Decklisten werden jetzt vor dem Versand entfernt; das eigene Deck lädt und speichert das Handy über ein Session-Token, das bei der Registrierung ausgestellt wird. Nebeneffekte: Die Registrierung über das Handy legt bei bereits vorhandenem Namen keinen doppelten Spieler mehr an, ist nach Ende der Anmeldephase gesperrt (403), und das Einreichen einer Deckliste sowie das Abmelden vom Turnier sind nur noch für den eigenen Spieler möglich (kein Fremd-Drop über die LAN-API mehr)
 - **Elo/Strafen-Zuordnung bevorzugt Spieler-ID** — Rückkehrende Spieler werden jetzt zuerst über ihre hinterlegte Spieler-ID (Konami-ID etc.) mit dem Datenbank-Eintrag verknüpft, statt nur über den Namen. Zwei verschiedene Personen mit gleichem Namen teilen sich dadurch nicht mehr versehentlich Elo- und Strafen-Historie
 - **Kein doppeltes Elo mehr beim Turnierabschluss** — Ein erneuter Abschluss eines bereits abgeschlossenen Turniers verändert die Wertung nicht mehr (Guard gegen doppelte Elo-Anwendung)
 - **Direktes Ergebnis-Schreiben vom Handy entfernt** — Der ungenutzte Endpoint, über den ein Match-Ergebnis ohne TO-Bestätigung gesetzt werden konnte, wurde entfernt; Spieler melden Ergebnisse ausschließlich über den bestätigungspflichtigen Weg
