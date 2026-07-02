@@ -141,6 +141,24 @@ describe('tournamentReducer', () => {
       state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
       expect(getTournament(state).status).toBe('registration')
     })
+
+    it('seats every player in double elimination, padding with byes (F1)', () => {
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'DE', game: 'yugioh', format: 'double_elimination', roundTimeMinutes: 50, topCut: 0 },
+      })
+      const id = getTournament(state).id
+      for (const name of ['A', 'B', 'C', 'D', 'E', 'F']) {
+        state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: name } })
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+
+      const t = getTournament(state)
+      expect(t.status).toBe('in_progress')
+      const seated = t.rounds[0].matches.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean))
+      expect(new Set(seated).size).toBe(6)
+      expect(t.rounds[0].matches.filter(m => m.isBye)).toHaveLength(2)
+    })
   })
 
   describe('SUBMIT_MATCH_RESULT', () => {
@@ -164,6 +182,182 @@ describe('tournamentReducer', () => {
       const before = getTournament(state)
       state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId: 'fake', result: 'player1_win' } })
       expect(getTournament(state).rounds[0].matches[0].result).toBe(before.rounds[0].matches[0].result)
+    })
+
+    it('rejects a draw in knockout rounds (F2)', () => {
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'DE', game: 'yugioh', format: 'double_elimination', roundTimeMinutes: 50, topCut: 0 },
+      })
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(state).rounds[0].phase).toBe('winners_bracket')
+
+      const matchId = getTournament(state).rounds[0].matches[0].id
+      state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId, result: 'draw' } })
+      expect(getTournament(state).rounds[0].matches[0].result).toBe('pending')
+
+      state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId, result: 'player1_win' } })
+      expect(getTournament(state).rounds[0].matches[0].result).toBe('player1_win')
+    })
+
+    it('still allows a draw in swiss rounds', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const matchId = getTournament(state).rounds[0].matches[0].id
+      state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId, result: 'draw' } })
+      expect(getTournament(state).rounds[0].matches[0].result).toBe('draw')
+    })
+  })
+
+  describe('ISSUE_PENALTY', () => {
+    function startedTournament() {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      return { state, id }
+    }
+
+    it('disqualification drops the player and decides the running match (F6)', () => {
+      const { state: started, id } = startedTournament()
+      const t = getTournament(started)
+      const match = t.rounds[0].matches[0]
+      const dqPlayerId = match.player1Id
+
+      const state = dispatch(started, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: dqPlayerId, type: 'disqualification', reason: 'Cheating' },
+      })
+
+      const after = getTournament(state)
+      expect(after.players.find(p => p.id === dqPlayerId)?.droppedInRound).toBe(1)
+      expect(after.rounds[0].matches[0].result).toBe('player2_win')
+      expect(after.penalties).toHaveLength(1)
+      // the round can now be completed without manual result entry
+      const completed = dispatch(state, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+      expect(getTournament(completed).rounds[0].isComplete).toBe(true)
+    })
+
+    it('disqualification leaves an already-decided match untouched', () => {
+      const { state: started, id } = startedTournament()
+      const t = getTournament(started)
+      const match = t.rounds[0].matches[0]
+
+      let state = dispatch(started, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId: match.id, result: 'player1_win' } })
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: match.player1Id, type: 'disqualification', reason: 'Cheating' },
+      })
+      expect(getTournament(state).rounds[0].matches[0].result).toBe('player1_win')
+    })
+  })
+
+  describe('GENERATE_ROUND — round robin', () => {
+    function completeCurrentRound(state: AppState, id: string): AppState {
+      const t = getTournament(state)
+      const round = t.rounds[t.rounds.length - 1]
+      let s = state
+      for (const m of round.matches) {
+        if (m.result === 'pending') {
+          s = dispatch(s, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId: m.id, result: 'player1_win' } })
+        }
+      }
+      return dispatch(s, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+    }
+
+    it('skips dropped players and gives their scheduled opponent a bye (F3)', () => {
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'RR', game: 'yugioh', format: 'round_robin', roundTimeMinutes: 50, topCut: 0 },
+      })
+      const id = getTournament(state).id
+      for (const name of ['A', 'B', 'C', 'D']) {
+        state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: name } })
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(state).totalRounds).toBe(3)
+      state = completeCurrentRound(state, id)
+
+      const droppedId = getTournament(state).players[1].id // "B"
+      state = dispatch(state, { type: 'DROP_PLAYER', payload: { tournamentId: id, playerId: droppedId } })
+
+      const laterPairs = new Set<string>()
+      for (const roundNumber of [2, 3]) {
+        state = dispatch(state, { type: 'GENERATE_ROUND', payload: { tournamentId: id } })
+        const round = getTournament(state).rounds[roundNumber - 1]
+        expect(round.roundNumber).toBe(roundNumber)
+        // the dropped player is never seated again
+        expect(round.matches.every(m => m.player1Id !== droppedId && m.player2Id !== droppedId)).toBe(true)
+        // their scheduled opponent gets a bye instead
+        expect(round.matches.filter(m => m.isBye)).toHaveLength(1)
+        for (const m of round.matches.filter(m => !m.isBye)) {
+          laterPairs.add([m.player1Id, m.player2Id].sort().join('-'))
+        }
+        state = completeCurrentRound(state, id)
+      }
+
+      // the two remaining pairs among active players are played exactly once
+      expect(laterPairs.size).toBe(2)
+    })
+
+    it('continues a round-robin phase with the phase-relative schedule (F4)', () => {
+      const phases = [
+        { id: 'ph1', name: 'Swiss', format: 'swiss' as const, topCut: 0 as const, advanceCount: 0, roundTimeMinutes: 50 },
+        { id: 'ph2', name: 'Finals', format: 'round_robin' as const, topCut: 0 as const, advanceCount: 4, roundTimeMinutes: 30 },
+      ]
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'MP', game: 'yugioh', format: 'swiss', roundTimeMinutes: 50, topCut: 0, phases },
+      })
+      const id = getTournament(state).id
+      for (const name of ['A', 'B', 'C', 'D', 'E', 'F']) {
+        state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: name } })
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      state = completeCurrentRound(state, id)
+
+      state = dispatch(state, { type: 'ADVANCE_PHASE', payload: { tournamentId: id } })
+      const afterAdvance = getTournament(state)
+      expect(afterAdvance.rounds[1].phase).toBe('round_robin')
+      const advanced = new Set(afterAdvance.players.filter(p => p.droppedInRound === null).map(p => p.id))
+      expect(advanced.size).toBe(4)
+
+      // play the round-robin phase to the end: 4 players → 3 rounds
+      const rrPairs = new Set<string>()
+      const collect = (roundIdx: number) => {
+        const round = getTournament(state).rounds[roundIdx]
+        expect(round.phase).toBe('round_robin')
+        expect(round.matches.length).toBeGreaterThan(0)
+        for (const m of round.matches) {
+          expect(advanced.has(m.player1Id)).toBe(true)
+          if (m.player2Id) {
+            expect(advanced.has(m.player2Id)).toBe(true)
+            rrPairs.add([m.player1Id, m.player2Id].sort().join('-'))
+          }
+        }
+      }
+
+      collect(1)
+      state = completeCurrentRound(state, id)
+      for (const roundIdx of [2, 3]) {
+        state = dispatch(state, { type: 'GENERATE_ROUND', payload: { tournamentId: id } })
+        collect(roundIdx)
+        state = completeCurrentRound(state, id)
+      }
+
+      // every pair of the four finalists met exactly once across the phase
+      expect(rrPairs.size).toBe(6)
+      // and the schedule is exhausted
+      const before = getTournament(state).rounds.length
+      state = dispatch(state, { type: 'GENERATE_ROUND', payload: { tournamentId: id } })
+      expect(getTournament(state).rounds.length).toBe(before)
     })
   })
 

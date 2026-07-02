@@ -97,4 +97,38 @@ describe('generateRoundRobinRound', () => {
     const tables = matches.filter(m => !m.isBye).map(m => m.tableNumber)
     expect(tables).toEqual([1, 2])
   })
+
+  it('turns pairings against dropped players into byes without shifting the schedule (F3)', () => {
+    const ids = ['a', 'b', 'c', 'd']
+    const dropped = new Set(['b'])
+    const totalRounds = getRoundRobinTotalRounds(4)
+    const seenPairs = new Set<string>()
+
+    for (let i = 0; i < totalRounds; i++) {
+      const withDrop = generateRoundRobinRound(ids, i, i + 1, dropped)
+      const without = generateRoundRobinRound(ids, i, i + 1)
+
+      // the dropped player appears nowhere
+      expect(withDrop.every(m => m.player1Id !== 'b' && m.player2Id !== 'b')).toBe(true)
+
+      // b's scheduled opponent got a bye instead
+      const scheduledOpponents = without
+        .filter(m => !m.isBye)
+        .flatMap(m => (m.player1Id === 'b' ? [m.player2Id!] : m.player2Id === 'b' ? [m.player1Id] : []))
+      for (const opp of scheduledOpponents) {
+        expect(withDrop.some(m => m.isBye && m.player1Id === opp)).toBe(true)
+      }
+
+      // the remaining real pairings match the undropped schedule exactly
+      for (const m of withDrop.filter(m => !m.isBye)) {
+        seenPairs.add([m.player1Id, m.player2Id].sort().join('-'))
+        expect(without.some(w => !w.isBye &&
+          ((w.player1Id === m.player1Id && w.player2Id === m.player2Id) ||
+           (w.player1Id === m.player2Id && w.player2Id === m.player1Id)))).toBe(true)
+      }
+    }
+
+    // every pair of active players still met exactly once
+    expect(seenPairs).toEqual(new Set(['a-c', 'a-d', 'c-d']))
+  })
 })

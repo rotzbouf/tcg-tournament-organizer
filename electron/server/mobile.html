@@ -241,6 +241,8 @@ function renderJudgeButton(){
   if(!myInfo){jc.innerHTML='';return}
   const match=myInfo.match;
   const isPending=match.result==='pending';
+  const phase=tournament.rounds[tournament.rounds.length-1]?.phase;
+  const isKo=['top_cut','winners_bracket','losers_bracket','grand_final'].includes(phase);
   jc.innerHTML=`
     ${isPending?`<div style="margin-top:12px">
       <p style="font-size:12px;color:var(--fg2);margin-bottom:8px;text-align:center">${t('reportResult')}</p>
@@ -248,7 +250,7 @@ function renderJudgeButton(){
         <button class="primary" style="flex:1;padding:10px;font-size:13px" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player1_win':'player2_win'}')">${t('iWon')}</button>
         <button class="secondary" style="flex:1;padding:10px;font-size:13px;margin:0" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player2_win':'player1_win'}')">${t('opponentWon')}</button>
       </div>
-      <button class="secondary" style="margin-top:6px;padding:8px;font-size:12px;color:var(--fg2);border-color:var(--bd)" onclick="reportResult('${match.id}','draw')">${t('itsDraw')}</button>
+      ${isKo?'':`<button class="secondary" style="margin-top:6px;padding:8px;font-size:12px;color:var(--fg2);border-color:var(--bd)" onclick="reportResult('${match.id}','draw')">${t('itsDraw')}</button>`}
       <div id="rr" class="msg"></div>
     </div>`:''}
     <button class="judge" style="margin-top:8px" onclick="callJudge()">${t('callJudge')}</button>

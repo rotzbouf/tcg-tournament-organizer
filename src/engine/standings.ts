@@ -2,7 +2,7 @@ import { Player } from '../types/player'
 import { Round } from '../types/round'
 import { Standing } from '../types/standing'
 import { GameType } from '../types/tournament'
-import { calculateMatchPoints, getPlayerRecord } from './scoring'
+import { calculateMatchPoints, getPlayerRecord, getTiebreakerRecord } from './scoring'
 import { GAME_CONFIG, TiebreakerConfig } from '../lib/gameConfig'
 
 export function calculateStandings(players: Player[], rounds: Round[], game?: GameType, playerFilter?: Set<string>): Standing[] {
@@ -94,7 +94,8 @@ function calculateOpponentMatchWinPct(playerId: string, rounds: Round[], floor: 
   if (opponents.length === 0) return 0
 
   const pcts = opponents.map(oppId => {
-    const record = getPlayerRecord(oppId, rounds)
+    // Byes are excluded from win percentages per official Pokémon/MTG rules.
+    const record = getTiebreakerRecord(oppId, rounds)
     const total = record.wins + record.losses + record.draws
     if (total === 0) return floor
     return Math.max(floor, record.wins / total)

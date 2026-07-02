@@ -90,6 +90,28 @@ function calculateDivisionTotalRounds(players: Player[], createdAt: string, minR
 
 type PlayerDatabase = Record<string, DatabasePlayer>
 
+// Knockout rounds cannot end in a draw — someone must advance.
+const KO_PHASES = new Set<Round['phase']>(['top_cut', 'winners_bracket', 'losers_bracket', 'grand_final'])
+
+// Assign the automatic match loss for a player leaving the tournament (drop or
+// disqualification): their pending match in the current round goes to the
+// opponent. Returns the rounds unchanged if there is nothing to decide.
+function applyAutoLoss(rounds: Round[], playerId: string): Round[] {
+  const currentRound = rounds[rounds.length - 1]
+  if (!currentRound || currentRound.isComplete) return rounds
+  const match = currentRound.matches.find(
+    m => !m.isBye && m.result === 'pending' &&
+      (m.player1Id === playerId || m.player2Id === playerId)
+  )
+  if (!match) return rounds
+  const result = match.player1Id === playerId ? 'player2_win' as const : 'player1_win' as const
+  return rounds.map(r =>
+    r.roundNumber === currentRound.roundNumber
+      ? { ...r, matches: r.matches.map(m => m.id === match.id ? { ...m, result } : m) }
+      : r
+  )
+}
+
 // Find a database entry for a tournament player, matching by external player ID
 // first (so two different people who share a name don't merge), then by name.
 function findDatabasePlayer(
@@ -255,27 +277,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           : p
       )
 
-      const currentRound = tournament.rounds[tournament.rounds.length - 1]
-      let updatedRounds = tournament.rounds
-
-      if (currentRound && !currentRound.isComplete) {
-        const match = currentRound.matches.find(
-          m => !m.isBye && m.result === 'pending' &&
-            (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
-        )
-        if (match) {
-          const result = match.player1Id === action.payload.playerId ? 'player2_win' as const : 'player1_win' as const
-          updatedRounds = tournament.rounds.map(r =>
-            r.roundNumber === currentRound.roundNumber
-              ? { ...r, matches: r.matches.map(m => m.id === match.id ? { ...m, result } : m) }
-              : r
-          )
-        }
-      }
-
       return updateTournament(state, action.payload.tournamentId, {
         players: updatedPlayers,
-        rounds: updatedRounds,
+        rounds: applyAutoLoss(tournament.rounds, action.payload.playerId),
       })
     }
 
@@ -300,10 +304,8 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
       if (tournament.format === 'double_elimination') {
         const playerIds = tournament.players.map(p => p.id)
-        const clamped = nearestPowerOfTwo(playerIds.length)
-        const seeded = playerIds.slice(0, clamped)
-        const totalRounds = calculateDoubleElimTotalRounds(seeded.length)
-        const matches = generateDoubleElimFirstRound(seeded, 1)
+        const totalRounds = calculateDoubleElimTotalRounds(playerIds.length)
+        const matches = generateDoubleElimFirstRound(playerIds, 1)
         return updateTournament(state, action.payload.tournamentId, {
           status: 'in_progress',
           totalRounds,
@@ -355,18 +357,38 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (lastRound && !lastRound.isComplete) return state
       const pi = tournament.currentPhaseIndex
 
-      if (tournament.format === 'round_robin' && tournament.status === 'in_progress') {
+      // Branch on the running round's phase too: in a multi-phase tournament
+      // `tournament.format` describes the first phase only.
+      const isRoundRobin = tournament.format === 'round_robin' || lastRound?.phase === 'round_robin'
+      if (isRoundRobin && tournament.status === 'in_progress') {
         if (tournament.currentRound >= tournament.totalRounds) return state
         const nextRoundNumber = tournament.currentRound + 1
-        const playerIds = tournament.players.map(p => p.id)
-        const matches = generateRoundRobinRound(playerIds, tournament.currentRound, nextRoundNumber)
+        // The circle schedule is order-sensitive and must stay stable for the
+        // whole phase: rebuild the participant list from the players seated in
+        // the phase's first round (players-array order reproduces the original
+        // list) and use the phase-relative round index — `currentRound` is
+        // absolute and would point at the wrong schedule slice in a later
+        // phase. Dropped players stay in the schedule; their opponents get a
+        // bye instead of a dead pairing.
+        const phaseRounds = tournament.rounds.filter(r => r.phaseIndex === pi)
+        const firstPhaseRound = phaseRounds[0]
+        if (!firstPhaseRound) return state
+        const seated = new Set(firstPhaseRound.matches.flatMap(m =>
+          [m.player1Id, m.player2Id].filter((id): id is string => id !== null)
+        ))
+        const participantIds = tournament.players.filter(p => seated.has(p.id)).map(p => p.id)
+        const droppedIds = new Set(tournament.players.filter(p => p.droppedInRound !== null).map(p => p.id))
+        const matches = generateRoundRobinRound(participantIds, phaseRounds.length, nextRoundNumber, droppedIds)
+        if (matches.length === 0) return state
         return updateTournament(state, action.payload.tournamentId, {
           currentRound: nextRoundNumber,
           rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'round_robin' }, pi)],
         })
       }
 
-      if (tournament.format === 'double_elimination' && tournament.status === 'in_progress') {
+      const isDoubleElim = tournament.format === 'double_elimination' ||
+        (lastRound != null && ['winners_bracket', 'losers_bracket', 'grand_final'].includes(lastRound.phase))
+      if (isDoubleElim && tournament.status === 'in_progress') {
         const advance = advanceDoubleElimBracket(tournament)
         if (!advance || advance.matches.length === 0) return state
         const nextRoundNumber = tournament.currentRound + 1
@@ -456,6 +478,10 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const currentRound = tournament.rounds[tournament.rounds.length - 1]
       if (!currentRound || currentRound.isComplete) return state
       if (!currentRound.matches.some(m => m.id === action.payload.matchId)) return state
+      // The desktop UI hides the draw option in knockout rounds, but a draw can
+      // still arrive via a confirmed mobile self-report — reject it here, or the
+      // bracket logic would silently advance the wrong player.
+      if (action.payload.result === 'draw' && KO_PHASES.has(currentRound.phase)) return state
       const rounds = tournament.rounds.map(round => ({
         ...round,
         matches: round.matches.map(match =>
@@ -572,6 +598,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
             ? { ...p, droppedInRound: tournament.currentRound }
             : p
         )
+        // Like a drop, a DQ decides the running match — otherwise the round
+        // could never be completed without manual result entry.
+        updates.rounds = applyAutoLoss(tournament.rounds, action.payload.playerId)
       }
 
       if (action.payload.type === 'game_loss') {
@@ -687,10 +716,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds = tournament.currentRound + calculateTotalRounds(activePlayers.length, GAME_CONFIG[tournament.game].minSwissRounds)
       } else {
         const activeIds = updatedPlayers.filter(p => p.droppedInRound === null).map(p => p.id)
-        const clamped = nearestPowerOfTwo(activeIds.length)
-        matches = generateDoubleElimFirstRound(activeIds.slice(0, clamped), nextRoundNumber)
+        matches = generateDoubleElimFirstRound(activeIds, nextRoundNumber)
         phase = 'winners_bracket'
-        totalRounds = tournament.currentRound + calculateDoubleElimTotalRounds(clamped)
+        totalRounds = tournament.currentRound + calculateDoubleElimTotalRounds(activeIds.length)
       }
 
       return updateTournament(state, action.payload.tournamentId, {
