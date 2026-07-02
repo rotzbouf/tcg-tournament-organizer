@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { GameType } from '@/types/tournament'
 import { Player } from '@/types/player'
 import { DatabasePlayer } from '@/types/database'

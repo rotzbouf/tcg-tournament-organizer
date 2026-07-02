@@ -41,13 +41,26 @@ interface Tournament {
   totalRounds: number
 }
 
+// Clients reach this server via its LAN IP (or localhost while testing), so a
+// legitimate Host header is always an IP literal. A DNS name here means a
+// browser resolved someone else's domain to this address (DNS rebinding) —
+// reject it. No CORS headers are set anywhere: the mobile page is served from
+// this same origin, so no cross-origin access is ever legitimate.
+function isAllowedHost(hostHeader: string | undefined): boolean {
+  const hostname = (hostHeader || '').replace(/:\d+$/, '')
+  return hostname === 'localhost'
+    || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)
+    || /^\[[0-9a-fA-F:.]+\]$/.test(hostname)
+}
+
 export function handleRequest(req: http.IncomingMessage, res: http.ServerResponse, boundTournamentId: string): void {
+  if (!isAllowedHost(req.headers.host)) {
+    jsonResponse(res, { error: 'forbidden' }, 403)
+    return
+  }
+
   const url = new URL(req.url || '/', `http://${req.headers.host}`)
   const reqPath = url.pathname
-
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204)

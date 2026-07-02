@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { Tournament } from '@/types/tournament'
 import { calculateEloChanges } from '@/engine/elo'
 import { cn } from '@/lib/utils'

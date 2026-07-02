@@ -4,7 +4,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { DecklistVisibility, GameType, TournamentFormat } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 

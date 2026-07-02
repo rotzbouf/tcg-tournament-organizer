@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { selectAllTournaments } from '@/state/selectors'
 import { TournamentCard } from './TournamentCard'
 import { CreateTournamentDialog } from './CreateTournamentDialog'

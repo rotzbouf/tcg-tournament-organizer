@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { serializeState, deserializeState } from '@/lib/serialization'
 
 interface FileIOResult {

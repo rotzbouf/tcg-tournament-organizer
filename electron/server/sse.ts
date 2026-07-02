@@ -70,7 +70,6 @@ export function addClient(
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
   })
   res.write(':ok\n\n')
   if (initial?.state) {

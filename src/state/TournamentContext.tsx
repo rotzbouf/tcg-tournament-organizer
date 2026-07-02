@@ -1,20 +1,12 @@
-import { createContext, useContext, useReducer, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
+import { useReducer, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import { AppState, TournamentAction } from './actions'
 import { tournamentReducer, initialState } from './tournamentReducer'
 import { loadState, saveState } from '@/lib/storage'
 import { sendDiscordMessage, formatPairingsMessage, formatStandingsMessage, formatCompletionMessage } from '@/lib/discord'
 import { selectCurrentRound, selectStandings } from './selectors'
+import { TournamentContext } from './useTournamentContext'
 
 const MAX_HISTORY = 20
-
-interface TournamentContextType {
-  state: AppState
-  dispatch: (action: TournamentAction) => void
-  undo: () => void
-  canUndo: boolean
-}
-
-const TournamentContext = createContext<TournamentContextType | null>(null)
 
 export function TournamentProvider({ children }: { children: ReactNode }) {
   const [state, rawDispatch] = useReducer(tournamentReducer, initialState, () => loadState() ?? initialState)
@@ -102,12 +94,4 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       {children}
     </TournamentContext.Provider>
   )
-}
-
-export function useTournamentContext() {
-  const context = useContext(TournamentContext)
-  if (!context) {
-    throw new Error('useTournamentContext must be used within TournamentProvider')
-  }
-  return context
 }

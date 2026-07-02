@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kopien-Limit über die ganze Liste** — Die Deck-Validierung summiert jetzt Kopien einer Karte über alle Einträge (z.B. Main + Side Deck), statt jede Zeile einzeln zu prüfen. Eine Karte, die auf zwei Zeilen verteilt das Limit überschreitet (z.B. 3× + 2× bei Limit 4), wird korrekt als Verstoß erkannt — betrifft sowohl das Format-Kopienlimit als auch Limited/Semi-Limited-Banlisten
 - **Basic Lands / Basic Energy vom Kopienlimit ausgenommen** — Beliebig viele Standard-Länder (Magic: Plains/Island/Swamp/Mountain/Forest/Wastes inkl. Snow-Covered) und Basis-Energien (Pokémon) lösen keinen „zu viele Kopien"-Fehler mehr aus. Special Energy bleibt limitiert
 - **Scryfall Rate Limit** — 200 ms Pause zwischen paginierten Requests; bei 429-Antwort wird automatisch 65 Sekunden gewartet und bis zu 2× erneut versucht; HTTP-Timeout pro Request auf 60 s erhöht
+- **Kein Spieler mehr ohne Paarung bei erschöpften Freilosen** — Wenn bei ungerader Spielerzahl alle verbleibenden Spieler bereits ein Freilos hatten, erhält jetzt der niedrigstplatzierte ein unvermeidbares zweites Freilos, statt ohne Match zu bleiben
+- **Banlist-Download meldet HTTP-Fehler verständlich** — Antworten mit Status ≥ 400 werden als klarer Fehler (`HTTP 503 für …`) gemeldet, statt als kryptischer JSON-Parse-Fehler einer HTML-Fehlerseite; die automatische Wiederholung bei Scryfall-Rate-Limit (429) bleibt erhalten
+- **Mobile-Server gegen DNS-Rebinding geschützt** — Anfragen, deren Host-Header ein Domainname statt einer IP-Adresse ist, werden abgewiesen (legitime Clients erreichen den Server immer über die LAN-IP); die offenen CORS-Header (`Access-Control-Allow-Origin: *`) wurden entfernt, da die Handy-Seite vom selben Server ausgeliefert wird
+- **Desktop-App gehärtet** — Fenster können keine neuen Fenster mehr öffnen, Navigation ist auf die App selbst beschränkt, und die Produktions-App erhält eine Content-Security-Policy (Netzwerkzugriff des Renderers nur noch zu Discord-Webhooks)
 
 ## [1.6.3] - 2026-06-28
 

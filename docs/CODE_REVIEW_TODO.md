@@ -77,19 +77,24 @@ Findings from the full code review (2026-07-01). Grouped by severity. Check off 
 
 ## 🟢 Low / polish
 
-- [ ] **L1 — Electron hardening:** no `setWindowOpenHandler`/`will-navigate` guard and
-  no CSP in `electron/main.ts` (context isolation / nodeIntegration are correct).
-- [ ] **L2 — Swiss edge case:** if every odd player has already had a bye, `assignBye`
-  returns `null` and one player is left with no match at all
-  (`src/engine/swiss.ts:110-115`).
-- [ ] **L3 — `httpsGet` ignores `statusCode >= 400`** (`electron/ipc/banlistHandlers.ts`);
-  4xx/5xx HTML lands in `JSON.parse` with a cryptic error.
-- [ ] **L4 — CORS `*` on mutating endpoints** (`router.ts:47`) — theoretical
-  DNS-rebinding / CSRF.
-- [ ] **L5 — Test gaps:** no tests for reducer core cases, `router.ts`,
-  `banlistHandlers`, or `serialization`.
-- [ ] **L6 — Lint warning:** `TournamentContext.tsx` exports non-components
-  (react-refresh warning).
+- [x] **L1 — Electron hardening:** `web-contents-created` now denies window.open and
+  blocks navigation off the app's own origin for every window (main + QR popups);
+  a CSP meta tag is injected into `index.html` on production builds
+  (`connect-src` allows Discord webhooks; dev/HMR unaffected).
+- [x] **L2 — Swiss edge case:** if every odd player has already had a bye, the
+  lowest-ranked player now receives an unavoidable second bye instead of being
+  left without a match; `byesForUnpaired` no longer skips `hasBye` players either.
+- [x] **L3 — `httpsGet` now rejects `statusCode >= 400`** with a typed
+  `HttpStatusError`; the Scryfall 429 retry logic handles the error path too.
+- [x] **L4 — CORS headers removed entirely** (the mobile page is same-origin) and a
+  Host-header guard rejects DNS-name hosts (DNS-rebinding protection: legitimate
+  clients always address the server by IP literal or localhost).
+- [x] **L5 — Test gaps:** added tests for `serialization`/`migration`, `router.ts`
+  (host guard, state scoping, register/token flow, decklist/drop gating, report),
+  `sessions`, `sanitizeTournament`, and an L2 regression test. Reducer core cases
+  were already covered. Still untested: `banlistHandlers` (needs HTTP mocking).
+- [x] **L6 — Lint warning:** context + hook moved to `src/state/useTournamentContext.ts`;
+  `TournamentContext.tsx` now only exports the provider component.
 
 ## Suggested order
 

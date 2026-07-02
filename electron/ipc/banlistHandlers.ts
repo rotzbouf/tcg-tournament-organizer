@@ -20,12 +20,23 @@ function saveStore(store: BanlistStore): void {
   fs.writeFileSync(BANLIST_FILE, JSON.stringify(store, null, 2), 'utf-8')
 }
 
+class HttpStatusError extends Error {
+  constructor(public statusCode: number, url: string) {
+    super(`HTTP ${statusCode} für ${url}`)
+  }
+}
+
 function httpsGet(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'TCG-Tournament-Organizer/1.0', 'Accept': 'application/json' } }, res => {
       if (res.statusCode === 301 || res.statusCode === 302) {
         const location = res.headers.location
         if (location) { resolve(httpsGet(location)); return }
+      }
+      if (res.statusCode && res.statusCode >= 400) {
+        res.resume() // discard the (often HTML) error body so the socket is freed
+        reject(new HttpStatusError(res.statusCode, url))
+        return
       }
       let body = ''
       res.on('data', chunk => { body += chunk })
@@ -44,13 +55,20 @@ type ScryfallPage = { object?: string; code?: string; data?: { name: string }[];
 function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
 
 async function scryfallPage(url: string, attempt = 0): Promise<ScryfallPage> {
-  const body = await httpsGet(url)
-  const json = JSON.parse(body) as ScryfallPage
-  if (json.code === 'rate_limited') {
+  const retryRateLimit = async (): Promise<ScryfallPage> => {
     if (attempt >= 2) throw new Error('Scryfall rate limit — bitte 60 Sekunden warten und erneut versuchen')
     await sleep(65000)
     return scryfallPage(url, attempt + 1)
   }
+  let body: string
+  try {
+    body = await httpsGet(url)
+  } catch (err) {
+    if (err instanceof HttpStatusError && err.statusCode === 429) return retryRateLimit()
+    throw err
+  }
+  const json = JSON.parse(body) as ScryfallPage
+  if (json.code === 'rate_limited') return retryRateLimit()
   if (!Array.isArray(json.data)) throw new Error(`Scryfall error: ${body.slice(0, 200)}`)
   return json
 }

@@ -13,6 +13,19 @@ process.env.VITE_PUBLIC = app.isPackaged
 let mainWindow: BrowserWindow | null = null
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
+// Applies to every window (main, QR popups): the app never opens child
+// windows itself, and navigation may only stay on the app's own origin
+// (dev server in dev, local files in production).
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  contents.on('will-navigate', (event, url) => {
+    const allowed = VITE_DEV_SERVER_URL
+      ? url.startsWith(VITE_DEV_SERVER_URL)
+      : url.startsWith('file://')
+    if (!allowed) event.preventDefault()
+  })
+})
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,

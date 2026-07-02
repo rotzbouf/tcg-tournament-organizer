@@ -3,7 +3,7 @@ import { Penalty } from '@/types/penalty'
 import { Player } from '@/types/player'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 
 interface PenaltyListProps {
   tournamentId: string
