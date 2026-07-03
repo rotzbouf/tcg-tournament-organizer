@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.6.4] - 2026-06-28
+## [1.6.4] - 2026-07-03
 
 ### Fixed
 - **Verdeckte Decklisten nicht mehr über den Mobile-Server lesbar** — Der SSE-Stream und die API des Mobile-Servers enthielten die vollständigen Decklisten aller Spieler, auch bei Sichtbarkeit „versteckt" oder „nur TO". Decklisten werden jetzt vor dem Versand entfernt; das eigene Deck lädt und speichert das Handy über ein Session-Token, das bei der Registrierung ausgestellt wird. Nebeneffekte: Die Registrierung über das Handy legt bei bereits vorhandenem Namen keinen doppelten Spieler mehr an, ist nach Ende der Anmeldephase gesperrt (403), und das Einreichen einer Deckliste sowie das Abmelden vom Turnier sind nur noch für den eigenen Spieler möglich (kein Fremd-Drop über die LAN-API mehr)
@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kein Unentschieden mehr in K.o.-Runden** — Über den Handy-Ergebnisbericht konnte ein bestätigtes Unentschieden in Top Cut / Double Elimination gelangen, wo die Bracket-Logik dann stillschweigend den falschen Spieler weiterrücken ließ. Unentschieden wird für K.o.-Runden jetzt zentral abgelehnt und der Unentschieden-Button auf der Handy-Seite in diesen Runden ausgeblendet
 - **Disqualifikation beendet das laufende Match** — Eine DQ vergibt jetzt wie ein Drop automatisch den Sieg an den Gegner; bisher blieb das Match offen und die Runde konnte ohne manuellen Ergebniseintrag nicht abgeschlossen werden
 - **Double Elimination verliert keine Spieler mehr** — Bei einer Teilnehmerzahl, die keine Zweierpotenz ist (z.B. 6 oder 12), wurden bisher die überzähligen Spieler beim Start stillschweigend aus dem Bracket ausgeschlossen; jetzt wird das Feld mit Freilosen für die Top-Seeds auf die nächste Zweierpotenz aufgefüllt. Zusätzlich behoben: Im Losers Bracket (immer ungerade Poolgröße) fiel bisher pro Runde ein Spieler unbemerkt aus dem Turnier — der übrige Spieler erhält jetzt ein Freilos und rückt weiter. Ein 2-Spieler-Bracket erreicht jetzt das Grand Final, statt hängen zu bleiben
+- **Strafen von Erstteilnehmern bleiben erhalten** — Strafen erreichten die Spieler-Datenbank bisher nur, wenn der Spieler dort bereits einen Eintrag hatte; beim allerersten Turnier eines Spielers gingen sie verloren. Beim Turnierabschluss werden sie jetzt in den neu angelegten Datenbank-Eintrag übernommen (Notizen bleiben wie bisher turnierintern). Außerdem entfernt das Löschen einer Strafe im Turnier jetzt auch den zugehörigen Eintrag in der Spieler-Datenbank
+- **Spielertausch prüft die Auswahl** — Beim Tauschen zweier Spieler zwischen Matches wird jetzt validiert, dass die gewählten Spieler tatsächlich in den angegebenen Matches sitzen; ein fehlerhafter Aufruf konnte vorher denselben Spieler doppelt in die Runde setzen
+- **Keine doppelte Registrierung im Sync-Fenster** — Registrierten sich zwei Geräte (oder ein Doppel-Tipp) innerhalb der Synchronisations-Verzögerung mit demselben Namen, entstanden zwei identische Spieler. Der Mobile-Server merkt sich jetzt gerade angelegte Namen und legt den Spieler nur einmal an; beide Geräte erhalten trotzdem ihre Session
+- **Ergebnis-Korrektur ohne Spielstände löscht die alten** — Wurde ein bereits eingetragenes Match-Ergebnis ohne neue Game-Angaben korrigiert (z.B. Sieger vertauscht), blieben die Spielstände des alten Ergebnisses stehen und verfälschten die Game-Win-Tiebreaker. Sie werden jetzt zurückgesetzt; von einer Game-Loss-Strafe vorbelegte Spielstände bleiben beim ersten Eintrag erhalten
+- **Manuell gewählter Top Cut bleibt erhalten** — Der Turnierstart überschrieb eine manuell eingestellte Cut-Größe immer mit der automatisch berechneten. Die manuelle Auswahl gilt jetzt; nur ohne Vorgabe wird automatisch berechnet
+- **Handy-Session übersteht Umbenennung** — Benannte der TO einen Spieler um, verlor dessen Handy den Zugriff auf Deckliste und Selbst-Drop. Die Session wird jetzt beim ersten Zugriff fest mit dem Spieler verknüpft und folgt ihm durch Umbenennungen
 
 ## [1.6.3] - 2026-06-28
 
