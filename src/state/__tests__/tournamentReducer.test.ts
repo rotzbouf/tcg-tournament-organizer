@@ -257,6 +257,144 @@ describe('tournamentReducer', () => {
       })
       expect(getTournament(state).rounds[0].matches[0].result).toBe('player1_win')
     })
+
+    it('carries first-tournament penalties into the new database entry (F7)', () => {
+      const { state: started, id } = startedTournament()
+      const t = getTournament(started)
+      const match = t.rounds[0].matches[0]
+      const offenderId = match.player1Id
+
+      // No database entry exists yet, so the live write in ISSUE_PENALTY has no target.
+      let state = dispatch(started, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: offenderId, type: 'warning', reason: 'Slow play' },
+      })
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: offenderId, type: 'note', reason: 'Judge note' },
+      })
+      expect(Object.keys(state.playerDatabase)).toHaveLength(0)
+
+      state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId: match.id, result: 'player1_win' } })
+      state = dispatch(state, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+      state = dispatch(state, { type: 'COMPLETE_TOURNAMENT', payload: { tournamentId: id } })
+
+      const offenderName = t.players.find(p => p.id === offenderId)?.name
+      const dbOffender = Object.values(state.playerDatabase).find(p => p.name === offenderName)
+      const dbOther = Object.values(state.playerDatabase).find(p => p.name !== offenderName)
+      // The warning survives, the note stays tournament-only.
+      expect(dbOffender?.penalties).toHaveLength(1)
+      expect(dbOffender?.penalties[0].type).toBe('warning')
+      expect(dbOffender?.penalties[0].reason).toBe('Slow play')
+      expect(dbOther?.penalties).toHaveLength(0)
+    })
+
+    it('does not duplicate a penalty already written live to the database (F7)', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Alice' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Bob' } })
+      // Alice already has a database entry, so ISSUE_PENALTY writes to it live.
+      state = {
+        ...state,
+        playerDatabase: {
+          db1: {
+            id: 'db1', name: 'Alice', game: 'yugioh', playerId: null,
+            elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [], penalties: [], lastUpdated: '2026-01-01',
+          },
+        },
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const alice = getTournament(state).players.find(p => p.name === 'Alice')!
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: alice.id, type: 'warning', reason: 'Slow play' },
+      })
+      expect(state.playerDatabase.db1.penalties).toHaveLength(1)
+
+      const matchId = getTournament(state).rounds[0].matches[0].id
+      state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId, result: 'player1_win' } })
+      state = dispatch(state, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+      state = dispatch(state, { type: 'COMPLETE_TOURNAMENT', payload: { tournamentId: id } })
+      expect(state.playerDatabase.db1.penalties).toHaveLength(1)
+    })
+  })
+
+  describe('REMOVE_PENALTY', () => {
+    it('removes the matching database penalty along with the tournament penalty (F7)', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Alice' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Bob' } })
+      state = {
+        ...state,
+        playerDatabase: {
+          db1: {
+            id: 'db1', name: 'Alice', game: 'yugioh', playerId: null,
+            elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [],
+            penalties: [{ tournamentId: 'other-t', tournamentName: 'Older Cup', date: '2026-01-01', type: 'warning', reason: 'Earlier offense' }],
+            lastUpdated: '2026-01-01',
+          },
+        },
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const alice = getTournament(state).players.find(p => p.name === 'Alice')!
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: alice.id, type: 'warning', reason: 'Slow play' },
+      })
+      expect(state.playerDatabase.db1.penalties).toHaveLength(2)
+
+      const penaltyId = getTournament(state).penalties[0].id
+      state = dispatch(state, { type: 'REMOVE_PENALTY', payload: { tournamentId: id, penaltyId } })
+      expect(getTournament(state).penalties).toHaveLength(0)
+      // Only the just-issued penalty is gone; the one from the older tournament stays.
+      expect(state.playerDatabase.db1.penalties).toHaveLength(1)
+      expect(state.playerDatabase.db1.penalties[0].tournamentId).toBe('other-t')
+    })
+  })
+
+  describe('SWAP_PLAYERS', () => {
+    function startedFourPlayerTournament() {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: ['A', 'B', 'C', 'D'] } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      return { state, id }
+    }
+
+    it('swaps two players between matches', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const [m1, m2] = getTournament(started).rounds[0].matches
+      const state = dispatch(started, {
+        type: 'SWAP_PLAYERS',
+        payload: { tournamentId: id, matchId1: m1.id, playerId1: m1.player1Id, matchId2: m2.id, playerId2: m2.player2Id! },
+      })
+      const [after1, after2] = getTournament(state).rounds[0].matches
+      expect(after1.player1Id).toBe(m2.player2Id)
+      expect(after2.player2Id).toBe(m1.player1Id)
+    })
+
+    it('rejects a swap when a player does not sit in the named match (F8)', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const [m1, m2] = getTournament(started).rounds[0].matches
+      // playerId1 actually sits in match2 — accepting this would seat them twice.
+      const state = dispatch(started, {
+        type: 'SWAP_PLAYERS',
+        payload: { tournamentId: id, matchId1: m1.id, playerId1: m2.player1Id, matchId2: m2.id, playerId2: m2.player2Id! },
+      })
+      expect(state).toBe(started)
+    })
+
+    it('rejects swapping a player with themselves (F8)', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const [m1, m2] = getTournament(started).rounds[0].matches
+      const state = dispatch(started, {
+        type: 'SWAP_PLAYERS',
+        payload: { tournamentId: id, matchId1: m1.id, playerId1: m1.player1Id, matchId2: m2.id, playerId2: m1.player1Id },
+      })
+      expect(state).toBe(started)
+    })
   })
 
   describe('GENERATE_ROUND — round robin', () => {

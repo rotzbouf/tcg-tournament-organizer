@@ -144,6 +144,24 @@ function applyTournamentResults(db: PlayerDatabase, tournament: Tournament): Pla
   const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
   const now = new Date().toISOString()
 
+  // Penalties are normally written to the database live by ISSUE_PENALTY, but
+  // that only works for players who already have a database entry. Carry over
+  // anything that isn't there yet (dedup by tournament + timestamp + type).
+  const penaltiesFor = (tournamentPlayerId: string): DatabasePenalty[] =>
+    tournament.penalties
+      .filter(pen => pen.playerId === tournamentPlayerId && pen.type !== 'note')
+      .map(pen => ({
+        tournamentId: tournament.id,
+        tournamentName: tournament.name,
+        date: pen.issuedAt,
+        type: pen.type,
+        reason: pen.reason,
+      }))
+  const mergePenalties = (existing: DatabasePenalty[], incoming: DatabasePenalty[]): DatabasePenalty[] => [
+    ...existing,
+    ...incoming.filter(inc => !existing.some(e => e.tournamentId === inc.tournamentId && e.date === inc.date && e.type === inc.type)),
+  ]
+
   const updatedDb: PlayerDatabase = { ...db }
   for (const update of eloUpdates) {
     const player = tournament.players.find(p => p.id === update.playerId)
@@ -168,6 +186,7 @@ function applyTournamentResults(db: PlayerDatabase, tournament: Tournament): Pla
         matchesPlayed: existing.matchesPlayed + gamesPlayed,
         tournamentsPlayed: existing.tournamentsPlayed + 1,
         history: [...existing.history, historyEntry],
+        penalties: mergePenalties(existing.penalties ?? [], penaltiesFor(player.id)),
         lastUpdated: now,
       }
     } else {
@@ -181,7 +200,7 @@ function applyTournamentResults(db: PlayerDatabase, tournament: Tournament): Pla
         matchesPlayed: gamesPlayed,
         tournamentsPlayed: 1,
         history: [historyEntry],
-        penalties: [],
+        penalties: penaltiesFor(player.id),
         lastUpdated: now,
       }
     }
@@ -673,9 +692,34 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'REMOVE_PENALTY': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
-      return updateTournament(state, action.payload.tournamentId, {
+      const penalty = tournament.penalties.find(p => p.id === action.payload.penaltyId)
+      let updatedState = updateTournament(state, action.payload.tournamentId, {
         penalties: tournament.penalties.filter(p => p.id !== action.payload.penaltyId),
       })
+
+      // Mirror the removal in the player database (note penalties never get a
+      // database entry). Match by tournament + timestamp + type — the same key
+      // ISSUE_PENALTY / applyTournamentResults write.
+      if (penalty && penalty.type !== 'note') {
+        const player = tournament.players.find(p => p.id === penalty.playerId)
+        const dbPlayer = player && findDatabasePlayer(updatedState.playerDatabase, player, tournament.game)
+        if (dbPlayer) {
+          const idx = (dbPlayer.penalties ?? []).findIndex(
+            dp => dp.tournamentId === tournament.id && dp.date === penalty.issuedAt && dp.type === penalty.type
+          )
+          if (idx !== -1) {
+            const penalties = (dbPlayer.penalties ?? []).filter((_, i) => i !== idx)
+            updatedState = {
+              ...updatedState,
+              playerDatabase: {
+                ...updatedState.playerDatabase,
+                [dbPlayer.id]: { ...dbPlayer, penalties, lastUpdated: new Date().toISOString() },
+              },
+            }
+          }
+        }
+      }
+      return updatedState
     }
 
     case 'ADVANCE_PHASE': {
@@ -814,6 +858,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (match1.id === match2.id) return state
 
       const { playerId1, playerId2 } = action.payload
+      if (playerId1 === playerId2) return state
+      const sitsIn = (m: Match, id: string) => m.player1Id === id || m.player2Id === id
+      if (!sitsIn(match1, playerId1) || !sitsIn(match2, playerId2)) return state
 
       const swapInMatch = (match: Match, oldId: string, newId: string): Match => {
         if (match.player1Id === oldId) return { ...match, player1Id: newId, result: 'pending', player1Games: undefined, player2Games: undefined }
