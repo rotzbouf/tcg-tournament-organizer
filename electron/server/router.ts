@@ -4,7 +4,7 @@ import path from 'node:path'
 import { app } from 'electron'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport } from '../ipc/stateSync'
 import { addClient, sanitizeTournament } from './sse'
-import { createSession, getSessionPlayerName } from './sessions'
+import { createSession, getSession, bindSessionToPlayer } from './sessions'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
 
@@ -124,9 +124,13 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         jsonResponse(res, { error: 'registration closed' }, 403); return
       }
       // Re-claiming an existing name (e.g. the TO registered the player at the
-      // desk, or the phone lost its session) must not create a duplicate.
-      const exists = tournament.players.some(p => p.name.toLowerCase() === name.toLowerCase())
-      if (!exists) {
+      // desk, or the phone lost its session) must not create a duplicate. The
+      // pending check closes the sync gap: a name dispatched moments ago is not
+      // visible in getCurrentState() yet.
+      const nameLower = name.toLowerCase()
+      const exists = tournament.players.some(p => p.name.toLowerCase() === nameLower)
+      if (!exists && !hasPendingRegistration(boundTournamentId, nameLower)) {
+        markPendingRegistration(boundTournamentId, nameLower)
         const payload: Record<string, unknown> = { tournamentId: boundTournamentId, playerName: name }
         if (playerId?.trim()) payload.playerId = playerId.trim()
         if (dateOfBirth?.trim()) payload.dateOfBirth = dateOfBirth.trim()
@@ -141,13 +145,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   // decklists are stripped from the broadcast state so hidden/to_only lists
   // never reach other devices.
   if (reqPath === '/api/my-decklist' && req.method === 'GET') {
-    const sessionName = getSessionPlayerName(getBearerToken(req), boundTournamentId)
-    if (!sessionName) { jsonResponse(res, { error: 'invalid session' }, 401); return }
+    const token = getBearerToken(req)
+    const session = getSession(token, boundTournamentId)
+    if (!session) { jsonResponse(res, { error: 'invalid session' }, 401); return }
     const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
-    const player = state?.tournaments[boundTournamentId]?.players.find(
-      p => p.name.toLowerCase() === sessionName
-    )
+    const players = state?.tournaments[boundTournamentId]?.players
+    const player = session.playerId
+      ? players?.find(p => p.id === session.playerId)
+      : players?.find(p => p.name.toLowerCase() === session.playerName)
     if (!player) { jsonResponse(res, { error: 'not found' }, 404); return }
+    if (token && !session.playerId) bindSessionToPlayer(token, player.id)
     jsonResponse(res, { playerId: player.id, deckName: player.deckName, decklist: player.decklist })
     return
   }
@@ -227,13 +234,45 @@ function getBearerToken(req: http.IncomingMessage): string | null {
 
 // True if the request carries a session token that belongs to the player with
 // the given id in the bound tournament — guards self-service writes (decklist,
-// drop) so one device cannot act for another player.
+// drop) so one device cannot act for another player. On the first successful
+// match the session is bound to the player id, so it keeps working after the
+// TO renames the player.
 function isOwnPlayer(req: http.IncomingMessage, boundTournamentId: string, playerId: string): boolean {
-  const sessionName = getSessionPlayerName(getBearerToken(req), boundTournamentId)
-  if (!sessionName) return false
+  const token = getBearerToken(req)
+  const session = getSession(token, boundTournamentId)
+  if (!session) return false
   const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
   const target = state?.tournaments[boundTournamentId]?.players.find(p => p.id === playerId)
-  return !!target && target.name.toLowerCase() === sessionName
+  if (!target) return false
+  if (session.playerId) return session.playerId === playerId
+  if (target.name.toLowerCase() !== session.playerName) return false
+  if (token) bindSessionToPlayer(token, playerId)
+  return true
+}
+
+// Registrations reach the renderer asynchronously and come back through a
+// debounced state sync, so a just-dispatched player is invisible to
+// getCurrentState() for up to ~500 ms. Names dispatched within this window
+// count as already registered; the TTL keeps a TO-side removal re-registrable.
+const PENDING_REGISTRATION_TTL_MS = 5000
+const pendingRegistrations = new Map<string, number>()
+
+function pendingKey(tournamentId: string, nameLower: string): string {
+  return `${tournamentId} ${nameLower}`
+}
+
+function hasPendingRegistration(tournamentId: string, nameLower: string): boolean {
+  const dispatchedAt = pendingRegistrations.get(pendingKey(tournamentId, nameLower))
+  if (dispatchedAt === undefined) return false
+  if (Date.now() - dispatchedAt > PENDING_REGISTRATION_TTL_MS) {
+    pendingRegistrations.delete(pendingKey(tournamentId, nameLower))
+    return false
+  }
+  return true
+}
+
+function markPendingRegistration(tournamentId: string, nameLower: string): void {
+  pendingRegistrations.set(pendingKey(tournamentId, nameLower), Date.now())
 }
 
 function jsonResponse(res: http.ServerResponse, data: unknown, status = 200): void {

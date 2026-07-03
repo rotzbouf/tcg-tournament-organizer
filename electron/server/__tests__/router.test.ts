@@ -147,6 +147,49 @@ describe('POST /api/register', () => {
   it('requires a name', async () => {
     expect((await request('POST', '/api/register', { body: { playerName: '  ' } })).status).toBe(400)
   })
+
+  it('dispatches ADD_PLAYER only once for two quick registrations of the same name (F9)', async () => {
+    // The mocked state never learns about the first dispatch — exactly like the
+    // real server inside the debounced sync window.
+    const r1 = await request('POST', '/api/register', { body: { playerName: 'Dana Duplicate' } })
+    const r2 = await request('POST', '/api/register', { body: { playerName: 'dana DUPLICATE' } })
+    expect(r1.status).toBe(200)
+    expect(r2.status).toBe(200)
+    expect(r1.body.token).toBeTruthy()
+    expect(r2.body.token).toBeTruthy()
+    const addCalls = vi.mocked(dispatchToRenderer).mock.calls.filter(
+      c => (c[0] as { type: string }).type === 'ADD_PLAYER'
+    )
+    expect(addCalls).toHaveLength(1)
+  })
+})
+
+describe('session survives a TO rename (F12)', () => {
+  it('still authorizes self-service writes for the bound player after a rename', async () => {
+    const token = await registerToken('Alice Alpha')
+    // First authorized use binds the session to p1.
+    expect((await request('GET', '/api/my-decklist', { token })).status).toBe(200)
+
+    const renamed = makeState()
+    renamed.tournaments[BOUND_ID].players[0].name = 'Alicia Renamed'
+    vi.mocked(getCurrentState).mockReturnValue(renamed)
+
+    // Name matching alone would fail now — the id binding keeps the session alive.
+    const res = await request('POST', '/api/players/p1/drop', { token })
+    expect(res.status).toBe(200)
+    expect((await request('GET', '/api/my-decklist', { token })).status).toBe(200)
+  })
+
+  it('a never-used session does not survive a rename', async () => {
+    const token = await registerToken('Bob Beta')
+
+    const renamed = makeState()
+    renamed.tournaments[BOUND_ID].players[1].name = 'Robert Renamed'
+    vi.mocked(getCurrentState).mockReturnValue(renamed)
+
+    const res = await request('POST', '/api/players/p2/drop', { token })
+    expect(res.status).toBe(401)
+  })
 })
 
 describe('GET /api/my-decklist', () => {

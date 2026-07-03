@@ -356,8 +356,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const hasBye = matches.some(m => m.isBye && m.player1Id === p.id)
         return hasBye ? { ...p, hasBye: true } : p
       })
+      // A manually configured cut size wins; only 0 means "pick one for me".
       const autoTopCut = tournament.format === 'swiss_topcut'
-        ? calculateTopCutSize(tournament.players.length)
+        ? (tournament.topCut > 0 ? tournament.topCut : calculateTopCutSize(tournament.players.length))
         : 0
       return updateTournament(state, action.payload.tournamentId, {
         status: 'in_progress',
@@ -501,18 +502,23 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       // still arrive via a confirmed mobile self-report — reject it here, or the
       // bracket logic would silently advance the wrong player.
       if (action.payload.result === 'draw' && KO_PHASES.has(currentRound.phase)) return state
+      const hasGames = action.payload.player1Games !== undefined || action.payload.player2Games !== undefined
       const rounds = tournament.rounds.map(round => ({
         ...round,
-        matches: round.matches.map(match =>
-          match.id === action.payload.matchId
-            ? {
-                ...match,
-                result: action.payload.result,
-                ...(action.payload.player1Games !== undefined && { player1Games: action.payload.player1Games }),
-                ...(action.payload.player2Games !== undefined && { player2Games: action.payload.player2Games }),
-              }
-            : match
-        ),
+        matches: round.matches.map(match => {
+          if (match.id !== action.payload.matchId) return match
+          // Correcting an already-decided result without fresh game scores must
+          // not keep the old ones — they described the previous result. On a
+          // first submission the existing scores stay (a game_loss penalty may
+          // have pre-set them before the result came in).
+          const clearStaleGames = !hasGames && match.result !== 'pending' && match.result !== action.payload.result
+          return {
+            ...match,
+            result: action.payload.result,
+            player1Games: hasGames ? action.payload.player1Games : clearStaleGames ? undefined : match.player1Games,
+            player2Games: hasGames ? action.payload.player2Games : clearStaleGames ? undefined : match.player2Games,
+          }
+        }),
       }))
       return updateTournament(state, action.payload.tournamentId, { rounds })
     }

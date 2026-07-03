@@ -215,6 +215,88 @@ describe('tournamentReducer', () => {
     })
   })
 
+  describe('SUBMIT_MATCH_RESULT — game score corrections (F10)', () => {
+    function startedTournament() {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      return { state, id, matchId: getTournament(state).rounds[0].matches[0].id }
+    }
+
+    it('clears stale game scores when a result is corrected without new games', () => {
+      const { state: started, id, matchId } = startedTournament()
+      let state = dispatch(started, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player1_win', player1Games: 2, player2Games: 1 },
+      })
+      state = dispatch(state, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player2_win' },
+      })
+      const match = getTournament(state).rounds[0].matches[0]
+      expect(match.result).toBe('player2_win')
+      expect(match.player1Games).toBeUndefined()
+      expect(match.player2Games).toBeUndefined()
+    })
+
+    it('keeps game scores when the same result is re-submitted without games', () => {
+      const { state: started, id, matchId } = startedTournament()
+      let state = dispatch(started, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player1_win', player1Games: 2, player2Games: 0 },
+      })
+      state = dispatch(state, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player1_win' },
+      })
+      const match = getTournament(state).rounds[0].matches[0]
+      expect(match.player1Games).toBe(2)
+      expect(match.player2Games).toBe(0)
+    })
+
+    it('keeps penalty-pre-set game scores on the first submission', () => {
+      const { state: started, id, matchId } = startedTournament()
+      const offender = getTournament(started).rounds[0].matches[0].player1Id
+      let state = dispatch(started, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: offender, type: 'game_loss', reason: 'Deck error' },
+      })
+      state = dispatch(state, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player2_win' },
+      })
+      const match = getTournament(state).rounds[0].matches[0]
+      expect(match.player2Games).toBe(1) // the game awarded by the penalty
+    })
+  })
+
+  describe('START_TOURNAMENT — top cut (F11)', () => {
+    function tournamentWithPlayers(topCut: 0 | 8, playerCount: number) {
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'Cut Test', game: 'yugioh', format: 'swiss_topcut', roundTimeMinutes: 50, topCut },
+      })
+      const id = getTournament(state).id
+      const names = Array.from({ length: playerCount }, (_, i) => `P${i + 1}`)
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: names } })
+      return { state, id }
+    }
+
+    it('keeps a manually configured top cut', () => {
+      const { state, id } = tournamentWithPlayers(8, 10) // auto would pick 4
+      const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(started).topCut).toBe(8)
+    })
+
+    it('auto-calculates when no top cut was configured', () => {
+      const { state, id } = tournamentWithPlayers(0, 10)
+      const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(started).topCut).toBe(4)
+    })
+  })
+
   describe('ISSUE_PENALTY', () => {
     function startedTournament() {
       let state = createTournament()
