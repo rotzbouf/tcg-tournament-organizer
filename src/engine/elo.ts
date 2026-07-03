@@ -18,14 +18,21 @@ export function calculateEloChanges(
   rounds: Round[],
   playerDatabase: Record<string, DatabasePlayer>,
   playerNameMap: Record<string, string>,
-  game?: string
+  game?: string,
+  playerIdMap?: Record<string, string | null>
 ): EloUpdate[] {
   const eloMap = new Map<string, number>()
   const matchCount = new Map<string, number>()
 
+  const entries = Object.values(playerDatabase).filter(p => !game || p.game === game)
   for (const playerId of playerIds) {
+    const extId = playerIdMap?.[playerId]
     const name = playerNameMap[playerId]?.toLowerCase()
-    const dbPlayer = name ? Object.values(playerDatabase).find(p => p.name.toLowerCase() === name && (!game || p.game === game)) : null
+    // Prefer matching by external player ID (avoids merging same-named players);
+    // fall back to name.
+    const dbPlayer =
+      (extId ? entries.find(p => p.playerId === extId) : undefined) ??
+      (name ? entries.find(p => p.name.toLowerCase() === name) : undefined)
     eloMap.set(playerId, dbPlayer?.elo ?? DEFAULT_ELO)
     matchCount.set(playerId, dbPlayer?.matchesPlayed ?? 0)
   }

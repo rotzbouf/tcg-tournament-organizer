@@ -4,7 +4,7 @@ import { DatabasePlayer } from '@/types/database'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EloChart } from '@/components/ui/EloChart'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { cn } from '@/lib/utils'
 
 interface PlayerHistoryProps {

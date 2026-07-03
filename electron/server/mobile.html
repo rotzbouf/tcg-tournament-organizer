@@ -65,13 +65,13 @@ const T={
     rank:'#',player:'Player',points:'Pts',w:'W',l:'L',d:'D',omw:'OMW%',
     registeredAs:'Registered as',decklist:'Decklist',submit:'Submit',
     pasteDecklist:'Paste decklist (e.g. 3x Card Name)',
-    decklistSaved:'Saved!',filter:'Filter by name...',
+    decklistSaved:'Saved!',decklistError:'Could not save — please register again on this device.',filter:'Filter by name...',
     firstName:'First Name',lastName:'Last Name',
     dateOfBirth:'Date of Birth',playerId:'Player ID',
     optional:'optional',playerCount:'Players',
     callJudge:'Call Judge',judgeCalled:'Judge has been called!',
     reportToTO:'Report results to the Tournament Organizer',
-    dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.',
+    dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.',dropError:'Could not drop — please see the tournament organizer.',
     noDecklists:'No decklists available',cards:'cards',
     reportResult:'Report Result',iWon:'I won',opponentWon:'Opponent won',itsDraw:'Draw',
     resultReported:'Result reported — waiting for TO confirmation.',reportError:'Error reporting result.'},
@@ -81,13 +81,13 @@ const T={
     rank:'#',player:'Spieler',points:'Pkt',w:'S',l:'N',d:'U',omw:'OMW%',
     registeredAs:'Registriert als',decklist:'Deckliste',submit:'Absenden',
     pasteDecklist:'Deckliste (z.B. 3x Kartenname)',
-    decklistSaved:'Gespeichert!',filter:'Nach Name filtern...',
+    decklistSaved:'Gespeichert!',decklistError:'Speichern fehlgeschlagen — bitte auf diesem Gerät neu registrieren.',filter:'Nach Name filtern...',
     firstName:'Vorname',lastName:'Nachname',
     dateOfBirth:'Geburtsdatum',playerId:'Spieler-ID',
     optional:'optional',playerCount:'Spieler',
     callJudge:'Judge rufen',judgeCalled:'Judge wurde gerufen!',
     reportToTO:'Ergebnisse beim Turnierleiter melden',
-    dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.',
+    dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.',dropError:'Abmelden fehlgeschlagen — bitte beim Turnierleiter melden.',
     noDecklists:'Keine Decklisten verfügbar',cards:'Karten',
     reportResult:'Ergebnis melden',iWon:'Ich habe gewonnen',opponentWon:'Gegner hat gewonnen',itsDraw:'Unentschieden',
     resultReported:'Ergebnis gemeldet — TO bestätigt noch.',reportError:'Fehler beim Melden.'}
@@ -102,7 +102,8 @@ const app=document.getElementById('app');
 const timerRoot=document.getElementById('timer-root');
 const API=location.origin;
 
-async function post(url,body){return fetch(API+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json())}
+function authHeaders(){return session&&session.token?{'Authorization':'Bearer '+session.token}:{}}
+async function post(url,body){return fetch(API+url,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},authHeaders()),body:JSON.stringify(body)}).then(r=>r.json())}
 
 function connectSSE(){
   const es=new EventSource(API+'/api/events');
@@ -240,6 +241,8 @@ function renderJudgeButton(){
   if(!myInfo){jc.innerHTML='';return}
   const match=myInfo.match;
   const isPending=match.result==='pending';
+  const phase=tournament.rounds[tournament.rounds.length-1]?.phase;
+  const isKo=['top_cut','winners_bracket','losers_bracket','grand_final'].includes(phase);
   jc.innerHTML=`
     ${isPending?`<div style="margin-top:12px">
       <p style="font-size:12px;color:var(--fg2);margin-bottom:8px;text-align:center">${t('reportResult')}</p>
@@ -247,7 +250,7 @@ function renderJudgeButton(){
         <button class="primary" style="flex:1;padding:10px;font-size:13px" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player1_win':'player2_win'}')">${t('iWon')}</button>
         <button class="secondary" style="flex:1;padding:10px;font-size:13px;margin:0" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player2_win':'player1_win'}')">${t('opponentWon')}</button>
       </div>
-      <button class="secondary" style="margin-top:6px;padding:8px;font-size:12px;color:var(--fg2);border-color:var(--bd)" onclick="reportResult('${match.id}','draw')">${t('itsDraw')}</button>
+      ${isKo?'':`<button class="secondary" style="margin-top:6px;padding:8px;font-size:12px;color:var(--fg2);border-color:var(--bd)" onclick="reportResult('${match.id}','draw')">${t('itsDraw')}</button>`}
       <div id="rr" class="msg"></div>
     </div>`:''}
     <button class="judge" style="margin-top:8px" onclick="callJudge()">${t('callJudge')}</button>
@@ -272,9 +275,13 @@ function renderDropButton(){
   dp.innerHTML=`<button class="secondary" style="margin-top:12px;color:#dc2626;border-color:#dc2626" onclick="doDrop('${me.id}')">${t('dropOut')}</button>`;
 }
 
+// No token self-heal here: the drop button only exists mid-tournament, when
+// the server no longer issues tokens — a failed drop needs the TO.
 async function doDrop(playerId){
   if(!confirm(t('dropConfirm')))return;
-  await post('/api/players/'+playerId+'/drop',{});
+  let ok=false;
+  try{const r=await post('/api/players/'+playerId+'/drop',{});ok=!!(r&&r.ok)}catch{}
+  if(!ok)alert(t('dropError'));
   needsFullRender=true;
 }
 
@@ -314,9 +321,10 @@ function renderRegister(el){
         ${details.length?`<div class="details">${details.map(d=>`<span>${esc(d)}</span>`).join('')}</div>`:''}
       </div>
       <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">${t('decklist')}</h3>
-      <textarea id="dt" placeholder="${t('pasteDecklist')}">${myPlayer.decklist?myPlayer.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n'):''}</textarea>
+      <textarea id="dt" placeholder="${t('pasteDecklist')}"></textarea>
       <button class="primary" onclick="doDl('${myPlayer.id}')">${t('submit')}</button>
       <div id="dm" class="msg"></div>`;
+    loadMyDecklist();
     return;
   }
 
@@ -365,16 +373,55 @@ async function doReg(){
   if(dob)body.dateOfBirth=dob;
   const res=await post('/api/register',body);
   if(res.ok){
-    session={fullName,firstName:fn,lastName:ln,dateOfBirth:dob,playerId:pid};
+    session={fullName,firstName:fn,lastName:ln,dateOfBirth:dob,playerId:pid,token:res.token||null};
     localStorage.setItem('tcg-session',JSON.stringify(session));
     needsFullRender=true;
+  }else if(res.error){
+    document.getElementById('rm').textContent=res.error;
   }
+}
+
+// Decklists are no longer part of the shared state; a player's own list comes
+// from the token-gated /api/my-decklist. Tokens live only in the app's memory,
+// so if ours is missing or stale (session predates tokens, app restarted),
+// re-claim the name — the server allows that while registration is open, which
+// is the only phase where this UI exists.
+async function reclaimToken(){
+  if(!session)return false;
+  try{
+    const body={playerName:session.fullName};
+    if(session.playerId)body.playerId=session.playerId;
+    if(session.dateOfBirth)body.dateOfBirth=session.dateOfBirth;
+    const r=await post('/api/register',body);
+    if(r.token){session.token=r.token;localStorage.setItem('tcg-session',JSON.stringify(session));return true}
+  }catch{}
+  return false;
+}
+
+async function fetchMyDecklist(){
+  const r=await fetch(API+'/api/my-decklist',{headers:authHeaders()});
+  return r.ok?r.json():null;
+}
+
+async function loadMyDecklist(){
+  if(!session)return;
+  try{
+    let d=session.token?await fetchMyDecklist():null;
+    if(!d&&await reclaimToken())d=await fetchMyDecklist();
+    const dt=document.getElementById('dt');
+    if(dt&&!dt.value&&d&&d.decklist)dt.value=d.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n');
+  }catch{}
+}
+
+async function tryDl(playerId,txt){
+  try{const res=await post('/api/players/'+playerId+'/decklist',{decklistText:txt});return!!(res&&res.ok)}catch{return false}
 }
 
 async function doDl(playerId){
   const txt=document.getElementById('dt')?.value;if(!txt)return;
-  await post('/api/players/'+playerId+'/decklist',{decklistText:txt});
-  document.getElementById('dm').textContent=t('decklistSaved');
+  let ok=await tryDl(playerId,txt);
+  if(!ok&&await reclaimToken())ok=await tryDl(playerId,txt);
+  document.getElementById('dm').textContent=ok?t('decklistSaved'):t('decklistError');
 }
 
 function setTab(k){activeTab=k;needsFullRender=true}

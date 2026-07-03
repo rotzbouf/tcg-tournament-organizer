@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { TimerDisplay } from '@/components/tournament/TimerDisplay'
 import { Tournament } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 
 interface TournamentCardProps {
   tournament: Tournament

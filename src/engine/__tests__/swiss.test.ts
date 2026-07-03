@@ -144,6 +144,31 @@ describe('generatePairings', () => {
     expect(byeMatch!.player1Id).not.toBe('p1')
   })
 
+  it('assigns a repeat bye when every player already had one, leaving nobody unmatched (L2)', () => {
+    const players = makePlayers(3)
+    players.forEach(p => { p.hasBye = true })
+
+    const rounds: Round[] = [
+      makeCompletedRound([
+        { player1Id: 'p1', player2Id: null, result: 'player1_win', isBye: true },
+        { player1Id: 'p2', player2Id: 'p3', result: 'player1_win' },
+      ], 1),
+      makeCompletedRound([
+        { player1Id: 'p2', player2Id: null, result: 'player1_win', isBye: true },
+        { player1Id: 'p1', player2Id: 'p3', result: 'player1_win' },
+      ], 2),
+      makeCompletedRound([
+        { player1Id: 'p3', player2Id: null, result: 'player1_win', isBye: true },
+        { player1Id: 'p1', player2Id: 'p2', result: 'player1_win' },
+      ], 3),
+    ]
+
+    const matches = generatePairings(players, rounds, 4)
+    const seated = matches.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean))
+    expect(new Set(seated).size).toBe(3)
+    expect(matches.filter(m => m.isBye)).toHaveLength(1)
+  })
+
   it('handles 8 players through multiple rounds', () => {
     const players = makePlayers(8)
     const rounds: Round[] = []

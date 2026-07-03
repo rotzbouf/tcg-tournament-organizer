@@ -17,6 +17,7 @@ export interface Tournament {
   id: string
   name: string
   game: GameType
+  gameFormat: string | null
   format: TournamentFormat
   status: TournamentStatus
   players: Player[]
@@ -36,6 +37,7 @@ export interface Tournament {
   discordWebhookUrl: string | null
   eloApplied: boolean
   archived: boolean
+  countForSeason: boolean
   createdAt: string
   updatedAt: string
 }

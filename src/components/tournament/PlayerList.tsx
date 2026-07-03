@@ -4,7 +4,7 @@ import { Player } from '@/types/player'
 import { GameType } from '@/types/tournament'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { getPlayerDivision, DIVISION_LABELS } from '@/lib/ageDivision'
 import { AddPlayerForm } from './AddPlayerForm'
 import { BulkImportDialog } from './BulkImportDialog'
@@ -17,11 +17,12 @@ interface PlayerListProps {
   editable: boolean
   inProgress?: boolean
   game?: GameType
+  gameFormat?: string | null
   ageDivisionsEnabled?: boolean
   createdAt?: string
 }
 
-export function PlayerList({ tournamentId, players, editable, inProgress, game, ageDivisionsEnabled, createdAt }: PlayerListProps) {
+export function PlayerList({ tournamentId, players, editable, inProgress, game, gameFormat, ageDivisionsEnabled, createdAt }: PlayerListProps) {
   const { t, i18n } = useTranslation()
   const { dispatch } = useTournamentContext()
   const [dropPlayerId, setDropPlayerId] = useState<string | null>(null)
@@ -155,6 +156,7 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
           player={players.find(p => p.id === decklistPlayerId)!}
           readonly={!editable}
           game={game}
+          gameFormat={gameFormat}
         />
       )}
 

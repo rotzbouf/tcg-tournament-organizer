@@ -66,10 +66,11 @@ function assignBye(
   candidates: PairingCandidate[],
   roundNumber: number
 ): { match: Match; byePlayerId: string } | null {
+  if (candidates.length === 0) return null
   const sorted = [...candidates].sort((a, b) => a.matchPoints - b.matchPoints)
-  const byeCandidate = sorted.find(c => !c.hasBye)
-
-  if (!byeCandidate) return null
+  // If every remaining player has already had a bye, a second bye for the
+  // lowest-ranked player is unavoidable — better than leaving them unpaired.
+  const byeCandidate = sorted.find(c => !c.hasBye) ?? sorted[0]
 
   return {
     match: createByeMatch(byeCandidate.playerId, roundNumber),
@@ -107,10 +108,12 @@ function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match
   return [...greedy, ...byesForUnpaired(candidates, greedy, roundNumber)]
 }
 
+// Safety net: anyone the pairing algorithms could not seat still gets a bye —
+// even a repeat bye — so no player is ever left without a match.
 function byesForUnpaired(candidates: PairingCandidate[], matches: Match[], roundNumber: number): Match[] {
   const pairedIds = new Set(matches.flatMap(m => [m.player1Id, m.player2Id].filter(Boolean)))
   return candidates
-    .filter(c => !pairedIds.has(c.playerId) && !c.hasBye)
+    .filter(c => !pairedIds.has(c.playerId))
     .map(c => createByeMatch(c.playerId, roundNumber))
 }
 

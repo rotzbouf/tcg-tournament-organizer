@@ -1,35 +1,52 @@
 import { Match } from '@/types/round'
 import { generateId } from '@/lib/utils'
 
-export function generateRoundRobinRound(playerIds: string[], roundIndex: number, roundNumber: number): Match[] {
+// `playerIds` must be the full list the schedule was originally computed over
+// (the circle method is order-sensitive); dropped players are passed via
+// `droppedIds` so the schedule stays stable and their scheduled opponents
+// receive a bye instead of a dead pairing.
+export function generateRoundRobinRound(playerIds: string[], roundIndex: number, roundNumber: number, droppedIds?: Set<string>): Match[] {
   const schedule = computeSchedule(playerIds)
   if (roundIndex >= schedule.length) return []
 
   const pairings = schedule[roundIndex]
+  const isOut = (id: string) => droppedIds?.has(id) ?? false
   let tableNumber = 1
 
-  return pairings.map(([p1, p2]) => {
+  const byeFor = (id: string): Match => ({
+    id: generateId(),
+    roundNumber,
+    tableNumber: 0,
+    player1Id: id,
+    player2Id: null,
+    result: 'player1_win',
+    isBye: true,
+  })
+
+  const matches: Match[] = []
+  for (const [p1, p2] of pairings) {
     if (p2 === null) {
-      return {
+      if (!isOut(p1)) matches.push(byeFor(p1))
+    } else if (isOut(p1) && isOut(p2)) {
+      // both gone — nothing to play
+    } else if (isOut(p2)) {
+      matches.push(byeFor(p1))
+    } else if (isOut(p1)) {
+      matches.push(byeFor(p2))
+    } else {
+      matches.push({
         id: generateId(),
         roundNumber,
-        tableNumber: 0,
+        tableNumber: tableNumber++,
         player1Id: p1,
-        player2Id: null,
-        result: 'player1_win' as const,
-        isBye: true,
-      }
+        player2Id: p2,
+        result: 'pending',
+        isBye: false,
+      })
     }
-    return {
-      id: generateId(),
-      roundNumber,
-      tableNumber: tableNumber++,
-      player1Id: p1,
-      player2Id: p2,
-      result: 'pending' as const,
-      isBye: false,
-    }
-  })
+  }
+
+  return matches
 }
 
 export function getRoundRobinTotalRounds(playerCount: number): number {

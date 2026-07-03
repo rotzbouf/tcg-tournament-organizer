@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useFileIO } from './useFileIO'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 
 export function useKeyboardShortcuts() {
   const { exportState, importState } = useFileIO()

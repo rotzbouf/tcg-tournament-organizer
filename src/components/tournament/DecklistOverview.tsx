@@ -5,7 +5,7 @@ import { DecklistVisibility } from '@/types/tournament'
 import { formatDecklistText, getDecklistStats } from '@/lib/decklistParser'
 import { Select } from '@/components/ui/Select'
 import { Card } from '@/components/ui/Card'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 
 interface DecklistOverviewProps {
   tournamentId: string

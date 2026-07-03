@@ -4,7 +4,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { DecklistVisibility, GameType, TournamentFormat } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
@@ -21,6 +21,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const { state, dispatch } = useTournamentContext()
   const [name, setName] = useState('')
   const [game, setGame] = useState<GameType>('yugioh')
+  const [gameFormat, setGameFormat] = useState<string>(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
   const [format, setFormat] = useState<TournamentFormat>('swiss')
   const [roundTime, setRoundTime] = useState(50)
   const [grandFinalReset, setGrandFinalReset] = useState(false)
@@ -28,15 +29,28 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [decklistVisibility, setDecklistVisibility] = useState<DecklistVisibility>('hidden')
   const [powerPairings, setPowerPairings] = useState(true)
   const [eloSeeding, setEloSeeding] = useState(false)
+  const [countForSeason, setCountForSeason] = useState(true)
   const [templateName, setTemplateName] = useState('')
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
 
   const templates = state.templates ?? []
 
+  const today = new Date().toISOString().slice(0, 10)
+  const hasActiveSeason = (state.seasons ?? []).some(
+    s => s.game === game && !!s.startDate && !!s.endDate && today >= s.startDate && today <= s.endDate
+  )
+
+  const handleGameChange = (newGame: GameType) => {
+    setGame(newGame)
+    setGameFormat(GAME_CONFIG[newGame].formats[0]?.id ?? '')
+    setCountForSeason(true)
+  }
+
   const applyTemplate = (templateId: string) => {
     const tmpl = templates.find(t => t.id === templateId)
     if (!tmpl) return
     setGame(tmpl.game)
+    setGameFormat(GAME_CONFIG[tmpl.game].formats[0]?.id ?? '')
     setFormat(tmpl.format)
     setRoundTime(tmpl.roundTimeMinutes)
     setDecklistVisibility(tmpl.decklistVisibility)
@@ -89,6 +103,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
       payload: {
         name: name.trim(),
         game,
+        gameFormat: gameFormat || null,
         format,
         roundTimeMinutes: roundTime,
         topCut: 0,
@@ -97,10 +112,12 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         decklistVisibility,
         powerPairings,
         eloSeeding,
+        countForSeason,
       },
     })
     setName('')
     setGame('yugioh')
+    setGameFormat(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
     setFormat('swiss')
     setRoundTime(50)
     setGrandFinalReset(false)
@@ -108,6 +125,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setDecklistVisibility('hidden')
     setPowerPairings(true)
     setEloSeeding(false)
+    setCountForSeason(true)
     onClose()
   }
 
@@ -138,8 +156,17 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           label={t('tournament.game')}
           options={gameOptions}
           value={game}
-          onChange={e => setGame(e.target.value as GameType)}
+          onChange={e => handleGameChange(e.target.value as GameType)}
         />
+        {GAME_CONFIG[game].formats.length > 1 && (
+          <Select
+            id="tournament-game-format"
+            label={t('tournament.gameFormat')}
+            options={GAME_CONFIG[game].formats.map(f => ({ value: f.id, label: f.name }))}
+            value={gameFormat}
+            onChange={e => setGameFormat(e.target.value)}
+          />
+        )}
         <Select
           id="tournament-format"
           label={t('tournament.format')}
@@ -212,6 +239,18 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           value={decklistVisibility}
           onChange={e => setDecklistVisibility(e.target.value as DecklistVisibility)}
         />
+        {hasActiveSeason && (
+          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+            <input
+              type="checkbox"
+              checked={countForSeason}
+              onChange={e => setCountForSeason(e.target.checked)}
+              className="rounded border-input"
+            />
+            <span>{t('season.countForSeason')}</span>
+          </label>
+        )}
+
         <div className="flex items-center justify-between border-t border-muted pt-3">
           {showSaveTemplate ? (
             <div className="flex items-center gap-2">

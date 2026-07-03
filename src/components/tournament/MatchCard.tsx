@@ -5,7 +5,7 @@ import { Player } from '@/types/player'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { cn } from '@/lib/utils'
 
 interface MatchCardProps {

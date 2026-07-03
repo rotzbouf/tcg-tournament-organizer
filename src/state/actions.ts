@@ -8,7 +8,7 @@ import { TournamentTemplate } from '@/types/template'
 import { Season, PointTier } from '@/types/season'
 
 export type TournamentAction =
-  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean; eloSeeding?: boolean } }
+  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; gameFormat?: string | null; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean; eloSeeding?: boolean; countForSeason?: boolean } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string; playerId?: string | null; dateOfBirth?: string | null } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }
@@ -35,11 +35,9 @@ export type TournamentAction =
   | { type: 'SWAP_PLAYERS'; payload: { tournamentId: string; matchId1: string; playerId1: string; matchId2: string; playerId2: string } }
   | { type: 'SAVE_TEMPLATE'; payload: Omit<TournamentTemplate, 'id'> }
   | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } }
-  | { type: 'CREATE_SEASON'; payload: { name: string; game: GameType; pointTiers: PointTier[] } }
+  | { type: 'CREATE_SEASON'; payload: { name: string; game: GameType; startDate: string; endDate: string; pointTiers: PointTier[] } }
   | { type: 'DELETE_SEASON'; payload: { seasonId: string } }
-  | { type: 'ADD_TOURNAMENT_TO_SEASON'; payload: { seasonId: string; tournamentId: string } }
-  | { type: 'REMOVE_TOURNAMENT_FROM_SEASON'; payload: { seasonId: string; tournamentId: string } }
-  | { type: 'UPDATE_SEASON'; payload: { seasonId: string; name?: string; pointTiers?: PointTier[] } }
+  | { type: 'UPDATE_SEASON'; payload: { seasonId: string; name?: string; startDate?: string; endDate?: string; pointTiers?: PointTier[] } }
   | { type: 'LOAD_STATE'; payload: AppState }
 
 export interface AppState {

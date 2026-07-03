@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { selectTournament, selectCurrentRound, selectStandings, selectDivisionStandings } from '@/state/selectors'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { DIVISION_LABELS, DIVISION_ORDER } from '@/lib/ageDivision'
@@ -264,6 +264,7 @@ export function TournamentView() {
             editable={tournament.status === 'registration'}
             inProgress={tournament.status === 'in_progress' || tournament.status === 'top_cut'}
             game={tournament.game}
+            gameFormat={tournament.gameFormat}
             ageDivisionsEnabled={tournament.ageDivisionsEnabled}
             createdAt={tournament.createdAt}
           />

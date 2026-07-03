@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { selectAllTournaments } from '@/state/selectors'
 import { useFileIO } from '@/hooks/useFileIO'
 import { useTheme } from '@/hooks/useTheme'
@@ -13,7 +13,7 @@ export function Sidebar() {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const { state } = useTournamentContext()
-  const tournaments = selectAllTournaments(state)
+  const tournaments = selectAllTournaments(state).filter(t => !t.archived)
   const { exportState, importState, error, clearError } = useFileIO()
 
   const { theme, cycleTheme } = useTheme()
@@ -64,6 +64,18 @@ export function Sidebar() {
           )}
         >
           {t('season.title')}
+        </Link>
+
+        <Link
+          to="/banlists"
+          className={cn(
+            'mt-1 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            location.pathname.startsWith('/banlists')
+              ? 'bg-muted text-foreground'
+              : 'text-secondary-foreground hover:bg-muted hover:text-foreground'
+          )}
+        >
+          {t('banlist.title')}
         </Link>
 
         {tournaments.length > 0 && (

@@ -11,7 +11,7 @@ import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roun
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
 import { calculateEloChanges } from '@/engine/elo'
-import { DatabasePenalty, EloHistoryEntry } from '@/types/database'
+import { DatabasePenalty, DatabasePlayer, EloHistoryEntry } from '@/types/database'
 import { getPlayerDivision, DIVISION_ORDER, AgeDivision } from '@/lib/ageDivision'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 
@@ -88,6 +88,126 @@ function calculateDivisionTotalRounds(players: Player[], createdAt: string, minR
   return max
 }
 
+type PlayerDatabase = Record<string, DatabasePlayer>
+
+// Knockout rounds cannot end in a draw — someone must advance.
+const KO_PHASES = new Set<Round['phase']>(['top_cut', 'winners_bracket', 'losers_bracket', 'grand_final'])
+
+// Assign the automatic match loss for a player leaving the tournament (drop or
+// disqualification): their pending match in the current round goes to the
+// opponent. Returns the rounds unchanged if there is nothing to decide.
+function applyAutoLoss(rounds: Round[], playerId: string): Round[] {
+  const currentRound = rounds[rounds.length - 1]
+  if (!currentRound || currentRound.isComplete) return rounds
+  const match = currentRound.matches.find(
+    m => !m.isBye && m.result === 'pending' &&
+      (m.player1Id === playerId || m.player2Id === playerId)
+  )
+  if (!match) return rounds
+  const result = match.player1Id === playerId ? 'player2_win' as const : 'player1_win' as const
+  return rounds.map(r =>
+    r.roundNumber === currentRound.roundNumber
+      ? { ...r, matches: r.matches.map(m => m.id === match.id ? { ...m, result } : m) }
+      : r
+  )
+}
+
+// Find a database entry for a tournament player, matching by external player ID
+// first (so two different people who share a name don't merge), then by name.
+function findDatabasePlayer(
+  db: PlayerDatabase,
+  player: { name: string; playerId: string | null },
+  game: string,
+): DatabasePlayer | undefined {
+  const entries = Object.values(db).filter(p => p.game === game)
+  if (player.playerId) {
+    const byId = entries.find(p => p.playerId === player.playerId)
+    if (byId) return byId
+  }
+  const nameKey = player.name.toLowerCase()
+  return entries.find(p => p.name.toLowerCase() === nameKey)
+}
+
+// Apply a completed tournament's Elo changes, match/tournament counts, and a
+// history entry to the player database. Shared by COMPLETE_TOURNAMENT and
+// UPDATE_ELO_RATINGS.
+function applyTournamentResults(db: PlayerDatabase, tournament: Tournament): PlayerDatabase {
+  const playerIds = tournament.players.map(p => p.id)
+  const playerNameMap: Record<string, string> = {}
+  const playerIdMap: Record<string, string | null> = {}
+  tournament.players.forEach(p => {
+    playerNameMap[p.id] = p.name
+    playerIdMap[p.id] = p.playerId ?? null
+  })
+
+  const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, db, playerNameMap, tournament.game, playerIdMap)
+  const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
+  const now = new Date().toISOString()
+
+  // Penalties are normally written to the database live by ISSUE_PENALTY, but
+  // that only works for players who already have a database entry. Carry over
+  // anything that isn't there yet (dedup by tournament + timestamp + type).
+  const penaltiesFor = (tournamentPlayerId: string): DatabasePenalty[] =>
+    tournament.penalties
+      .filter(pen => pen.playerId === tournamentPlayerId && pen.type !== 'note')
+      .map(pen => ({
+        tournamentId: tournament.id,
+        tournamentName: tournament.name,
+        date: pen.issuedAt,
+        type: pen.type,
+        reason: pen.reason,
+      }))
+  const mergePenalties = (existing: DatabasePenalty[], incoming: DatabasePenalty[]): DatabasePenalty[] => [
+    ...existing,
+    ...incoming.filter(inc => !existing.some(e => e.tournamentId === inc.tournamentId && e.date === inc.date && e.type === inc.type)),
+  ]
+
+  const updatedDb: PlayerDatabase = { ...db }
+  for (const update of eloUpdates) {
+    const player = tournament.players.find(p => p.id === update.playerId)
+    const standing = standings.find(s => s.playerId === update.playerId)
+    if (!player || !standing) continue
+
+    const historyEntry: EloHistoryEntry = {
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      date: now,
+      eloBefore: update.eloBefore,
+      eloAfter: update.eloAfter,
+      placement: standing.rank ?? 0,
+    }
+    const gamesPlayed = standing.wins + standing.losses + standing.draws
+    const existing = findDatabasePlayer(updatedDb, player, tournament.game)
+
+    if (existing) {
+      updatedDb[existing.id] = {
+        ...existing,
+        elo: update.eloAfter,
+        matchesPlayed: existing.matchesPlayed + gamesPlayed,
+        tournamentsPlayed: existing.tournamentsPlayed + 1,
+        history: [...existing.history, historyEntry],
+        penalties: mergePenalties(existing.penalties ?? [], penaltiesFor(player.id)),
+        lastUpdated: now,
+      }
+    } else {
+      const id = generateId()
+      updatedDb[id] = {
+        id,
+        name: player.name,
+        game: tournament.game,
+        playerId: player.playerId ?? null,
+        elo: update.eloAfter,
+        matchesPlayed: gamesPlayed,
+        tournamentsPlayed: 1,
+        history: [historyEntry],
+        penalties: penaltiesFor(player.id),
+        lastUpdated: now,
+      }
+    }
+  }
+  return updatedDb
+}
+
 export function tournamentReducer(state: AppState, action: TournamentAction): AppState {
   switch (action.type) {
     case 'CREATE_TOURNAMENT': {
@@ -97,6 +217,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id,
         name: action.payload.name,
         game: action.payload.game,
+        gameFormat: action.payload.gameFormat ?? null,
         format: action.payload.format,
         status: 'registration',
         players: [],
@@ -116,6 +237,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         discordWebhookUrl: null,
         eloApplied: false,
         archived: false,
+        countForSeason: action.payload.countForSeason ?? true,
         createdAt: now,
         updatedAt: now,
       }
@@ -174,27 +296,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           : p
       )
 
-      const currentRound = tournament.rounds[tournament.rounds.length - 1]
-      let updatedRounds = tournament.rounds
-
-      if (currentRound && !currentRound.isComplete) {
-        const match = currentRound.matches.find(
-          m => !m.isBye && m.result === 'pending' &&
-            (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
-        )
-        if (match) {
-          const result = match.player1Id === action.payload.playerId ? 'player2_win' as const : 'player1_win' as const
-          updatedRounds = tournament.rounds.map(r =>
-            r.roundNumber === currentRound.roundNumber
-              ? { ...r, matches: r.matches.map(m => m.id === match.id ? { ...m, result } : m) }
-              : r
-          )
-        }
-      }
-
       return updateTournament(state, action.payload.tournamentId, {
         players: updatedPlayers,
-        rounds: updatedRounds,
+        rounds: applyAutoLoss(tournament.rounds, action.payload.playerId),
       })
     }
 
@@ -219,10 +323,8 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
       if (tournament.format === 'double_elimination') {
         const playerIds = tournament.players.map(p => p.id)
-        const clamped = nearestPowerOfTwo(playerIds.length)
-        const seeded = playerIds.slice(0, clamped)
-        const totalRounds = calculateDoubleElimTotalRounds(seeded.length)
-        const matches = generateDoubleElimFirstRound(seeded, 1)
+        const totalRounds = calculateDoubleElimTotalRounds(playerIds.length)
+        const matches = generateDoubleElimFirstRound(playerIds, 1)
         return updateTournament(state, action.payload.tournamentId, {
           status: 'in_progress',
           totalRounds,
@@ -239,9 +341,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const buildEloMap = () => {
         const m = new Map<string, number>()
         for (const p of tournament.players) {
-          const dbEntry = Object.values(state.playerDatabase).find(
-            d => d.name.toLowerCase() === p.name.toLowerCase() && d.game === tournament.game
-          )
+          const dbEntry = findDatabasePlayer(state.playerDatabase, p, tournament.game)
           if (dbEntry) m.set(p.id, dbEntry.elo)
         }
         return m
@@ -256,8 +356,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const hasBye = matches.some(m => m.isBye && m.player1Id === p.id)
         return hasBye ? { ...p, hasBye: true } : p
       })
+      // A manually configured cut size wins; only 0 means "pick one for me".
       const autoTopCut = tournament.format === 'swiss_topcut'
-        ? calculateTopCutSize(tournament.players.length)
+        ? (tournament.topCut > 0 ? tournament.topCut : calculateTopCutSize(tournament.players.length))
         : 0
       return updateTournament(state, action.payload.tournamentId, {
         status: 'in_progress',
@@ -276,18 +377,38 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (lastRound && !lastRound.isComplete) return state
       const pi = tournament.currentPhaseIndex
 
-      if (tournament.format === 'round_robin' && tournament.status === 'in_progress') {
+      // Branch on the running round's phase too: in a multi-phase tournament
+      // `tournament.format` describes the first phase only.
+      const isRoundRobin = tournament.format === 'round_robin' || lastRound?.phase === 'round_robin'
+      if (isRoundRobin && tournament.status === 'in_progress') {
         if (tournament.currentRound >= tournament.totalRounds) return state
         const nextRoundNumber = tournament.currentRound + 1
-        const playerIds = tournament.players.map(p => p.id)
-        const matches = generateRoundRobinRound(playerIds, tournament.currentRound, nextRoundNumber)
+        // The circle schedule is order-sensitive and must stay stable for the
+        // whole phase: rebuild the participant list from the players seated in
+        // the phase's first round (players-array order reproduces the original
+        // list) and use the phase-relative round index — `currentRound` is
+        // absolute and would point at the wrong schedule slice in a later
+        // phase. Dropped players stay in the schedule; their opponents get a
+        // bye instead of a dead pairing.
+        const phaseRounds = tournament.rounds.filter(r => r.phaseIndex === pi)
+        const firstPhaseRound = phaseRounds[0]
+        if (!firstPhaseRound) return state
+        const seated = new Set(firstPhaseRound.matches.flatMap(m =>
+          [m.player1Id, m.player2Id].filter((id): id is string => id !== null)
+        ))
+        const participantIds = tournament.players.filter(p => seated.has(p.id)).map(p => p.id)
+        const droppedIds = new Set(tournament.players.filter(p => p.droppedInRound !== null).map(p => p.id))
+        const matches = generateRoundRobinRound(participantIds, phaseRounds.length, nextRoundNumber, droppedIds)
+        if (matches.length === 0) return state
         return updateTournament(state, action.payload.tournamentId, {
           currentRound: nextRoundNumber,
           rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'round_robin' }, pi)],
         })
       }
 
-      if (tournament.format === 'double_elimination' && tournament.status === 'in_progress') {
+      const isDoubleElim = tournament.format === 'double_elimination' ||
+        (lastRound != null && ['winners_bracket', 'losers_bracket', 'grand_final'].includes(lastRound.phase))
+      if (isDoubleElim && tournament.status === 'in_progress') {
         const advance = advanceDoubleElimBracket(tournament)
         if (!advance || advance.matches.length === 0) return state
         const nextRoundNumber = tournament.currentRound + 1
@@ -377,18 +498,27 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const currentRound = tournament.rounds[tournament.rounds.length - 1]
       if (!currentRound || currentRound.isComplete) return state
       if (!currentRound.matches.some(m => m.id === action.payload.matchId)) return state
+      // The desktop UI hides the draw option in knockout rounds, but a draw can
+      // still arrive via a confirmed mobile self-report — reject it here, or the
+      // bracket logic would silently advance the wrong player.
+      if (action.payload.result === 'draw' && KO_PHASES.has(currentRound.phase)) return state
+      const hasGames = action.payload.player1Games !== undefined || action.payload.player2Games !== undefined
       const rounds = tournament.rounds.map(round => ({
         ...round,
-        matches: round.matches.map(match =>
-          match.id === action.payload.matchId
-            ? {
-                ...match,
-                result: action.payload.result,
-                ...(action.payload.player1Games !== undefined && { player1Games: action.payload.player1Games }),
-                ...(action.payload.player2Games !== undefined && { player2Games: action.payload.player2Games }),
-              }
-            : match
-        ),
+        matches: round.matches.map(match => {
+          if (match.id !== action.payload.matchId) return match
+          // Correcting an already-decided result without fresh game scores must
+          // not keep the old ones — they described the previous result. On a
+          // first submission the existing scores stay (a game_loss penalty may
+          // have pre-set them before the result came in).
+          const clearStaleGames = !hasGames && match.result !== 'pending' && match.result !== action.payload.result
+          return {
+            ...match,
+            result: action.payload.result,
+            player1Games: hasGames ? action.payload.player1Games : clearStaleGames ? undefined : match.player1Games,
+            player2Games: hasGames ? action.payload.player2Games : clearStaleGames ? undefined : match.player2Games,
+          }
+        }),
       }))
       return updateTournament(state, action.payload.tournamentId, { rounds })
     }
@@ -411,65 +541,14 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'COMPLETE_TOURNAMENT': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
+      if (tournament.status === 'completed') return state // already finalized — don't re-apply Elo
 
       const completedState = updateTournament(state, action.payload.tournamentId, {
         status: 'completed',
         eloApplied: true,
       })
 
-      const playerIds = tournament.players.map(p => p.id)
-      const playerNameMap: Record<string, string> = {}
-      tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
-
-      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, completedState.playerDatabase, playerNameMap, tournament.game)
-      const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
-      const now = new Date().toISOString()
-
-      const updatedDb = { ...completedState.playerDatabase }
-      for (const update of eloUpdates) {
-        const player = tournament.players.find(p => p.id === update.playerId)
-        if (!player) continue
-        const nameKey = player.name.toLowerCase()
-        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
-        const standing = standings.find(s => s.playerId === update.playerId)
-
-        const historyEntry: EloHistoryEntry = {
-          tournamentId: tournament.id,
-          tournamentName: tournament.name,
-          date: now,
-          eloBefore: update.eloBefore,
-          eloAfter: update.eloAfter,
-          placement: standing?.rank ?? 0,
-        }
-
-        if (existing) {
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[existing.id] = {
-            ...existing,
-            elo: update.eloAfter,
-            matchesPlayed: existing.matchesPlayed + s.wins + s.losses + s.draws,
-            tournamentsPlayed: existing.tournamentsPlayed + 1,
-            history: [...existing.history, historyEntry],
-            lastUpdated: now,
-          }
-        } else {
-          const id = generateId()
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[id] = {
-            id,
-            name: player.name,
-            game: tournament.game,
-            playerId: player.playerId ?? null,
-            elo: update.eloAfter,
-            matchesPlayed: s.wins + s.losses + s.draws,
-            tournamentsPlayed: 1,
-            history: [historyEntry],
-            penalties: [],
-            lastUpdated: now,
-          }
-        }
-      }
-
+      const updatedDb = applyTournamentResults(completedState.playerDatabase, tournament)
       return { ...completedState, playerDatabase: updatedDb }
     }
 
@@ -544,6 +623,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
             ? { ...p, droppedInRound: tournament.currentRound }
             : p
         )
+        // Like a drop, a DQ decides the running match — otherwise the round
+        // could never be completed without manual result entry.
+        updates.rounds = applyAutoLoss(tournament.rounds, action.payload.playerId)
       }
 
       if (action.payload.type === 'game_loss') {
@@ -590,8 +672,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (action.payload.type !== 'note') {
         const player = tournament.players.find(p => p.id === action.payload.playerId)
         if (player) {
-          const nameKey = player.name.toLowerCase()
-          const dbPlayer = Object.values(updatedState.playerDatabase).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
+          const dbPlayer = findDatabasePlayer(updatedState.playerDatabase, player, tournament.game)
           if (dbPlayer) {
             const dbPenalty: DatabasePenalty = {
               tournamentId: tournament.id,
@@ -617,9 +698,34 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
     case 'REMOVE_PENALTY': {
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament) return state
-      return updateTournament(state, action.payload.tournamentId, {
+      const penalty = tournament.penalties.find(p => p.id === action.payload.penaltyId)
+      let updatedState = updateTournament(state, action.payload.tournamentId, {
         penalties: tournament.penalties.filter(p => p.id !== action.payload.penaltyId),
       })
+
+      // Mirror the removal in the player database (note penalties never get a
+      // database entry). Match by tournament + timestamp + type — the same key
+      // ISSUE_PENALTY / applyTournamentResults write.
+      if (penalty && penalty.type !== 'note') {
+        const player = tournament.players.find(p => p.id === penalty.playerId)
+        const dbPlayer = player && findDatabasePlayer(updatedState.playerDatabase, player, tournament.game)
+        if (dbPlayer) {
+          const idx = (dbPlayer.penalties ?? []).findIndex(
+            dp => dp.tournamentId === tournament.id && dp.date === penalty.issuedAt && dp.type === penalty.type
+          )
+          if (idx !== -1) {
+            const penalties = (dbPlayer.penalties ?? []).filter((_, i) => i !== idx)
+            updatedState = {
+              ...updatedState,
+              playerDatabase: {
+                ...updatedState.playerDatabase,
+                [dbPlayer.id]: { ...dbPlayer, penalties, lastUpdated: new Date().toISOString() },
+              },
+            }
+          }
+        }
+      }
+      return updatedState
     }
 
     case 'ADVANCE_PHASE': {
@@ -660,10 +766,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds = tournament.currentRound + calculateTotalRounds(activePlayers.length, GAME_CONFIG[tournament.game].minSwissRounds)
       } else {
         const activeIds = updatedPlayers.filter(p => p.droppedInRound === null).map(p => p.id)
-        const clamped = nearestPowerOfTwo(activeIds.length)
-        matches = generateDoubleElimFirstRound(activeIds.slice(0, clamped), nextRoundNumber)
+        matches = generateDoubleElimFirstRound(activeIds, nextRoundNumber)
         phase = 'winners_bracket'
-        totalRounds = tournament.currentRound + calculateDoubleElimTotalRounds(clamped)
+        totalRounds = tournament.currentRound + calculateDoubleElimTotalRounds(activeIds.length)
       }
 
       return updateTournament(state, action.payload.tournamentId, {
@@ -680,59 +785,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const tournament = state.tournaments[action.payload.tournamentId]
       if (!tournament || tournament.status !== 'completed' || tournament.eloApplied) return state
 
-      const playerIds = tournament.players.map(p => p.id)
-      const playerNameMap: Record<string, string> = {}
-      tournament.players.forEach(p => { playerNameMap[p.id] = p.name })
-
-      const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, state.playerDatabase, playerNameMap, tournament.game)
-      const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
-      const now = new Date().toISOString()
-
-      const updatedDb = { ...state.playerDatabase }
-      for (const update of eloUpdates) {
-        const player = tournament.players.find(p => p.id === update.playerId)
-        if (!player) continue
-        const nameKey = player.name.toLowerCase()
-        const existing = Object.values(updatedDb).find(p => p.name.toLowerCase() === nameKey && p.game === tournament.game)
-        const standing = standings.find(s => s.playerId === update.playerId)
-
-        const historyEntry: EloHistoryEntry = {
-          tournamentId: tournament.id,
-          tournamentName: tournament.name,
-          date: now,
-          eloBefore: update.eloBefore,
-          eloAfter: update.eloAfter,
-          placement: standing?.rank ?? 0,
-        }
-
-        if (existing) {
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[existing.id] = {
-            ...existing,
-            elo: update.eloAfter,
-            matchesPlayed: existing.matchesPlayed + s.wins + s.losses + s.draws,
-            tournamentsPlayed: existing.tournamentsPlayed + 1,
-            history: [...existing.history, historyEntry],
-            lastUpdated: now,
-          }
-        } else {
-          const id = generateId()
-          const s = standings.find(s => s.playerId === update.playerId)!
-          updatedDb[id] = {
-            id,
-            name: player.name,
-            game: tournament.game,
-            playerId: player.playerId ?? null,
-            elo: update.eloAfter,
-            matchesPlayed: s.wins + s.losses + s.draws,
-            tournamentsPlayed: 1,
-            history: [historyEntry],
-            penalties: [],
-            lastUpdated: now,
-          }
-        }
-      }
-
+      const updatedDb = applyTournamentResults(state.playerDatabase, tournament)
       return { ...state, playerDatabase: updatedDb }
     }
 
@@ -811,6 +864,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (match1.id === match2.id) return state
 
       const { playerId1, playerId2 } = action.payload
+      if (playerId1 === playerId2) return state
+      const sitsIn = (m: Match, id: string) => m.player1Id === id || m.player2Id === id
+      if (!sitsIn(match1, playerId1) || !sitsIn(match2, playerId2)) return state
 
       const swapInMatch = (match: Match, oldId: string, newId: string): Match => {
         if (match.player1Id === oldId) return { ...match, player1Id: newId, result: 'pending', player1Games: undefined, player2Games: undefined }
@@ -847,7 +903,8 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         id: generateId(),
         name: action.payload.name,
         game: action.payload.game,
-        tournamentIds: [],
+        startDate: action.payload.startDate,
+        endDate: action.payload.endDate,
         pointTiers: action.payload.pointTiers,
         createdAt: new Date().toISOString(),
       }
@@ -858,34 +915,12 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       return { ...state, seasons: (state.seasons ?? []).filter(s => s.id !== action.payload.seasonId) }
     }
 
-    case 'ADD_TOURNAMENT_TO_SEASON': {
-      return {
-        ...state,
-        seasons: (state.seasons ?? []).map(s =>
-          s.id === action.payload.seasonId && !s.tournamentIds.includes(action.payload.tournamentId)
-            ? { ...s, tournamentIds: [...s.tournamentIds, action.payload.tournamentId] }
-            : s
-        ),
-      }
-    }
-
-    case 'REMOVE_TOURNAMENT_FROM_SEASON': {
-      return {
-        ...state,
-        seasons: (state.seasons ?? []).map(s =>
-          s.id === action.payload.seasonId
-            ? { ...s, tournamentIds: s.tournamentIds.filter(id => id !== action.payload.tournamentId) }
-            : s
-        ),
-      }
-    }
-
     case 'UPDATE_SEASON': {
       return {
         ...state,
         seasons: (state.seasons ?? []).map(s =>
           s.id === action.payload.seasonId
-            ? { ...s, ...(action.payload.name !== undefined && { name: action.payload.name }), ...(action.payload.pointTiers !== undefined && { pointTiers: action.payload.pointTiers }) }
+            ? { ...s, ...(action.payload.name !== undefined && { name: action.payload.name }), ...(action.payload.startDate !== undefined && { startDate: action.payload.startDate }), ...(action.payload.endDate !== undefined && { endDate: action.payload.endDate }), ...(action.payload.pointTiers !== undefined && { pointTiers: action.payload.pointTiers }) }
             : s
         ),
       }

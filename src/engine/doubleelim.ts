@@ -1,19 +1,42 @@
 import { Match, Round } from '@/types/round'
 import { Tournament } from '@/types/tournament'
-import { generateId, nearestPowerOfTwo } from '@/lib/utils'
+import { generateId } from '@/lib/utils'
 
+function nextPowerOfTwo(n: number): number {
+  let p = 1
+  while (p < n) p *= 2
+  return p
+}
+
+function createByeMatch(playerId: string, roundNumber: number): Match {
+  return {
+    id: generateId(),
+    roundNumber,
+    tableNumber: 0,
+    player1Id: playerId,
+    player2Id: null,
+    result: 'player1_win',
+    isBye: true,
+  }
+}
+
+// Pads the field up to the next power of two with byes for the top seeds
+// (players arrive in seeding order) — never cut anyone from the bracket.
 export function generateDoubleElimFirstRound(playerIds: string[], roundNumber: number): Match[] {
-  const size = nearestPowerOfTwo(playerIds.length)
-  const seeded = playerIds.slice(0, size)
-  const matches: Match[] = []
+  if (playerIds.length < 2) return []
+  const size = nextPowerOfTwo(playerIds.length)
+  const byes = size - playerIds.length
+  const matches: Match[] = playerIds.slice(0, byes).map(id => createByeMatch(id, roundNumber))
+  const rest = playerIds.slice(byes)
+  let table = 1
 
-  for (let i = 0; i < seeded.length; i += 2) {
+  for (let i = 0; i < rest.length; i += 2) {
     matches.push({
       id: generateId(),
       roundNumber,
-      tableNumber: (i / 2) + 1,
-      player1Id: seeded[i],
-      player2Id: seeded[i + 1],
+      tableNumber: table++,
+      player1Id: rest[i],
+      player2Id: rest[i + 1],
       result: 'pending',
       isBye: false,
     })
@@ -84,18 +107,8 @@ export function advanceDoubleElimBracket(tournament: Tournament): AdvanceResult 
 
   if (wbWinners.length >= 2) {
     const nextRound = tournament.currentRound + 1
-    const matches = pairSequential(wbWinners, nextRound)
-
-    if (lbRounds.length === 0 && wbLosers.length >= 2) {
-      return {
-        matches,
-        phase: 'winners_bracket',
-        isComplete: false,
-      }
-    }
-
     return {
-      matches,
+      matches: pairSequential(wbWinners, nextRound),
       phase: 'winners_bracket',
       isComplete: false,
     }
@@ -146,20 +159,40 @@ export function advanceDoubleElimBracket(tournament: Tournament): AdvanceResult 
     }
   }
 
+  // 2-player bracket: the sole WB loser goes straight to the grand final.
+  if (lbRounds.length === 0 && activeLbPlayers.length === 1 && wbWinners.length === 1) {
+    const nextRound = tournament.currentRound + 1
+    return {
+      matches: [{
+        id: generateId(),
+        roundNumber: nextRound,
+        tableNumber: 1,
+        player1Id: wbWinners[0],
+        player2Id: activeLbPlayers[0],
+        result: 'pending',
+        isBye: false,
+      }],
+      phase: 'grand_final',
+      isComplete: false,
+    }
+  }
+
   return null
 }
 
 export function calculateDoubleElimTotalRounds(playerCount: number): number {
   if (playerCount <= 1) return 0
-  const size = nearestPowerOfTwo(playerCount)
+  const size = nextPowerOfTwo(playerCount)
   const wbRounds = Math.log2(size)
-  const lbRounds = wbRounds * 2 - 1
+  // The losers bracket runs as one pool (all WB losers), halving each round.
+  const lbRounds = size > 2 ? Math.ceil(Math.log2(size - 1)) : 0
   return wbRounds + lbRounds + 1
 }
 
+// Byes count as wins for player1, so bye recipients advance like any winner.
 function getWinners(round: Round): string[] {
   return round.matches
-    .filter(m => m.result !== 'pending' && !m.isBye)
+    .filter(m => m.result !== 'pending')
     .map(m => m.result === 'player1_win' ? m.player1Id : m.player2Id!)
     .filter(Boolean)
 }
@@ -184,6 +217,10 @@ function pairSequential(playerIds: string[], roundNumber: number): Match[] {
         result: 'pending',
         isBye: false,
       })
+    } else {
+      // Odd pool: the leftover player advances with a bye instead of silently
+      // vanishing from the bracket.
+      matches.push(createByeMatch(playerIds[i], roundNumber))
     }
   }
   return matches
@@ -226,6 +263,11 @@ function pairAvoidRematches(playerIds: string[], roundNumber: number, allRounds:
       paired.add(opponent)
     }
   }
+
+  // Odd pool (e.g. all WB losers enter at once): the leftover player gets a
+  // bye — previously they were silently dropped from the bracket.
+  const leftover = playerIds.find(id => !paired.has(id))
+  if (leftover) matches.push(createByeMatch(leftover, roundNumber))
 
   return matches
 }

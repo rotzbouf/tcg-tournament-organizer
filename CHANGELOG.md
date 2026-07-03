@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-07-03
+
+### Fixed
+- **Verdeckte Decklisten nicht mehr über den Mobile-Server lesbar** — Der SSE-Stream und die API des Mobile-Servers enthielten die vollständigen Decklisten aller Spieler, auch bei Sichtbarkeit „versteckt" oder „nur TO". Decklisten werden jetzt vor dem Versand entfernt; das eigene Deck lädt und speichert das Handy über ein Session-Token, das bei der Registrierung ausgestellt wird. Nebeneffekte: Die Registrierung über das Handy legt bei bereits vorhandenem Namen keinen doppelten Spieler mehr an, ist nach Ende der Anmeldephase gesperrt (403), und das Einreichen einer Deckliste sowie das Abmelden vom Turnier sind nur noch für den eigenen Spieler möglich (kein Fremd-Drop über die LAN-API mehr)
+- **Elo/Strafen-Zuordnung bevorzugt Spieler-ID** — Rückkehrende Spieler werden jetzt zuerst über ihre hinterlegte Spieler-ID (Konami-ID etc.) mit dem Datenbank-Eintrag verknüpft, statt nur über den Namen. Zwei verschiedene Personen mit gleichem Namen teilen sich dadurch nicht mehr versehentlich Elo- und Strafen-Historie
+- **Kein doppeltes Elo mehr beim Turnierabschluss** — Ein erneuter Abschluss eines bereits abgeschlossenen Turniers verändert die Wertung nicht mehr (Guard gegen doppelte Elo-Anwendung)
+- **Direktes Ergebnis-Schreiben vom Handy entfernt** — Der ungenutzte Endpoint, über den ein Match-Ergebnis ohne TO-Bestätigung gesetzt werden konnte, wurde entfernt; Spieler melden Ergebnisse ausschließlich über den bestätigungspflichtigen Weg
+- **Einheitliche Datenmigration** — Laden aus dem Speicher und Datei-Import nutzen jetzt dieselbe Migrationslogik; importierte Dateien können keine Felder mehr verpassen
+- **Discord-Paarungen stimmen mit der echten Runde überein** — Die Discord-Benachrichtigung wurde bisher aus einem zweiten, separaten Reducer-Durchlauf gebaut; da die erste Runde zufällig ausgelost wird, wichen die geposteten Paarungen von den tatsächlich gespeicherten ab. Die Nachricht wird jetzt aus dem echten Turnierzustand nach dem Dispatch erzeugt
+- **Mobile-Server gibt nur noch das eigene Turnier preis** — Der lokale Webserver (`/api/state` und der SSE-Stream) sendete bisher den kompletten App-State an jedes verbundene Gerät, inklusive Spieler-Datenbank (Elo, Strafen-Historie, Geburtsdaten, Spieler-IDs) und aller anderen Turniere. Jetzt wird pro Client nur das gebundene Turnier ausgeliefert; die Datenbank verlässt das Gerät nicht mehr
+- **SSE-Clients pro Turnier getrennt** — Bei mehreren gleichzeitigen Turnier-Servern erhält jeder Client nur die Updates seines Turniers, das Stoppen eines Servers trennt nur dessen Verbindungen, und der Client-Zähler zählt pro Turnier
+- **Request-Größe begrenzt** — POST-Anfragen an den Mobile-Server sind auf 1 MB gedeckelt (Schutz vor Speicher-Erschöpfung)
+- **Sideboard getrennt gewertet** — Der Decklist-Parser markiert Karten nach einem Sideboard-Header (`Sideboard`, `Side Deck:`, `!side`) als Side-Deck. Die Validierung zählt Main-Deck und Sideboard jetzt getrennt: Side-Karten blähen die Main-Deck-Zahl nicht mehr auf (kein falsches „zu viele Karten" mehr), und die Sideboard-Größe wird gegen das Limit geprüft (`Zu viele Side-Deck-Karten`). Das Kopienlimit gilt weiterhin über Main + Side zusammen
+- **Doppelseitige Karten (DFC/Split) gegen Whitelist** — Bei Whitelist-Formaten (Magic Standard/Pauper) werden `Front // Back`-Karten korrekt erkannt, auch wenn der Export nur die Vorderseite listet — kein falsches „nicht im Format" mehr
+- **Kopien-Limit über die ganze Liste** — Die Deck-Validierung summiert jetzt Kopien einer Karte über alle Einträge (z.B. Main + Side Deck), statt jede Zeile einzeln zu prüfen. Eine Karte, die auf zwei Zeilen verteilt das Limit überschreitet (z.B. 3× + 2× bei Limit 4), wird korrekt als Verstoß erkannt — betrifft sowohl das Format-Kopienlimit als auch Limited/Semi-Limited-Banlisten
+- **Basic Lands / Basic Energy vom Kopienlimit ausgenommen** — Beliebig viele Standard-Länder (Magic: Plains/Island/Swamp/Mountain/Forest/Wastes inkl. Snow-Covered) und Basis-Energien (Pokémon) lösen keinen „zu viele Kopien"-Fehler mehr aus. Special Energy bleibt limitiert
+- **Scryfall Rate Limit** — 200 ms Pause zwischen paginierten Requests; bei 429-Antwort wird automatisch 65 Sekunden gewartet und bis zu 2× erneut versucht; HTTP-Timeout pro Request auf 60 s erhöht
+- **Kein Spieler mehr ohne Paarung bei erschöpften Freilosen** — Wenn bei ungerader Spielerzahl alle verbleibenden Spieler bereits ein Freilos hatten, erhält jetzt der niedrigstplatzierte ein unvermeidbares zweites Freilos, statt ohne Match zu bleiben
+- **Banlist-Download meldet HTTP-Fehler verständlich** — Antworten mit Status ≥ 400 werden als klarer Fehler (`HTTP 503 für …`) gemeldet, statt als kryptischer JSON-Parse-Fehler einer HTML-Fehlerseite; die automatische Wiederholung bei Scryfall-Rate-Limit (429) bleibt erhalten
+- **Mobile-Server gegen DNS-Rebinding geschützt** — Anfragen, deren Host-Header ein Domainname statt einer IP-Adresse ist, werden abgewiesen (legitime Clients erreichen den Server immer über die LAN-IP); die offenen CORS-Header (`Access-Control-Allow-Origin: *`) wurden entfernt, da die Handy-Seite vom selben Server ausgeliefert wird
+- **Desktop-App gehärtet** — Fenster können keine neuen Fenster mehr öffnen, Navigation ist auf die App selbst beschränkt, und die Produktions-App erhält eine Content-Security-Policy (Netzwerkzugriff des Renderers nur noch zu Discord-Webhooks)
+- **Round Robin: Gedroppte Spieler werden nicht mehr gepaart** — Wer das Turnier verlässt, taucht in den Folgerunden nicht mehr in den Paarungen auf; der planmäßige Gegner erhält stattdessen ein Freilos. Der Spielplan der übrigen Teilnehmer bleibt dabei unverändert (jeder spielt weiterhin genau einmal gegen jeden)
+- **Round Robin als spätere Turnierphase repariert** — In Mehrphasen-Turnieren nutzte eine Round-Robin-Phase den absoluten Rundenzähler statt des phasenbezogenen und rechnete über alle statt nur die weitergekommenen Spieler; außerdem landete die Rundengenerierung späterer Phasen im falschen Format-Zweig. Der Spielplan wird jetzt stabil über die Teilnehmer der Phase berechnet
+- **Freilose zählen nicht mehr in die Tiebreaker** — Die Opponent-Match-Win-% wertete Freilose der Gegner bisher als Siege (ein Gegner mit 1-2 plus Freilos zählte mit 50 % statt offiziell 33,3 %). Gemäß offiziellen Pokémon-/Magic-Regeln sind Byes jetzt von der Win-Percentage ausgeschlossen; in der angezeigten Siege-Niederlagen-Bilanz zählt ein Freilos weiterhin als Sieg
+- **Kein Unentschieden mehr in K.o.-Runden** — Über den Handy-Ergebnisbericht konnte ein bestätigtes Unentschieden in Top Cut / Double Elimination gelangen, wo die Bracket-Logik dann stillschweigend den falschen Spieler weiterrücken ließ. Unentschieden wird für K.o.-Runden jetzt zentral abgelehnt und der Unentschieden-Button auf der Handy-Seite in diesen Runden ausgeblendet
+- **Disqualifikation beendet das laufende Match** — Eine DQ vergibt jetzt wie ein Drop automatisch den Sieg an den Gegner; bisher blieb das Match offen und die Runde konnte ohne manuellen Ergebniseintrag nicht abgeschlossen werden
+- **Double Elimination verliert keine Spieler mehr** — Bei einer Teilnehmerzahl, die keine Zweierpotenz ist (z.B. 6 oder 12), wurden bisher die überzähligen Spieler beim Start stillschweigend aus dem Bracket ausgeschlossen; jetzt wird das Feld mit Freilosen für die Top-Seeds auf die nächste Zweierpotenz aufgefüllt. Zusätzlich behoben: Im Losers Bracket (immer ungerade Poolgröße) fiel bisher pro Runde ein Spieler unbemerkt aus dem Turnier — der übrige Spieler erhält jetzt ein Freilos und rückt weiter. Ein 2-Spieler-Bracket erreicht jetzt das Grand Final, statt hängen zu bleiben
+- **Strafen von Erstteilnehmern bleiben erhalten** — Strafen erreichten die Spieler-Datenbank bisher nur, wenn der Spieler dort bereits einen Eintrag hatte; beim allerersten Turnier eines Spielers gingen sie verloren. Beim Turnierabschluss werden sie jetzt in den neu angelegten Datenbank-Eintrag übernommen (Notizen bleiben wie bisher turnierintern). Außerdem entfernt das Löschen einer Strafe im Turnier jetzt auch den zugehörigen Eintrag in der Spieler-Datenbank
+- **Spielertausch prüft die Auswahl** — Beim Tauschen zweier Spieler zwischen Matches wird jetzt validiert, dass die gewählten Spieler tatsächlich in den angegebenen Matches sitzen; ein fehlerhafter Aufruf konnte vorher denselben Spieler doppelt in die Runde setzen
+- **Keine doppelte Registrierung im Sync-Fenster** — Registrierten sich zwei Geräte (oder ein Doppel-Tipp) innerhalb der Synchronisations-Verzögerung mit demselben Namen, entstanden zwei identische Spieler. Der Mobile-Server merkt sich jetzt gerade angelegte Namen und legt den Spieler nur einmal an; beide Geräte erhalten trotzdem ihre Session
+- **Ergebnis-Korrektur ohne Spielstände löscht die alten** — Wurde ein bereits eingetragenes Match-Ergebnis ohne neue Game-Angaben korrigiert (z.B. Sieger vertauscht), blieben die Spielstände des alten Ergebnisses stehen und verfälschten die Game-Win-Tiebreaker. Sie werden jetzt zurückgesetzt; von einer Game-Loss-Strafe vorbelegte Spielstände bleiben beim ersten Eintrag erhalten
+- **Manuell gewählter Top Cut bleibt erhalten** — Der Turnierstart überschrieb eine manuell eingestellte Cut-Größe immer mit der automatisch berechneten. Die manuelle Auswahl gilt jetzt; nur ohne Vorgabe wird automatisch berechnet
+- **Handy-Session übersteht Umbenennung** — Benannte der TO einen Spieler um, verlor dessen Handy den Zugriff auf Deckliste und Selbst-Drop. Die Session wird jetzt beim ersten Zugriff fest mit dem Spieler verknüpft und folgt ihm durch Umbenennungen
+
+## [1.6.3] - 2026-06-28
+
+### Changed
+- **Banlist-Strategie pro Format** — Jedes Format deklariert jetzt einen Validierungstyp: `legal_list` (MTG Standard, Pauper: vollständige legale Kartenliste von Scryfall), `rotation` (Pokémon Standard: Set-Code-Whitelist für Pokémon-Karten; Trainer/Energie werden übersprungen da Namens-basiert) oder `banlist` (alle anderen: explizite Verboten/Limited/Semi-Limited-Listen). MTG Vintage lädt zusätzlich die Restricted-List (max. 1 Kopie). Die Banlist-Ansicht zeigt für jedes Format den passenden Badge und die entsprechenden Statistiken
+
+## [1.6.2] - 2026-06-28
+
+### Added
+- **Saison-Zeitraum** — Beim Erstellen einer Saison wird ein Start- und Enddatum festgelegt. Alle abgeschlossenen Turniere desselben Spiels, deren Erstellungsdatum im Zeitraum liegt, werden automatisch zur Saison gewertet — kein manuelles Hinzufügen mehr nötig. Der Zeitraum ist nachträglich editierbar
+- **Saison-Opt-out bei Turniererstellung** — Existiert eine aktive Saison für das gewählte Spiel, erscheint beim Erstellen eines Turniers die Checkbox „Zur Saison werten" (Standard: angehakt). Wird sie deaktiviert, wird das Turnier nicht in der Saison-Wertung berücksichtigt
+- **Archivierte Turniere aus Sidebar entfernt** — Archivierte Turniere erscheinen nicht mehr in der Navigation
+
+## [1.6.1] - 2026-06-28
+
+### Fixed
+- **Pokémon Standard Banlist-Laden** — Trainer-Namen-Fetch entfernt, der ~18 API-Requests erzeugte und ins Timeout lief. Rotations-Check gilt jetzt nur für Pokémon-Karten (set-code-basiert); Trainer und Energie werden übersprungen, da reprinted Karten ohne vollständige Datenbank nicht zuverlässig geprüft werden können
+- **Scryfall API-Fehler** — `Accept: application/json`-Header ergänzt, der von der Scryfall API zwingend vorausgesetzt wird
+- **Scryfall Fehler-Response** — Ungültige API-Responses (kein `data`-Array) werfen jetzt einen lesbaren Fehler statt einem `TypeError: data is not iterable`
+
+## [1.6.0] - 2026-06-28
+
+### Added
+- **Rotations-Validierung für Pokémon TCG Standard** — Beim Laden der Banlist werden jetzt auch die aktuell legalen Standard-Sets (via pokemontcg.io) sowie alle legalen Trainer- und Energie-Karten-Namen geladen. Pokémon-Karten werden printing-basiert geprüft (Set-Code muss in der aktuellen Rotation sein); Trainer- und Energie-Karten sind legal wenn ihr Name in einem Standard-legalen Set vorkommt — unabhängig vom Druck
+- **Rotations-Validierung für MTG Standard** — Beim Laden der Standard-Banlist von Scryfall wird eine vollständige Liste aller Standard-legalen Karten-Namen heruntergeladen. Die Prüfung ist namensbasiert, sodass Reprints in älteren Sets korrekt als legal erkannt werden
+- **Set-Code im Parser** — Der Decklist-Parser extrahiert jetzt den Set-Code (`setCode`) als eigenes Feld aus PTCGL- und MTGA-Exportformaten. Karten-Namen enthalten keine Set-Info mehr. Der Parser erkennt außerdem den Abschnittstyp (`section`: pokemon / trainer / energy) für Pokémon-Decklisten
+
 ## [1.5.5] - 2026-06-27
 
 ### Fixed

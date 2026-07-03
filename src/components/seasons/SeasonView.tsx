@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTournamentContext } from '@/state/TournamentContext'
+import { useTournamentContext } from '@/state/useTournamentContext'
 import { Season } from '@/types/season'
 import { Button } from '@/components/ui/Button'
 import { GAME_CONFIG } from '@/lib/gameConfig'

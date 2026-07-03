@@ -1,4 +1,4 @@
-import { Match, Round } from '@/types/round'
+import { Match, Round } from '../types/round'
 
 export const WIN_POINTS = 3
 export const DRAW_POINTS = 1
@@ -38,7 +38,19 @@ export function getMatchPointsForPlayer(playerId: string, match: Match): number 
   return 0
 }
 
+// Record as displayed in the standings: byes count as wins.
 export function getPlayerRecord(playerId: string, rounds: Round[]): { wins: number; losses: number; draws: number } {
+  return recordFor(playerId, rounds, true)
+}
+
+// Record for tiebreaker math (opponent match-win percentage): official
+// Pokémon and MTG rules exclude byes from win percentages — a bye only scores
+// match points and shows as a win in the W-L-D record.
+export function getTiebreakerRecord(playerId: string, rounds: Round[]): { wins: number; losses: number; draws: number } {
+  return recordFor(playerId, rounds, false)
+}
+
+function recordFor(playerId: string, rounds: Round[], includeByes: boolean): { wins: number; losses: number; draws: number } {
   let wins = 0
   let losses = 0
   let draws = 0
@@ -48,8 +60,8 @@ export function getPlayerRecord(playerId: string, rounds: Round[]): { wins: numb
     for (const match of round.matches) {
       if (match.result === 'pending') continue
 
-      if (match.isBye && match.player1Id === playerId) {
-        wins++
+      if (match.isBye) {
+        if (includeByes && match.player1Id === playerId) wins++
         continue
       }
 

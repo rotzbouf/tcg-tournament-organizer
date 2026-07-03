@@ -1,6 +1,6 @@
 {
   "name": "tcg-tournament-organizer",
-  "version": "1.5.5",
+  "version": "1.6.4",
   "description": "Desktop app for organizing TCG tournaments using the Swiss system",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -24,6 +24,9 @@
     "email": "rotzbouf@gmail.com"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "clsx": "^2.1.1",
     "i18next": "^26.3.1",
