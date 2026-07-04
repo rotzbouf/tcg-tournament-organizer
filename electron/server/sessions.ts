@@ -20,15 +20,59 @@ interface Session {
 const MAX_SESSIONS = 1000
 const sessions = new Map<string, Session>()
 
-export function createSession(tournamentId: string, playerName: string): string {
-  const token = crypto.randomBytes(24).toString('base64url')
-  sessions.set(token, { tournamentId, playerName: playerName.toLowerCase(), playerId: null })
+// TO-issued tokens (shown as per-player QR codes), keyed by tournament+player
+// so re-opening the QR window hands out the same token instead of minting a
+// new session per click.
+const toIssuedTokens = new Map<string, string>()
+
+function evictOldest(): void {
   while (sessions.size > MAX_SESSIONS) {
     const oldest = sessions.keys().next().value
     if (oldest === undefined) break
     sessions.delete(oldest)
   }
+}
+
+export function createSession(tournamentId: string, playerName: string): string {
+  const token = crypto.randomBytes(24).toString('base64url')
+  sessions.set(token, { tournamentId, playerName: playerName.toLowerCase(), playerId: null })
+  evictOldest()
   return token
+}
+
+// Session pre-bound to a player, issued by the TO (per-player QR code). Unlike
+// name-claimed sessions this needs no open registration phase and is immune to
+// the first-claim race: the token only ever leaves the app via the QR code the
+// TO hands to the player.
+export function createPlayerSession(tournamentId: string, playerId: string, playerName: string): string {
+  const key = `${tournamentId}:${playerId}`
+  const existing = toIssuedTokens.get(key)
+  if (existing) {
+    const session = sessions.get(existing)
+    if (session && session.tournamentId === tournamentId && session.playerId === playerId) return existing
+  }
+  const token = crypto.randomBytes(24).toString('base64url')
+  sessions.set(token, { tournamentId, playerName: playerName.toLowerCase(), playerId })
+  toIssuedTokens.set(key, token)
+  evictOldest()
+  return token
+}
+
+// True if any live session already claims this player: bound sessions count by
+// player id, unbound ones by the name they claimed. Guards /api/register so a
+// second device cannot take over a name that is already in use.
+export function isNameClaimed(tournamentId: string, playerId: string | null, nameLower: string): boolean {
+  for (const session of sessions.values()) {
+    if (session.tournamentId !== tournamentId) continue
+    if (session.playerId !== null ? session.playerId === playerId : session.playerName === nameLower) return true
+  }
+  return false
+}
+
+// Test helper — sessions are module state shared across a test file.
+export function clearSessions(): void {
+  sessions.clear()
+  toIssuedTokens.clear()
 }
 
 // Returns the session the token was issued for, or null if the token is

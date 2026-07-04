@@ -3,7 +3,7 @@ import { useTournamentContext } from '@/state/useTournamentContext'
 import { serializeState, deserializeState } from '@/lib/serialization'
 
 interface FileIOResult {
-  exportState: () => Promise<boolean>
+  exportState: (options?: { stripPii?: boolean }) => Promise<boolean>
   importState: () => Promise<boolean>
   error: string | null
   clearError: () => void
@@ -13,9 +13,9 @@ export function useFileIO(): FileIOResult {
   const { state, dispatch } = useTournamentContext()
   const [error, setError] = useState<string | null>(null)
 
-  const exportState = useCallback(async () => {
+  const exportState = useCallback(async (options?: { stripPii?: boolean }) => {
     try {
-      const json = serializeState(state)
+      const json = serializeState(state, options)
       if (window.electronAPI) {
         const result = await window.electronAPI.saveFile(json)
         return result !== null

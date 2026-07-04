@@ -3,6 +3,7 @@ import path from 'node:path'
 import { registerFileHandlers } from './ipc/fileHandlers'
 import { registerStateSyncHandlers } from './ipc/stateSync'
 import { registerBanlistHandlers } from './ipc/banlistHandlers'
+import { registerStorageHandlers } from './ipc/storageHandlers'
 import { stopAllServers } from './server/index'
 
 process.env.DIST = path.join(__dirname, '../dist')
@@ -66,5 +67,6 @@ app.on('activate', () => {
 app.whenReady().then(() => {
   registerFileHandlers()
   registerBanlistHandlers()
+  registerStorageHandlers()
   createWindow()
 })

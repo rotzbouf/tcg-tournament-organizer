@@ -14,6 +14,8 @@ vi.mock('../../ipc/stateSync', () => ({
 
 import { handleRequest } from '../router'
 import { getCurrentState, dispatchToRenderer, sendMatchReport } from '../../ipc/stateSync'
+import { clearSessions, createPlayerSession } from '../sessions'
+import { resetRateLimits } from '../rateLimit'
 
 const BOUND_ID = 't1'
 
@@ -89,6 +91,10 @@ beforeEach(() => {
   vi.mocked(getCurrentState).mockReturnValue(makeState())
   vi.mocked(dispatchToRenderer).mockClear()
   vi.mocked(sendMatchReport).mockClear()
+  // Sessions and rate-limit buckets are module state; every test starts clean
+  // (all requests here come from 127.0.0.1, so they share one bucket).
+  clearSessions()
+  resetRateLimits()
 })
 
 describe('host guard (DNS rebinding)', () => {
@@ -150,17 +156,86 @@ describe('POST /api/register', () => {
 
   it('dispatches ADD_PLAYER only once for two quick registrations of the same name (F9)', async () => {
     // The mocked state never learns about the first dispatch — exactly like the
-    // real server inside the debounced sync window.
+    // real server inside the debounced sync window. The second device is
+    // rejected outright: the first registration already claimed the name.
     const r1 = await request('POST', '/api/register', { body: { playerName: 'Dana Duplicate' } })
     const r2 = await request('POST', '/api/register', { body: { playerName: 'dana DUPLICATE' } })
     expect(r1.status).toBe(200)
-    expect(r2.status).toBe(200)
     expect(r1.body.token).toBeTruthy()
-    expect(r2.body.token).toBeTruthy()
+    expect(r2.status).toBe(409)
+    expect(r2.body.token).toBeUndefined()
     const addCalls = vi.mocked(dispatchToRenderer).mock.calls.filter(
       c => (c[0] as { type: string }).type === 'ADD_PLAYER'
     )
     expect(addCalls).toHaveLength(1)
+  })
+
+  it('rejects claiming a name that another device already holds a session for', async () => {
+    const r1 = await request('POST', '/api/register', { body: { playerName: 'Alice Alpha' } })
+    expect(r1.status).toBe(200)
+    const r2 = await request('POST', '/api/register', { body: { playerName: 'ALICE alpha' } })
+    expect(r2.status).toBe(409)
+    expect(r2.body.code).toBe('claimed')
+    expect(r2.body.token).toBeUndefined()
+  })
+
+  it('rejects claiming a player the TO already issued a QR token for', async () => {
+    createPlayerSession(BOUND_ID, 'p1', 'Alice Alpha')
+    const res = await request('POST', '/api/register', { body: { playerName: 'Alice Alpha' } })
+    expect(res.status).toBe(409)
+    expect(res.body.code).toBe('claimed')
+  })
+
+  it('still blocks the claim after the session was bound and the player renamed', async () => {
+    const token = await registerToken('Alice Alpha')
+    // bind the session to p1 via an authorized read
+    await request('GET', '/api/my-decklist', { token })
+    // TO renames Alice; the bound session follows the player id
+    const renamed = makeState()
+    renamed.tournaments[BOUND_ID].players[0].name = 'Alice Omega'
+    vi.mocked(getCurrentState).mockReturnValue(renamed)
+    const res = await request('POST', '/api/register', { body: { playerName: 'Alice Omega' } })
+    expect(res.status).toBe(409)
+    expect(res.body.code).toBe('claimed')
+  })
+})
+
+describe('GET /api/me', () => {
+  it('resolves a registered session to its player', async () => {
+    const token = await registerToken('Alice Alpha')
+    const res = await request('GET', '/api/me', { token })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ playerId: 'p1', playerName: 'Alice Alpha' })
+  })
+
+  it('resolves a TO-issued token without any prior request from the device', async () => {
+    const token = createPlayerSession(BOUND_ID, 'p2', 'Bob Beta')
+    const res = await request('GET', '/api/me', { token })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ playerId: 'p2', playerName: 'Bob Beta' })
+  })
+
+  it('rejects unknown tokens', async () => {
+    expect((await request('GET', '/api/me', { token: 'nope' })).status).toBe(401)
+    expect((await request('GET', '/api/me')).status).toBe(401)
+  })
+})
+
+describe('rate limiting', () => {
+  it('returns 429 once an IP exceeds the POST budget and recovers after reset', async () => {
+    // Burn the budget with cheap invalid requests — the limiter sits in front
+    // of all POST routing, so even 400s count.
+    let firstLimited = 0
+    for (let i = 1; i <= 31; i++) {
+      const res = await request('POST', '/api/judge-call', { body: {} })
+      if (res.status === 429) { firstLimited = i; break }
+      expect(res.status).toBe(400)
+    }
+    expect(firstLimited).toBe(31)
+    // GETs stay unaffected while the IP is limited
+    expect((await request('GET', '/api/state')).status).toBe(200)
+    resetRateLimits()
+    expect((await request('POST', '/api/judge-call', { body: {} })).status).toBe(400)
   })
 })
 

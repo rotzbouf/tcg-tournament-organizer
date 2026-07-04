@@ -15,12 +15,29 @@ const APP_NAME = 'TCG Tournament Organizer'
 const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
 const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'top_cut', 'completed']
 
-export function serializeState(state: AppState): string {
+// Clears personal data (birthdates, external player IDs) for exports meant to
+// be shared. Names stay — a shared tournament file is useless without them.
+// Re-importing a stripped file degrades player-DB matching to name-only.
+export function stripPii(state: AppState): AppState {
+  const copy = JSON.parse(JSON.stringify(state)) as AppState
+  for (const tournament of Object.values(copy.tournaments)) {
+    for (const player of tournament.players) {
+      player.dateOfBirth = null
+      player.playerId = null
+    }
+  }
+  for (const dbPlayer of Object.values(copy.playerDatabase ?? {})) {
+    dbPlayer.playerId = null
+  }
+  return copy
+}
+
+export function serializeState(state: AppState, options?: { stripPii?: boolean }): string {
   const exportData: ExportData = {
     version: CURRENT_VERSION,
     exportedAt: new Date().toISOString(),
     appName: APP_NAME,
-    data: state,
+    data: options?.stripPii ? stripPii(state) : state,
   }
   return JSON.stringify(exportData, null, 2)
 }

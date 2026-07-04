@@ -1,6 +1,8 @@
 import { ipcMain, BrowserWindow, screen } from 'electron'
 import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
 import { broadcastState, broadcastTimers } from '../server/sse'
+import { createPlayerSession } from '../server/sessions'
+import { persistState } from './storageHandlers'
 
 let currentState: string | null = null
 let currentTimers: string | null = null
@@ -12,6 +14,7 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
 
   ipcMain.on('state:sync', (_event, state: string) => {
     currentState = state
+    persistState(state)
     stateListeners.forEach(fn => fn())
     try {
       broadcastState(JSON.parse(state), currentTimers ? JSON.parse(currentTimers) : null)
@@ -83,6 +86,16 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
 
   ipcMain.handle('server:getInfo', (_event, tournamentId: string) => {
     return getServerInfo(tournamentId)
+  })
+
+  // Pre-bound session token for a player, shown as a QR code by the TO. Safe
+  // to hand out: the token claims exactly this player, so scanning it is the
+  // race-free alternative to claiming a name via /api/register.
+  ipcMain.handle('server:playerToken', (_event, tournamentId: string, playerId: string) => {
+    const state = getCurrentState() as { tournaments?: Record<string, { players?: Array<{ id: string; name: string }> }> } | null
+    const player = state?.tournaments?.[tournamentId]?.players?.find(p => p.id === playerId)
+    if (!player) return null
+    return createPlayerSession(tournamentId, playerId, player.name)
   })
 }
 

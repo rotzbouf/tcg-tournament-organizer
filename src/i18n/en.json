@@ -70,6 +70,7 @@
     "title": "Players",
     "add": "Add Player",
     "name": "Player Name",
+    "qr": "QR",
     "remove": "Remove",
     "drop": "Drop",
     "dropped": "Dropped",
@@ -329,6 +330,24 @@
     "typeBanlist": "Banlist",
     "typeLegalList": "Legal Cards",
     "typeRotation": "Rotation"
+  },
+  "export": {
+    "title": "Export",
+    "description": "The full export is your backup (including birthdates and player IDs). To share with others, use the export without personal data.",
+    "full": "Full (backup)",
+    "noPii": "Without personal data"
+  },
+  "backup": {
+    "title": "Backups",
+    "description": "Automatic backups: every 10 minutes, the last 10 snapshots are kept. Before every restore the current state is backed up as well.",
+    "encryptionOn": "Encryption active: data file and backups are encrypted via the system keychain.",
+    "encryptionOff": "Encryption unavailable (no system keychain) — data file and backups are stored unencrypted on disk.",
+    "empty": "No backups yet.",
+    "restore": "Restore",
+    "confirmTitle": "Restore backup?",
+    "confirmMessage": "All current data will be replaced with the snapshot from {{date}}.",
+    "restoreFailed": "Backup could not be read.",
+    "recoveredNotice": "The main data file was missing or corrupt — data was recovered from the backup from {{date}}."
   },
   "common": {
     "cancel": "Cancel",

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -6,8 +7,11 @@ import { selectAllTournaments } from '@/state/selectors'
 import { useFileIO } from '@/hooks/useFileIO'
 import { useTheme } from '@/hooks/useTheme'
 import { GAME_CONFIG } from '@/lib/gameConfig'
+import { getRecoveredAt } from '@/lib/storage'
 import { Button } from '@/components/ui/Button'
+import { Dialog } from '@/components/ui/Dialog'
 import { TimerDisplay } from '@/components/tournament/TimerDisplay'
+import { BackupDialog } from './BackupDialog'
 
 export function Sidebar() {
   const { t, i18n } = useTranslation()
@@ -15,6 +19,15 @@ export function Sidebar() {
   const { state } = useTournamentContext()
   const tournaments = selectAllTournaments(state).filter(t => !t.archived)
   const { exportState, importState, error, clearError } = useFileIO()
+  const [backupsOpen, setBackupsOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [recoveryDismissed, setRecoveryDismissed] = useState(false)
+  const recoveredAt = getRecoveredAt()
+
+  const handleExport = (stripPii: boolean) => {
+    setExportOpen(false)
+    void exportState({ stripPii })
+  }
 
   const { theme, cycleTheme } = useTheme()
   const themeLabel = theme === 'light' ? '☀' : theme === 'dark' ? '☾' : '◐'
@@ -121,14 +134,45 @@ export function Sidebar() {
             <button onClick={clearError} className="ml-2 underline">x</button>
           </div>
         )}
+        {recoveredAt !== null && !recoveryDismissed && (
+          <div className="rounded-lg bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+            {t('backup.recoveredNotice', {
+              date: new Date(recoveredAt).toLocaleString(i18n.language === 'de' ? 'de-DE' : 'en-GB', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              }),
+            })}
+            <button onClick={() => setRecoveryDismissed(true)} className="ml-2 underline">x</button>
+          </div>
+        )}
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" className="flex-1" onClick={exportState}>
+          <Button variant="secondary" size="sm" className="flex-1" onClick={() => setExportOpen(true)}>
             {t('nav.export')}
           </Button>
           <Button variant="secondary" size="sm" className="flex-1" onClick={importState}>
             {t('nav.import')}
           </Button>
         </div>
+        <Dialog open={exportOpen} onClose={() => setExportOpen(false)} title={t('export.title')}>
+          <p className="text-sm text-secondary-foreground">{t('export.description')}</p>
+          <div className="mt-4 space-y-2">
+            <Button className="w-full" onClick={() => handleExport(false)}>
+              {t('export.full')}
+            </Button>
+            <Button variant="secondary" className="w-full" onClick={() => handleExport(true)}>
+              {t('export.noPii')}
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => setExportOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </Dialog>
+        {window.electronAPI && (
+          <Button variant="secondary" size="sm" className="w-full" onClick={() => setBackupsOpen(true)}>
+            {t('backup.title')}
+          </Button>
+        )}
+        <BackupDialog open={backupsOpen} onClose={() => setBackupsOpen(false)} />
         <div className="flex gap-2">
           <button
             onClick={toggleLanguage}

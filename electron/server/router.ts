@@ -4,7 +4,8 @@ import path from 'node:path'
 import { app } from 'electron'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport } from '../ipc/stateSync'
 import { addClient, sanitizeTournament } from './sse'
-import { createSession, getSession, bindSessionToPlayer } from './sessions'
+import { createSession, getSession, bindSessionToPlayer, isNameClaimed } from './sessions'
+import { allowPost } from './rateLimit'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
 
@@ -61,6 +62,13 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   const url = new URL(req.url || '/', `http://${req.headers.host}`)
   const reqPath = url.pathname
+
+  // Every POST either writes state or raises a banner on the TO screen —
+  // throttle them per device so one phone cannot flood the TO.
+  if (req.method === 'POST' && !allowPost(req.socket.remoteAddress || 'unknown')) {
+    jsonResponse(res, { error: 'rate limited' }, 429)
+    return
+  }
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204)
@@ -128,7 +136,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       // pending check closes the sync gap: a name dispatched moments ago is not
       // visible in getCurrentState() yet.
       const nameLower = name.toLowerCase()
-      const exists = tournament.players.some(p => p.name.toLowerCase() === nameLower)
+      const existing = tournament.players.find(p => p.name.toLowerCase() === nameLower)
+      // First claim wins: once any device (or a TO-issued QR token) holds a
+      // session for this name/player, further claims are rejected — otherwise
+      // any LAN device could take over a known player name. Recovery path for
+      // a phone that lost its session is the per-player QR code from the TO.
+      if (isNameClaimed(boundTournamentId, existing?.id ?? null, nameLower)) {
+        jsonResponse(res, { error: 'name already claimed', code: 'claimed' }, 409)
+        return
+      }
+      const exists = existing !== undefined
       if (!exists && !hasPendingRegistration(boundTournamentId, nameLower)) {
         markPendingRegistration(boundTournamentId, nameLower)
         const payload: Record<string, unknown> = { tournamentId: boundTournamentId, playerName: name }
@@ -138,6 +155,24 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       }
       jsonResponse(res, { ok: true, token: createSession(boundTournamentId, name) })
     })
+    return
+  }
+
+  // Resolves a session token to the player it belongs to. Used by the mobile
+  // page when it adopts a TO-issued QR token: the phone only has the token and
+  // needs to learn which player it represents.
+  if (reqPath === '/api/me' && req.method === 'GET') {
+    const token = getBearerToken(req)
+    const session = getSession(token, boundTournamentId)
+    if (!session) { jsonResponse(res, { error: 'invalid session' }, 401); return }
+    const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+    const players = state?.tournaments[boundTournamentId]?.players
+    const player = session.playerId
+      ? players?.find(p => p.id === session.playerId)
+      : players?.find(p => p.name.toLowerCase() === session.playerName)
+    if (!player) { jsonResponse(res, { error: 'not found' }, 404); return }
+    if (token && !session.playerId) bindSessionToPlayer(token, player.id)
+    jsonResponse(res, { playerId: player.id, playerName: player.name })
     return
   }
 

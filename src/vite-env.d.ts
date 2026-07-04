@@ -6,11 +6,17 @@ interface ElectronAPI {
   saveCsv: (data: string, defaultName?: string) => Promise<string | null>
   savePdf: (html: string, defaultName?: string) => Promise<string | null>
   syncState: (state: string) => void
+  loadStorageState: () => { state: string; recoveredFrom: string | null; recoveredAt: number | null } | null
+  flushStorageState: (state: string) => boolean
+  listBackups: () => Promise<{ name: string; createdAt: number; size: number }[]>
+  readBackup: (name: string) => Promise<string>
+  getEncryptionStatus: () => Promise<boolean>
   syncTimerState: (timers: string) => void
   onDispatchAction: (callback: (action: string) => void) => void
   startServer: (tournamentId: string) => Promise<{ address: string; port: number }>
   stopServer: (tournamentId: string) => Promise<void>
   getServerInfo: (tournamentId: string) => Promise<{ running: boolean; address?: string; port?: number; clientCount?: number }>
+  getPlayerToken: (tournamentId: string, playerId: string) => Promise<string | null>
   openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string }) => Promise<void>
   onJudgeCall: (callback: (data: string) => void) => void
   onMatchReport: (callback: (data: string) => void) => void

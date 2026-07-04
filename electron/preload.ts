@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveCsv: (data: string, defaultName?: string) => ipcRenderer.invoke('file:saveCsv', data, defaultName),
   savePdf: (html: string, defaultName?: string) => ipcRenderer.invoke('file:savePdf', html, defaultName),
   syncState: (state: string) => ipcRenderer.send('state:sync', state),
+  loadStorageState: () => ipcRenderer.sendSync('storage:load'),
+  flushStorageState: (state: string) => ipcRenderer.sendSync('storage:flush', state),
+  listBackups: () => ipcRenderer.invoke('storage:listBackups'),
+  readBackup: (name: string) => ipcRenderer.invoke('storage:readBackup', name),
+  getEncryptionStatus: () => ipcRenderer.invoke('storage:encryptionStatus'),
   syncTimerState: (timers: string) => ipcRenderer.send('timer:sync', timers),
   onDispatchAction: (callback: (action: string) => void) => {
     ipcRenderer.on('action:dispatch', (_event, action: string) => callback(action))
@@ -14,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startServer: (tournamentId: string) => ipcRenderer.invoke('server:start', tournamentId),
   stopServer: (tournamentId: string) => ipcRenderer.invoke('server:stop', tournamentId),
   getServerInfo: (tournamentId: string) => ipcRenderer.invoke('server:getInfo', tournamentId),
+  getPlayerToken: (tournamentId: string, playerId: string) => ipcRenderer.invoke('server:playerToken', tournamentId, playerId),
   openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string }) => ipcRenderer.invoke('window:openQr', opts),
   onJudgeCall: (callback: (data: string) => void) => {
     ipcRenderer.on('judge:call', (_event, data: string) => callback(data))

@@ -74,7 +74,8 @@ const T={
     dropOut:'Drop from tournament',dropConfirm:'Are you sure you want to drop? This cannot be undone.',dropped:'You have dropped from the tournament.',dropError:'Could not drop — please see the tournament organizer.',
     noDecklists:'No decklists available',cards:'cards',
     reportResult:'Report Result',iWon:'I won',opponentWon:'Opponent won',itsDraw:'Draw',
-    resultReported:'Result reported — waiting for TO confirmation.',reportError:'Error reporting result.'},
+    resultReported:'Result reported — waiting for TO confirmation.',reportError:'Error reporting result.',
+    claimed:'This name is already claimed by another device — ask the organizer for your QR code.'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
     games:'Spiele',noData:'Laden...',
@@ -90,7 +91,8 @@ const T={
     dropOut:'Vom Turnier abmelden',dropConfirm:'Bist du sicher? Dies kann nicht rückgängig gemacht werden.',dropped:'Du hast das Turnier verlassen.',dropError:'Abmelden fehlgeschlagen — bitte beim Turnierleiter melden.',
     noDecklists:'Keine Decklisten verfügbar',cards:'Karten',
     reportResult:'Ergebnis melden',iWon:'Ich habe gewonnen',opponentWon:'Gegner hat gewonnen',itsDraw:'Unentschieden',
-    resultReported:'Ergebnis gemeldet — TO bestätigt noch.',reportError:'Fehler beim Melden.'}
+    resultReported:'Ergebnis gemeldet — TO bestätigt noch.',reportError:'Fehler beim Melden.',
+    claimed:'Dieser Name ist bereits von einem anderen Gerät beansprucht — QR-Code beim Turnierleiter anfordern.'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
@@ -120,7 +122,26 @@ function loadFromState(state){
   }
 }
 
+// A TO-issued QR code carries a pre-bound session token in the URL fragment
+// (never sent to the server, never in any log). Adopt it as our session; the
+// server tells us which player it belongs to.
+async function adoptTokenFromHash(){
+  const m=location.hash.match(/token=([A-Za-z0-9_-]+)/);
+  if(!m)return;
+  history.replaceState(null,'',location.pathname+location.search);
+  try{
+    const r=await fetch(API+'/api/me',{headers:{'Authorization':'Bearer '+m[1]}});
+    if(r.ok){
+      const d=await r.json();
+      session={fullName:d.playerName,firstName:'',lastName:'',dateOfBirth:'',playerId:'',token:m[1]};
+      localStorage.setItem('tcg-session',JSON.stringify(session));
+      activeTab='register'; // land on the "registered as ..." confirmation
+    }
+  }catch{}
+}
+
 async function init(){
+  await adoptTokenFromHash();
   try{
     const d=await fetch(API+'/api/tournament').then(r=>r.json());
     if(d.tournament){tournament=d.tournament;boundTournamentId=d.tournament.id}
@@ -376,6 +397,8 @@ async function doReg(){
     session={fullName,firstName:fn,lastName:ln,dateOfBirth:dob,playerId:pid,token:res.token||null};
     localStorage.setItem('tcg-session',JSON.stringify(session));
     needsFullRender=true;
+  }else if(res.code==='claimed'){
+    document.getElementById('rm').textContent=t('claimed');
   }else if(res.error){
     document.getElementById('rm').textContent=res.error;
   }
@@ -384,18 +407,20 @@ async function doReg(){
 // Decklists are no longer part of the shared state; a player's own list comes
 // from the token-gated /api/my-decklist. Tokens live only in the app's memory,
 // so if ours is missing or stale (session predates tokens, app restarted),
-// re-claim the name — the server allows that while registration is open, which
-// is the only phase where this UI exists.
+// re-claim the name — allowed while registration is open AND the name is not
+// claimed by a live session. Returns 'ok' | 'claimed' | 'fail'; on 'claimed'
+// the recovery path is the per-player QR code from the TO.
 async function reclaimToken(){
-  if(!session)return false;
+  if(!session)return 'fail';
   try{
     const body={playerName:session.fullName};
     if(session.playerId)body.playerId=session.playerId;
     if(session.dateOfBirth)body.dateOfBirth=session.dateOfBirth;
     const r=await post('/api/register',body);
-    if(r.token){session.token=r.token;localStorage.setItem('tcg-session',JSON.stringify(session));return true}
+    if(r.token){session.token=r.token;localStorage.setItem('tcg-session',JSON.stringify(session));return 'ok'}
+    if(r.code==='claimed')return 'claimed';
   }catch{}
-  return false;
+  return 'fail';
 }
 
 async function fetchMyDecklist(){
@@ -407,7 +432,7 @@ async function loadMyDecklist(){
   if(!session)return;
   try{
     let d=session.token?await fetchMyDecklist():null;
-    if(!d&&await reclaimToken())d=await fetchMyDecklist();
+    if(!d&&await reclaimToken()==='ok')d=await fetchMyDecklist();
     const dt=document.getElementById('dt');
     if(dt&&!dt.value&&d&&d.decklist)dt.value=d.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n');
   }catch{}
@@ -420,8 +445,13 @@ async function tryDl(playerId,txt){
 async function doDl(playerId){
   const txt=document.getElementById('dt')?.value;if(!txt)return;
   let ok=await tryDl(playerId,txt);
-  if(!ok&&await reclaimToken())ok=await tryDl(playerId,txt);
-  document.getElementById('dm').textContent=ok?t('decklistSaved'):t('decklistError');
+  let claimed=false;
+  if(!ok){
+    const rc=await reclaimToken();
+    if(rc==='ok')ok=await tryDl(playerId,txt);
+    else if(rc==='claimed')claimed=true;
+  }
+  document.getElementById('dm').textContent=ok?t('decklistSaved'):claimed?t('claimed'):t('decklistError');
 }
 
 function setTab(k){activeTab=k;needsFullRender=true}

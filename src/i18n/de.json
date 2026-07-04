@@ -70,6 +70,7 @@
     "title": "Spieler",
     "add": "Spieler hinzufügen",
     "name": "Spielername",
+    "qr": "QR",
     "remove": "Entfernen",
     "drop": "Droppen",
     "dropped": "Gedroppt",
@@ -329,6 +330,24 @@
     "typeBanlist": "Banlist",
     "typeLegalList": "Legale Karten",
     "typeRotation": "Rotation"
+  },
+  "export": {
+    "title": "Exportieren",
+    "description": "Der vollständige Export ist dein Backup (inkl. Geburtsdaten und Spieler-IDs). Zum Weitergeben an Dritte gibt es den Export ohne persönliche Daten.",
+    "full": "Komplett (Backup)",
+    "noPii": "Ohne persönliche Daten"
+  },
+  "backup": {
+    "title": "Backups",
+    "description": "Automatische Sicherungen: alle 10 Minuten, die letzten 10 Stände bleiben erhalten. Vor jeder Wiederherstellung wird der aktuelle Stand zusätzlich gesichert.",
+    "encryptionOn": "Verschlüsselung aktiv: Datendatei und Backups sind über den System-Schlüsselbund verschlüsselt.",
+    "encryptionOff": "Verschlüsselung nicht verfügbar (kein System-Schlüsselbund) — Datendatei und Backups liegen unverschlüsselt auf der Festplatte.",
+    "empty": "Noch keine Backups vorhanden.",
+    "restore": "Wiederherstellen",
+    "confirmTitle": "Backup wiederherstellen?",
+    "confirmMessage": "Alle aktuellen Daten werden durch den Stand vom {{date}} ersetzt.",
+    "restoreFailed": "Backup konnte nicht gelesen werden.",
+    "recoveredNotice": "Die Hauptdatei fehlte oder war beschädigt — Daten wurden aus dem Backup vom {{date}} wiederhergestellt."
   },
   "common": {
     "cancel": "Abbrechen",

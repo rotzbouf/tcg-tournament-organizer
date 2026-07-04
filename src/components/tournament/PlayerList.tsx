@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import QRCode from 'qrcode'
 import { Player } from '@/types/player'
 import { GameType } from '@/types/tournament'
 import { Button } from '@/components/ui/Button'
@@ -31,6 +32,37 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
 
   const activePlayers = players.filter(p => p.droppedInRound === null)
   const dropPlayer = players.find(p => p.id === dropPlayerId)
+
+  // The per-player QR button needs the LAN server: it encodes a pre-bound
+  // session token into the mobile-page URL, so a player claims their spot by
+  // scanning instead of racing for the name via open registration.
+  const [serverRunning, setServerRunning] = useState(false)
+  useEffect(() => {
+    if (!window.electronAPI) return
+    let cancelled = false
+    const check = () => {
+      window.electronAPI!.getServerInfo(tournamentId).then(info => {
+        if (!cancelled) setServerRunning(info.running)
+      })
+    }
+    check()
+    const interval = setInterval(check, 5000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [tournamentId])
+
+  const handleShowQr = async (player: Player) => {
+    const api = window.electronAPI
+    if (!api) return
+    const info = await api.getServerInfo(tournamentId)
+    if (!info.running || !info.address) { setServerRunning(false); return }
+    const token = await api.getPlayerToken(tournamentId, player.id)
+    if (!token) return
+    const url = `http://${info.address}:${info.port}/#token=${token}`
+    try {
+      const qrSvg = await QRCode.toString(url, { type: 'svg' })
+      api.openQrWindow({ tournamentName: player.name, url, qrSvg })
+    } catch { /* QR generation failed — nothing to show */ }
+  }
 
   const handleConfirmDrop = () => {
     if (dropPlayerId) {
@@ -102,6 +134,11 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
               </div>
               {editable && (
                 <div className="flex items-center gap-2">
+                  {serverRunning && (
+                    <Button variant="ghost" size="sm" onClick={() => handleShowQr(player)}>
+                      {t('players.qr')}
+                    </Button>
+                  )}
                   <input
                     type="text"
                     placeholder={t('players.deckName')}
@@ -134,14 +171,21 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
                 </div>
               )}
               {inProgress && player.droppedInRound === null && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700"
-                  onClick={() => setDropPlayerId(player.id)}
-                >
-                  {t('players.drop')}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {serverRunning && (
+                    <Button variant="ghost" size="sm" onClick={() => handleShowQr(player)}>
+                      {t('players.qr')}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setDropPlayerId(player.id)}
+                  >
+                    {t('players.drop')}
+                  </Button>
+                </div>
               )}
             </div>
           ))
