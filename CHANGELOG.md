@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-07-04
+
+### Added
+- **Automatische Backups mit Wiederherstellung** — Der App-Zustand wird jetzt als Datei im Benutzerdatenordner gespeichert (atomares Schreiben, Crash-sicher) statt nur im Browser-Speicher. Alle 10 Minuten entsteht ein Backup, die letzten 10 Stände bleiben erhalten; leere oder beschädigte Stände gelangen nie in die Rotation. Ist die Hauptdatei beim Start beschädigt oder fehlt sie, stellt die App automatisch den neuesten brauchbaren Stand wieder her und zeigt einen Hinweis. Über den neuen „Backups"-Dialog in der Seitenleiste lässt sich jeder Stand manuell zurückspielen — vor jeder Wiederherstellung wird der aktuelle Stand zusätzlich gesichert. Beim Beenden der App wird der letzte Stand sofort geschrieben (kein Verlust der letzten Sekunden mehr)
+- **QR-Code pro Spieler** — Bei laufendem Mobile-Server zeigt die Spielerliste pro Spieler einen „QR"-Button: Der Code enthält ein vorab an den Spieler gebundenes Zugriffs-Token. Ein Handy, das ihn scannt, ist sofort als dieser Spieler angemeldet (Deckliste, Selbst-Drop, Ergebnismeldung) — ohne Namens-Registrierung und ohne Wettrennen um den Namen. Das Token steckt im URL-Fragment und taucht in keinem Log auf
+- **Export ohne persönliche Daten** — Der Export-Button bietet jetzt zwei Modi: „Komplett (Backup)" wie bisher und „Ohne persönliche Daten" zum Weitergeben — Geburtsdaten und Spieler-IDs werden entfernt, Namen, Decks, Ergebnisse und Elo bleiben erhalten
+
+### Security
+- **Verschlüsselung der gespeicherten Daten** — Datendatei und Backups werden über den System-Schlüsselbund verschlüsselt (Electron safeStorage), sofern verfügbar; der Status ist im Backups-Dialog sichtbar. Bestehende unverschlüsselte Daten werden beim ersten Start automatisch übernommen. Kann eine verschlüsselte Datei nicht mehr gelesen werden (z.B. Schlüsselbund entfernt), greift die Backup-Wiederherstellung; die unlesbare Datei wird aufbewahrt statt überschrieben und ist mit zurückkehrendem Schlüsselbund wieder verwertbar. Die frühere unverschlüsselte Kopie im Browser-Speicher entfällt und wird nach der Umstellung gelöscht
+- **Namens-Übernahme über die LAN-API geschlossen** — Bisher konnte während der offenen Anmeldung jedes Gerät im Netzwerk ein Zugriffs-Token für einen bekannten Spielernamen beanspruchen. Jetzt gilt: Wer zuerst registriert, hält den Namen; weitere Versuche werden abgelehnt (409). Verliert ein Handy seine Sitzung, ist der Weg zurück der QR-Code beim Turnierleiter — die Handy-Seite weist darauf hin
+- **Rate-Limit am Mobile-Server** — Schreibzugriffe (Registrierung, Ergebnismeldung, Judge-Ruf, Deckliste, Drop) sind auf 30 Anfragen pro Minute und Gerät begrenzt (429 bei Überschreitung). Ein einzelnes Gerät kann den Turnierleiter nicht mehr mit Meldungen fluten; Lesezugriffe und Live-Updates sind nicht betroffen
+
 ## [1.6.4] - 2026-07-03
 
 ### Fixed
