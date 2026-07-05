@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-07-05
+
+### Fixed
+- **Top Cut wird jetzt regelkonform geseedet** — Die erste Top-Cut-Runde paarte bisher Platz 1 gegen Platz 2, Platz 3 gegen Platz 4 usw. — die beiden besten Swiss-Spieler eliminierten sich damit direkt in Runde 1 gegenseitig. Jetzt wird das offizielle Single-Elimination-Bracket aufgestellt (Pokémon/Magic/Yu-Gi-Oh-Standard): Seed 1 trifft den niedrigsten Qualifikanten (z.B. 1 vs 16, 8 vs 9, …), Seed 1 und 2 stehen in getrennten Bracket-Hälften und können sich frühestens im Finale begegnen. Gilt für alle Cut-Größen (Top 4/8/16/32); bereits laufende Top Cuts behalten ihre Paarungen
+- **Keine vermeidbaren Rematches mehr im Swiss** — Die Paarungserzeugung nutzt jetzt ein exaktes Maximum-Weight-Matching (Blossom-Algorithmus) statt einer First-Fit-Suche. Bei großen Turnieren mit Drops konnte die bisherige Suche in der letzten Runde am Tabellenende ein unnötiges Rematch erzeugen; jetzt ist garantiert: Rematches nur, wenn mathematisch unvermeidbar (und dann so wenige wie möglich), Punktegruppen werden bestmöglich eingehalten (ein großer Pair-Down wird gegenüber zwei kleinen vermieden), Power-Pairings bleiben rang-benachbart
+
+### Added
+- **Spielersuche im Turnier** — Im Spieler-Tab lässt sich ab 10 Teilnehmern nach Name, Spieler-ID oder Deck filtern (unabhängig von Groß-/Kleinschreibung und Akzenten: „jose" findet „José"); alle Aktionen wie QR-Code, Droppen oder Deckliste stehen direkt am Treffer. Im Runden-Tab filtert eine Suche nach Spielername oder Tischnummer — bei Großturnieren ist damit sofort auffindbar, wo ein Spieler sitzt. Beim Drucken der Paarungen wird immer die vollständige Liste ausgegeben, auch wenn gerade gefiltert ist
+
 ## [1.6.5] - 2026-07-04
 
 ### Added

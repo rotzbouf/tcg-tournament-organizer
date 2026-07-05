@@ -10,6 +10,7 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Penalty-System** — Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen; Cross-Tournament-Tracking in der Spieler-Datenbank
 - **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools; Sichtbarkeits-Modi (Versteckt/Nur TO/Öffentlich); Kartenbank-Validierung (Kartenzahl, Kopien-Limit)
 - **Manuelle Paarungsänderung** — Spieler zwischen Matches per Klick tauschen
+- **Spielersuche** — Spieler-Tab nach Name/Spieler-ID/Deck filtern, Runden-Tab nach Spielername oder Tischnummer; akzent-tolerant („jose" findet „José"), gedruckt wird immer die vollständige Paarungsliste
 - **Saison-Management** — Mehrere Turniere zu einer Saison zusammenfassen. Konfigurierbare Punkte-Tiers nach Platzierung. Automatische Saison-Rangliste über alle verknüpften Events
 - **Spieler Self-Reporting** — Spieler können Ergebnis auf der Mobile-Seite melden; TO bestätigt vor der Speicherung
 - **Elo Seeding** — Erste Runde optional nach Elo-Wertung per S-Kurve paaren
@@ -21,11 +22,11 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Dark Mode** — Hell, Dunkel oder System-Einstellung. Mobile-Seite folgt dem System-Theme
 - **Rundenzeit** — Auswählbar von 20 bis 90 Minuten, Timer in Sidebar sichtbar, Alarm (Sound + Notification + Vibration) bei Ablauf, stummschaltbar
 - **Rangliste mit Tiebreakern** — Buchholz, Median-Buchholz, Sonneborn-Berger
-- **Auto-Save** — Automatische Speicherung via localStorage
+- **Auto-Save mit Backups** — Automatische Speicherung als Datei im Benutzerdatenordner (verschlüsselt über den System-Schlüsselbund, sofern verfügbar), rotierende Backups alle 10 Minuten mit Wiederherstellungs-Dialog
 - **Undo** — Aktionen rückgängig machen (Ctrl+Z)
 - **Bulk Import** — Spielerliste per Textarea einfügen
 - **Paarungen drucken** — Druckoptimierte Ansicht mit Turnier-Header, PDF-Export für Paarungen und Standings
-- **QR-Code drucken** — QR-Code für mobile Spielerregistrierung ausdrucken
+- **QR-Code drucken** — QR-Code für mobile Spielerregistrierung ausdrucken; zusätzlich QR pro Spieler mit vorab gebundenem Zugriffs-Token (sofortige Anmeldung ohne Namens-Registrierung)
 - **Mobile Turnier-Navigation** — Registrierte Spieler können Paarungen und Rangliste direkt am Handy einsehen
 - **Tischnummern** — Automatische Nummerierung auf Match-Cards
 - **JSON Export/Import** — Turnierdaten speichern und laden
@@ -64,14 +65,14 @@ npm run electron:build
 
 - **Punkte**: 3 (Sieg), 1 (Unentschieden), 0 (Niederlage)
 - **Rundenanzahl**: ⌈log₂(Spieleranzahl)⌉ — entspricht dem offiziellen Standard von Yu-Gi-Oh!, Pokémon und Magic
-- **Paarung**: Spieler mit gleicher Punktzahl werden gegeneinander gepaart (Backtracking-Algorithmus mit Rematch-Vermeidung)
+- **Paarung**: Exaktes Maximum-Weight-Matching (Blossom-Algorithmus) über alle aktiven Spieler — Rematches nur, wenn mathematisch unvermeidbar; Spieler mit gleicher Punktzahl werden bestmöglich gegeneinander gepaart (ein großer Pair-Down wird gegenüber zwei kleinen vermieden)
 - **Bye**: Bei ungerader Spielerzahl erhält der niedrigstrangierte Spieler ein Freilos (3 Punkte). Kein Spieler erhält mehr als ein Freilos pro Turnier.
 - **Tiebreaker**: Buchholz → Median-Buchholz → Sonneborn-Berger
 
 ### Top Cut (Single Elimination)
 
 - Single-Elimination-Bracket nach Abschluss der Swiss-Runden (Top 4, 8, 16 oder 32)
-- Seeding basiert auf Swiss-Rangliste
+- Seeding nach Swiss-Rangliste im offiziellen Standard-Bracket: Seed 1 trifft den niedrigsten Qualifikanten (1 vs 16, 8 vs 9, …), Seed 1 und 2 können sich frühestens im Finale begegnen
 - Kein Unentschieden im Top Cut
 - Platzierung nach Bracket-Ergebnis (Sieger = 1., Finalist = 2., Halbfinal-Verlierer = 3.–4.)
 
