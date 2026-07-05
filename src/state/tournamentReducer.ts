@@ -6,7 +6,7 @@ import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds, calculateTopCutSize } from '@/engine/scoring'
 import { generatePairings, generatePowerPairings, generateFirstRoundPairings, generateEloSeededPairings } from '@/engine/swiss'
-import { generateTopCutRound } from '@/engine/topcut'
+import { generateTopCutRound, bracketSeedOrder } from '@/engine/topcut'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
@@ -479,9 +479,10 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (clampedSize < 2) return state
 
       const topPlayerIds = eligible.slice(0, clampedSize).map(s => s.playerId)
+      const seededIds = bracketSeedOrder(clampedSize).map(seed => topPlayerIds[seed - 1])
 
       const nextRoundNumber = tournament.currentRound + 1
-      const matches = generateTopCutRound(topPlayerIds, nextRoundNumber)
+      const matches = generateTopCutRound(seededIds, nextRoundNumber)
       const topCutTotalRounds = Math.log2(clampedSize)
 
       return updateTournament(state, action.payload.tournamentId, {

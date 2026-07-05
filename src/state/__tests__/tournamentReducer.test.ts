@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { tournamentReducer, initialState } from '../tournamentReducer'
 import { AppState, TournamentAction } from '../actions'
+import { calculateStandings } from '@/engine/standings'
 
 vi.mock('@/lib/utils', () => {
   let counter = 0
@@ -294,6 +295,41 @@ describe('tournamentReducer', () => {
       const { state, id } = tournamentWithPlayers(0, 10)
       const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
       expect(getTournament(started).topCut).toBe(4)
+    })
+
+    it('seeds the top cut as a standard bracket (1 vs 8, 4 vs 5, 2 vs 7, 3 vs 6)', () => {
+      const { state: created, id } = tournamentWithPlayers(8, 16)
+      let state = dispatch(created, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+
+      // alle Swiss-Runden deterministisch durchspielen (immer Spieler 1 gewinnt)
+      for (;;) {
+        let t = getTournament(state)
+        const round = t.rounds[t.rounds.length - 1]
+        for (const m of round.matches) {
+          if (m.result !== 'pending') continue
+          state = dispatch(state, {
+            type: 'SUBMIT_MATCH_RESULT',
+            payload: { tournamentId: id, matchId: m.id, result: 'player1_win' },
+          })
+        }
+        state = dispatch(state, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+        t = getTournament(state)
+        if (t.currentRound >= t.totalRounds) break
+        state = dispatch(state, { type: 'GENERATE_ROUND', payload: { tournamentId: id } })
+      }
+
+      const beforeCut = getTournament(state)
+      const standings = calculateStandings(beforeCut.players, beforeCut.rounds, beforeCut.game)
+      const seedOf = new Map(standings.slice(0, 8).map((s, i) => [s.playerId, i + 1]))
+
+      state = dispatch(state, { type: 'START_TOP_CUT', payload: { tournamentId: id } })
+      const t = getTournament(state)
+      expect(t.status).toBe('top_cut')
+
+      const cutRound = t.rounds[t.rounds.length - 1]
+      expect(cutRound.phase).toBe('top_cut')
+      const seedPairs = cutRound.matches.map(m => [seedOf.get(m.player1Id), seedOf.get(m.player2Id!)])
+      expect(seedPairs).toEqual([[1, 8], [4, 5], [2, 7], [3, 6]])
     })
   })
 
