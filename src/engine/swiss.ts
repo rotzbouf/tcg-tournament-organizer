@@ -2,6 +2,7 @@ import { Player } from '@/types/player'
 import { Match, Round } from '@/types/round'
 import { Standing } from '@/types/standing'
 import { calculateMatchPoints } from './scoring'
+import { maximumWeightMatching } from './matching'
 import { generateId } from '@/lib/utils'
 
 interface PairingCandidate {
@@ -90,22 +91,45 @@ function createByeMatch(playerId: string, roundNumber: number): Match {
   }
 }
 
-function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match[] {
-  if (candidates.length === 0) return []
+// Weight tiers keep the pairing goals strictly lexicographic: avoiding a
+// rematch always outweighs any sum of score mismatches, and a score mismatch
+// always outweighs seating preferences within a score group.
+const REMATCH_PENALTY = 1_000_000_000
+const POINT_DIFF_SCALE = 10_000
+const PAIR_WEIGHT_BASE = 2_000_000_000
 
-  if (candidates.length === 2) {
-    return [createMatch(candidates[0].playerId, candidates[1].playerId, roundNumber)]
-  }
+// Exact maximum-weight matching over all possible pairings: minimizes the
+// number of rematches globally, then the sum of squared match-point
+// differences (one big pair-down is worse than two small ones), then prefers
+// pairing neighbors in the sorted order (keeps power pairings rank-adjacent).
+function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match[] {
+  if (candidates.length < 2) return []
 
   candidates.sort((a, b) => b.matchPoints - a.matchPoints)
 
-  const result = backtrackingPair(candidates, [], new Set(), roundNumber, 0)
-  if (result) {
-    return [...result, ...byesForUnpaired(candidates, result, roundNumber)]
+  const edges: [number, number, number][] = []
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const diff = candidates[i].matchPoints - candidates[j].matchPoints
+      let weight = PAIR_WEIGHT_BASE - diff * diff * POINT_DIFF_SCALE - (j - i)
+      if (candidates[i].previousOpponents.has(candidates[j].playerId)) {
+        weight -= REMATCH_PENALTY
+      }
+      edges.push([i, j, weight])
+    }
   }
 
-  const greedy = greedyPairFallback(candidates, roundNumber)
-  return [...greedy, ...byesForUnpaired(candidates, greedy, roundNumber)]
+  const mate = maximumWeightMatching(edges, true)
+
+  const matches: Match[] = []
+  for (let i = 0; i < candidates.length; i++) {
+    const j = mate[i]
+    if (j > i) {
+      matches.push(createMatch(candidates[i].playerId, candidates[j].playerId, roundNumber))
+    }
+  }
+
+  return [...matches, ...byesForUnpaired(candidates, matches, roundNumber)]
 }
 
 // Safety net: anyone the pairing algorithms could not seat still gets a bye —
@@ -115,79 +139,6 @@ function byesForUnpaired(candidates: PairingCandidate[], matches: Match[], round
   return candidates
     .filter(c => !pairedIds.has(c.playerId))
     .map(c => createByeMatch(c.playerId, roundNumber))
-}
-
-function backtrackingPair(
-  candidates: PairingCandidate[],
-  matches: Match[],
-  paired: Set<string>,
-  roundNumber: number,
-  depth: number
-): Match[] | null {
-  if (depth > 1000) return null
-
-  if (paired.size === candidates.length) return [...matches]
-
-  const unpaired = candidates.filter(c => !paired.has(c.playerId))
-  if (unpaired.length === 0) return [...matches]
-  if (unpaired.length === 1) return null
-
-  const player = unpaired[0]
-  const potentialOpponents = unpaired
-    .slice(1)
-    .filter(c => !player.previousOpponents.has(c.playerId))
-
-  for (const opponent of potentialOpponents) {
-    const match = createMatch(player.playerId, opponent.playerId, roundNumber)
-    matches.push(match)
-    paired.add(player.playerId)
-    paired.add(opponent.playerId)
-
-    const result = backtrackingPair(candidates, matches, paired, roundNumber, depth + 1)
-    if (result) return result
-
-    matches.pop()
-    paired.delete(player.playerId)
-    paired.delete(opponent.playerId)
-  }
-
-  if (potentialOpponents.length === 0) {
-    const opponent = unpaired[1]
-    const match = createMatch(player.playerId, opponent.playerId, roundNumber)
-    matches.push(match)
-    paired.add(player.playerId)
-    paired.add(opponent.playerId)
-
-    const result = backtrackingPair(candidates, matches, paired, roundNumber, depth + 1)
-    if (result) return result
-
-    matches.pop()
-    paired.delete(player.playerId)
-    paired.delete(opponent.playerId)
-  }
-
-  return null
-}
-
-function greedyPairFallback(candidates: PairingCandidate[], roundNumber: number): Match[] {
-  const matches: Match[] = []
-  const paired = new Set<string>()
-
-  for (const candidate of candidates) {
-    if (paired.has(candidate.playerId)) continue
-
-    const opponent = candidates.find(
-      c => !paired.has(c.playerId) && c.playerId !== candidate.playerId
-    )
-
-    if (opponent) {
-      matches.push(createMatch(candidate.playerId, opponent.playerId, roundNumber))
-      paired.add(candidate.playerId)
-      paired.add(opponent.playerId)
-    }
-  }
-
-  return matches
 }
 
 function createMatch(player1Id: string, player2Id: string, roundNumber: number): Match {
