@@ -670,6 +670,30 @@ describe('tournamentReducer', () => {
       state = dispatch(state, { type: 'UPDATE_TOURNAMENT', payload: { tournamentId: id, name: 'Nope' } })
       expect(getTournament(state).name).toBe('Test')
     })
+
+    it('updates gameFormat during registration only', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'UPDATE_TOURNAMENT', payload: { tournamentId: id, gameFormat: 'traditional' } })
+      expect(getTournament(state).gameFormat).toBe('traditional')
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      state = dispatch(state, { type: 'UPDATE_TOURNAMENT', payload: { tournamentId: id, gameFormat: 'advanced' } })
+      expect(getTournament(state).gameFormat).toBe('traditional')
+    })
+
+    it('updates countForSeason even after tournament started', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      state = dispatch(state, { type: 'UPDATE_TOURNAMENT', payload: { tournamentId: id, countForSeason: false } })
+      expect(getTournament(state).countForSeason).toBe(false)
+      state = dispatch(state, { type: 'UPDATE_TOURNAMENT', payload: { tournamentId: id, countForSeason: true } })
+      expect(getTournament(state).countForSeason).toBe(true)
+    })
   })
 
   describe('BULK_ADD_PLAYERS', () => {

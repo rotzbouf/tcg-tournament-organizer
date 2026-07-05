@@ -35,11 +35,6 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
 
   const templates = state.templates ?? []
 
-  const today = new Date().toISOString().slice(0, 10)
-  const hasActiveSeason = (state.seasons ?? []).some(
-    s => s.game === game && !!s.startDate && !!s.endDate && today >= s.startDate && today <= s.endDate
-  )
-
   const handleGameChange = (newGame: GameType) => {
     setGame(newGame)
     setGameFormat(GAME_CONFIG[newGame].formats[0]?.id ?? '')
@@ -239,17 +234,15 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           value={decklistVisibility}
           onChange={e => setDecklistVisibility(e.target.value as DecklistVisibility)}
         />
-        {hasActiveSeason && (
-          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
-            <input
-              type="checkbox"
-              checked={countForSeason}
-              onChange={e => setCountForSeason(e.target.checked)}
-              className="rounded border-input"
-            />
-            <span>{t('season.countForSeason')}</span>
-          </label>
-        )}
+        <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+          <input
+            type="checkbox"
+            checked={countForSeason}
+            onChange={e => setCountForSeason(e.target.checked)}
+            className="rounded border-input"
+          />
+          <span>{t('season.countForSeason')}</span>
+        </label>
 
         <div className="flex items-center justify-between border-t border-muted pt-3">
           {showSaveTemplate ? (

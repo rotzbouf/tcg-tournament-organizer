@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Saison-Wertung nachträglich änderbar** — Der Dialog „Turnier bearbeiten" bietet jetzt die Checkbox „Zur Saison werten". Sie ist in jedem Turnierstatus änderbar, auch nach Abschluss: Ein bereits gewertetes Turnier lässt sich nachträglich aus der Saisonwertung nehmen (oder wieder hineinnehmen), die Saison-Rangliste rechnet sofort neu
+- **Regelwerk / Format nachträglich änderbar** — Im Dialog „Turnier bearbeiten" lässt sich jetzt auch das spielspezifische Regelwerk umstellen (z.B. Advanced/Traditional bei Yu-Gi-Oh!, Standard/Expanded bei Pokémon) — wie Name und Turniermodus nur während der Anmeldephase, da das Regelwerk die Decklisten-Prüfung bestimmt
+
+### Fixed
+- **Saison-Wertung ohne bestehende Saison wählbar** — Die Checkbox „Zur Saison werten" erschien beim Erstellen eines Turniers nur, wenn für das Spiel bereits eine laufende Saison existierte. Turniere ohne Saison wurden stillschweigend als „wird gewertet" angelegt — eine später angelegte Saison sammelte damit rückwirkend alle Turniere in ihrem Zeitraum ein, ohne dass der Turnierleiter je gefragt wurde. Die Checkbox ist jetzt beim Erstellen und Bearbeiten immer sichtbar
+
 ## [1.6.6] - 2026-07-05
 
 ### Fixed

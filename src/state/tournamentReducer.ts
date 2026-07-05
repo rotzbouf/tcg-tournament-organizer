@@ -591,11 +591,13 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const updates: Partial<Tournament> = {}
       if (action.payload.discordWebhookUrl !== undefined) updates.discordWebhookUrl = action.payload.discordWebhookUrl
       if (action.payload.decklistVisibility !== undefined) updates.decklistVisibility = action.payload.decklistVisibility
+      if (action.payload.countForSeason !== undefined) updates.countForSeason = action.payload.countForSeason
       if (tournament.status === 'registration') {
         if (action.payload.name !== undefined) updates.name = action.payload.name
         if (action.payload.roundTimeMinutes !== undefined) updates.roundTimeMinutes = action.payload.roundTimeMinutes
         if (action.payload.topCut !== undefined) updates.topCut = action.payload.topCut
         if (action.payload.format !== undefined) updates.format = action.payload.format
+        if (action.payload.gameFormat !== undefined) updates.gameFormat = action.payload.gameFormat
       }
       if (Object.keys(updates).length === 0) return state
       return updateTournament(state, action.payload.tournamentId, updates)

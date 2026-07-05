@@ -21,7 +21,7 @@ export type TournamentAction =
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'UNARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
-  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility } }
+  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; gameFormat?: string | null; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility; countForSeason?: boolean } }
   | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
   | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName?: string | null; decklist?: DecklistEntry[] | null } }
   | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string } }

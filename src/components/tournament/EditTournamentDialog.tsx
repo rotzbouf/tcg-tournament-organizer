@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useTournamentContext } from '@/state/useTournamentContext'
+import { GAME_CONFIG } from '@/lib/gameConfig'
 import { Tournament, TournamentFormat } from '@/types/tournament'
 
 interface EditTournamentDialogProps {
@@ -22,6 +23,9 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
   const [name, setName] = useState(tournament.name)
   const [format, setFormat] = useState<TournamentFormat>(tournament.format)
   const [roundTime, setRoundTime] = useState(tournament.roundTimeMinutes)
+  const [countForSeason, setCountForSeason] = useState(tournament.countForSeason !== false)
+  const gameFormats = GAME_CONFIG[tournament.game].formats
+  const [gameFormat, setGameFormat] = useState(tournament.gameFormat ?? gameFormats[0]?.id ?? '')
 
   const formatOptions = FORMAT_OPTIONS.map(f => ({
     value: f,
@@ -44,6 +48,8 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
         format,
         roundTimeMinutes: roundTime,
         topCut: 0,
+        gameFormat: gameFormat || null,
+        countForSeason,
       },
     })
     onClose()
@@ -59,6 +65,15 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
           onChange={e => setName(e.target.value)}
           autoFocus
         />
+        {gameFormats.length > 1 && (
+          <Select
+            id="edit-tournament-game-format"
+            label={t('tournament.gameFormat')}
+            options={gameFormats.map(f => ({ value: f.id, label: f.name }))}
+            value={gameFormat}
+            onChange={e => setGameFormat(e.target.value)}
+          />
+        )}
         <Select
           id="edit-tournament-format"
           label={t('tournament.format')}
@@ -76,6 +91,15 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
           value={String(roundTime)}
           onChange={e => setRoundTime(Number(e.target.value))}
         />
+        <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+          <input
+            type="checkbox"
+            checked={countForSeason}
+            onChange={e => setCountForSeason(e.target.checked)}
+            className="rounded border-input"
+          />
+          <span>{t('season.countForSeason')}</span>
+        </label>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             {t('common.cancel')}
