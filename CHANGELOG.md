@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Spielersuche im Turnier** — Im Spieler-Tab lässt sich ab 10 Teilnehmern nach Name, Spieler-ID oder Deck filtern (unabhängig von Groß-/Kleinschreibung und Akzenten: „jose" findet „José"); alle Aktionen wie QR-Code, Droppen oder Deckliste stehen direkt am Treffer. Im Runden-Tab filtert eine Suche nach Spielername oder Tischnummer — bei Großturnieren ist damit sofort auffindbar, wo ein Spieler sitzt. Beim Drucken der Paarungen wird immer die vollständige Liste ausgegeben, auch wenn gerade gefiltert ist
 
+### Changed
+- **Spielstände überleben jetzt auch Stromausfall, Backups im 2-Minuten-Takt** — Die Datendatei wird beim Speichern zusätzlich per fsync auf die Platte erzwungen (Datei und Verzeichnis): Bisher schützte das atomare Schreiben nur vor App-Abstürzen, nach einem Stromausfall oder OS-Absturz konnte die Datei dagegen leer zurückbleiben und die Wiederherstellung fiel auf ein bis zu 10 Minuten altes Backup zurück. Zusätzlich entstehen automatische Backups jetzt alle 2 statt alle 10 Minuten — im schlimmsten Fall gehen damit nur noch etwa 2 Minuten verloren. Damit die häufigeren Backups die ältere Historie nicht verdrängen, wird die Rotation nach Alter gestaffelt aufbewahrt (unter 15 Minuten alles, bis 2 Stunden viertelstündlich, bis 24 Stunden alle 2 Stunden, danach täglich; maximal 40 Dateien) — der Backups-Dialog reicht also weiterhin bis zum Vortag zurück, bei minutengenauen jungen Ständen
+
 ## [1.6.5] - 2026-07-04
 
 ### Added
