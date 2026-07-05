@@ -83,7 +83,7 @@ export function TournamentView() {
 
   const canGenerate = tournament.status !== 'completed' &&
     currentRound?.isComplete === true && !isGrandFinalComplete &&
-    !(isLastSwissRound && !hasTopCut) && !isLastTopCutRound && !isLastRoundRobin
+    !isLastSwissRound && !isLastTopCutRound && !isLastRoundRobin
 
   const isLastRound = isInTopCut ? isLastTopCutRound :
     isGrandFinalComplete ? true :

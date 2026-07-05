@@ -254,12 +254,6 @@
     "callSent": "Judge wurde gerufen!",
     "noTable": "Kein aktives Match gefunden"
   },
-  "export": {
-    "csv": "CSV exportieren",
-    "pdf": "PDF exportieren",
-    "pairings": "Paarungen exportieren",
-    "report": "Abschlussbericht"
-  },
   "bracket": {
     "title": "Bracket",
     "champion": "Sieger",
@@ -341,11 +335,15 @@
     "title": "Exportieren",
     "description": "Der vollständige Export ist dein Backup (inkl. Geburtsdaten und Spieler-IDs). Zum Weitergeben an Dritte gibt es den Export ohne persönliche Daten.",
     "full": "Komplett (Backup)",
-    "noPii": "Ohne persönliche Daten"
+    "noPii": "Ohne persönliche Daten",
+    "csv": "CSV exportieren",
+    "pdf": "PDF exportieren",
+    "pairings": "Paarungen exportieren",
+    "report": "Abschlussbericht"
   },
   "backup": {
     "title": "Backups",
-    "description": "Automatische Sicherungen: alle 10 Minuten, die letzten 10 Stände bleiben erhalten. Vor jeder Wiederherstellung wird der aktuelle Stand zusätzlich gesichert.",
+    "description": "Automatische Sicherungen: alle 2 Minuten, ältere Stände werden gestaffelt ausgedünnt (bis zu einem Tag zurück). Vor jeder Wiederherstellung wird der aktuelle Stand zusätzlich gesichert.",
     "encryptionOn": "Verschlüsselung aktiv: Datendatei und Backups sind über den System-Schlüsselbund verschlüsselt.",
     "encryptionOff": "Verschlüsselung nicht verfügbar (kein System-Schlüsselbund) — Datendatei und Backups liegen unverschlüsselt auf der Festplatte.",
     "empty": "Noch keine Backups vorhanden.",

@@ -254,12 +254,6 @@
     "callSent": "Judge has been called!",
     "noTable": "No active match found"
   },
-  "export": {
-    "csv": "Export CSV",
-    "pdf": "Export PDF",
-    "pairings": "Export Pairings",
-    "report": "Tournament Report"
-  },
   "bracket": {
     "title": "Bracket",
     "champion": "Champion",
@@ -341,11 +335,15 @@
     "title": "Export",
     "description": "The full export is your backup (including birthdates and player IDs). To share with others, use the export without personal data.",
     "full": "Full (backup)",
-    "noPii": "Without personal data"
+    "noPii": "Without personal data",
+    "csv": "Export CSV",
+    "pdf": "Export PDF",
+    "pairings": "Export Pairings",
+    "report": "Tournament Report"
   },
   "backup": {
     "title": "Backups",
-    "description": "Automatic backups: every 10 minutes, the last 10 snapshots are kept. Before every restore the current state is backed up as well.",
+    "description": "Automatic backups: every 2 minutes, older snapshots are thinned out by age (kept up to a day back). Before every restore the current state is backed up as well.",
     "encryptionOn": "Encryption active: data file and backups are encrypted via the system keychain.",
     "encryptionOff": "Encryption unavailable (no system keychain) — data file and backups are stored unencrypted on disk.",
     "empty": "No backups yet.",
