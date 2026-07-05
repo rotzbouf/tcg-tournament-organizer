@@ -106,17 +106,49 @@ describe('persistState', () => {
     expect(listBackups()).toHaveLength(1)
   })
 
-  it('prunes the rotation to 10 backups, dropping the oldest', () => {
-    fs.mkdirSync(backupDir(), { recursive: true })
-    for (let i = 10; i < 22; i++) {
-      fs.writeFileSync(path.join(backupDir(), `state-2026-01-${i}T00-00-00-000Z.json`), VALID_STATE)
-    }
+  it('creates a backup once the newest one is older than the 2-minute interval', () => {
     persistState(VALID_STATE)
-    ageNewestBackup(11 * 60 * 1000)
     persistState(OTHER_STATE)
-    const backups = listBackups()
-    expect(backups).toHaveLength(10)
-    expect(backups).not.toContain('state-2026-01-10T00-00-00-000Z.json')
+    ageNewestBackup(3 * 60 * 1000)
+    persistState(VALID_STATE)
+    expect(listBackups()).toHaveLength(2)
+  })
+
+  // Ein Backup mit definiertem Alter in die Rotation legen; Name und mtime
+  // müssen zeitlich zusammenpassen, weil die Sortierung über den Namen läuft.
+  function plantBackup(ageMs: number) {
+    fs.mkdirSync(backupDir(), { recursive: true })
+    const at = new Date(Date.now() - ageMs)
+    const stamp = at.toISOString().replace(/[:.]/g, '-')
+    const file = path.join(backupDir(), `state-${stamp}.json`)
+    fs.writeFileSync(file, VALID_STATE)
+    fs.utimesSync(file, at, at)
+  }
+
+  it('keeps all recent backups but thins out older ones by age tier', () => {
+    // 7 junge (2–14 min, im <15-min-Tier) + 10 alte im 2-min-Abstand (46–64 min)
+    for (let min = 2; min <= 14; min += 2) plantBackup(min * 60 * 1000)
+    for (let min = 46; min <= 64; min += 2) plantBackup(min * 60 * 1000)
+    persistState(VALID_STATE)
+    persistState(OTHER_STATE) // löst Backup + Pruning aus
+
+    const ages = listBackups().map(name =>
+      Date.now() - fs.statSync(path.join(backupDir(), name)).mtimeMs
+    )
+    // Alle 7 jungen (<15 min) + das gerade erstellte überleben ungedünnt
+    expect(ages.filter(age => age < 15 * 60 * 1000)).toHaveLength(8)
+    // Die 10 alten (46–64 min, Tier "alle 15 min") sind auf 2 ausgedünnt (46er + 62er)
+    expect(ages.filter(age => age > 40 * 60 * 1000)).toHaveLength(2)
+  })
+
+  it('caps the rotation at 40 backups even when tiers would keep more', () => {
+    for (let day = 1; day <= 50; day++) plantBackup(day * 24 * 60 * 60 * 1000)
+    persistState(VALID_STATE)
+    persistState(OTHER_STATE)
+    expect(listBackups().length).toBeLessThanOrEqual(40)
+    // die jüngsten überleben, die ältesten fallen raus
+    const ages = listBackups().map(n => fs.statSync(path.join(backupDir(), n)).mtimeMs)
+    expect(Math.max(...ages)).toBeGreaterThan(Date.now() - 60 * 1000)
   })
 })
 

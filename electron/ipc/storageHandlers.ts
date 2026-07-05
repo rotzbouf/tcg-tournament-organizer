@@ -2,9 +2,19 @@ import { ipcMain, app, safeStorage } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const BACKUP_KEEP = 10
-const BACKUP_INTERVAL_MS = 10 * 60 * 1000
+const BACKUP_INTERVAL_MS = 2 * 60 * 1000
+const BACKUP_KEEP_MAX = 40
 const BACKUP_NAME_RE = /^state-[0-9TZ-]+\.json$/
+
+// Age-tiered thinning: the 2-minute cadence keeps crash-recovery loss small,
+// while older backups are thinned out so the dense recent ones cannot flush
+// yesterday's states out of the rotation ("restore an older state" stays useful).
+const BACKUP_TIERS: Array<{ maxAgeMs: number; keepEveryMs: number }> = [
+  { maxAgeMs: 15 * 60 * 1000, keepEveryMs: 0 },                    // < 15 min: alle
+  { maxAgeMs: 2 * 60 * 60 * 1000, keepEveryMs: 15 * 60 * 1000 },   // < 2 h: alle 15 min
+  { maxAgeMs: 24 * 60 * 60 * 1000, keepEveryMs: 2 * 60 * 60 * 1000 }, // < 24 h: alle 2 h
+  { maxAgeMs: Infinity, keepEveryMs: 24 * 60 * 60 * 1000 },        // älter: täglich
+]
 
 // State files hold PII (birthdates, player IDs), so they are encrypted at rest
 // via the OS keychain when available. The prefix marks encrypted files; files
@@ -73,7 +83,24 @@ function listBackupFiles(): BackupInfo[] {
 }
 
 function pruneBackups(): void {
-  for (const backup of listBackupFiles().slice(BACKUP_KEEP)) {
+  const now = Date.now()
+  const backups = listBackupFiles() // newest first
+  const kept: BackupInfo[] = []
+  for (const backup of backups) {
+    const lastKept = kept[kept.length - 1]
+    if (!lastKept) {
+      kept.push(backup) // das neueste Backup überlebt immer
+      continue
+    }
+    const age = now - backup.createdAt
+    const tier = BACKUP_TIERS.find(t => age < t.maxAgeMs)!
+    if (tier.keepEveryMs === 0 || lastKept.createdAt - backup.createdAt >= tier.keepEveryMs) {
+      kept.push(backup)
+    }
+  }
+  const keepNames = new Set(kept.slice(0, BACKUP_KEEP_MAX).map(b => b.name))
+  for (const backup of backups) {
+    if (keepNames.has(backup.name)) continue
     try {
       fs.unlinkSync(path.join(backupDir(), backup.name))
     } catch { /* ignore */ }
@@ -133,10 +160,27 @@ export function persistState(stateJson: string): void {
     maybeCreateBackup()
     const file = stateFile()
     fs.mkdirSync(path.dirname(file), { recursive: true })
-    // Write-then-rename so a crash mid-write never corrupts the state file
+    // Write-then-rename so an app crash mid-write never corrupts the state
+    // file, plus fsync on file and directory so even power loss / OS crash
+    // cannot leave a truncated state.json behind (delayed allocation would
+    // otherwise allow the rename to survive without the data blocks).
     const tmp = file + '.tmp'
-    fs.writeFileSync(tmp, encryptForDisk(stateJson), 'utf-8')
+    const fd = fs.openSync(tmp, 'w')
+    try {
+      fs.writeSync(fd, encryptForDisk(stateJson), null, 'utf-8')
+      fs.fsyncSync(fd)
+    } finally {
+      fs.closeSync(fd)
+    }
     fs.renameSync(tmp, file)
+    try {
+      const dirFd = fs.openSync(path.dirname(file), 'r')
+      try {
+        fs.fsyncSync(dirFd)
+      } finally {
+        fs.closeSync(dirFd)
+      }
+    } catch { /* directory fsync is unsupported on some platforms (Windows) */ }
   } catch (err) {
     console.error('Failed to persist state:', err)
   }
