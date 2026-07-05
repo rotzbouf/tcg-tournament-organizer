@@ -229,7 +229,13 @@
     "address": "Adresse",
     "scanQR": "QR-Code scannen um zu verbinden",
     "connectedClients": "{{count}} verbunden",
-    "openQrWindow": "QR-Code im Fenster öffnen"
+    "openQrWindow": "QR-Code im Fenster öffnen",
+    "judgeAccess": "Judge-Zugang",
+    "judgeAccessHint": "Co-Judges scannen den Judge-QR-Code und können vom Handy aus Ergebnisse eintragen, Strafen vergeben, Spieler droppen und Judge-Rufe sehen. Der Code ist geheim zu halten — jeder mit dem Code hat Judge-Rechte.",
+    "judgeQr": "Judge-QR anzeigen",
+    "judgeQrHint": "QR-Code scannen für Judge-Zugang",
+    "judgeRevoke": "Zugang widerrufen",
+    "judgeRevoked": "Judge-Zugang widerrufen — alle bisherigen Judge-QR-Codes sind ungültig."
   },
   "discord": {
     "webhookUrl": "Discord Webhook-URL",

@@ -19,6 +19,7 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
   const { t } = useTranslation()
   const [info, setInfo] = useState<ServerInfo>({ running: false })
   const [qrSvg, setQrSvg] = useState<string>('')
+  const [judgeRevoked, setJudgeRevoked] = useState(false)
 
   const updateQr = useCallback(async (serverInfo: ServerInfo) => {
     if (serverInfo.running && serverInfo.address && serverInfo.port) {
@@ -56,6 +57,29 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
   const handleOpenQrWindow = () => {
     if (!url || !qrSvg) return
     window.electronAPI?.openQrWindow({ tournamentName, url, qrSvg })
+  }
+
+  // The judge token travels only inside the QR code (URL fragment, never sent
+  // to the server or logged); the window shows the plain URL without it.
+  const handleJudgeQr = async () => {
+    if (!url) return
+    const token = await window.electronAPI?.getJudgeToken(tournamentId)
+    if (!token) return
+    try {
+      const svg = await QRCode.toString(`${url}/#judge=${token}`, { type: 'svg' })
+      window.electronAPI?.openQrWindow({
+        tournamentName: `${tournamentName} — Judge`,
+        url,
+        qrSvg: svg,
+        hint: t('server.judgeQrHint'),
+      })
+      setJudgeRevoked(false)
+    } catch { /* QR generation failed; nothing to show */ }
+  }
+
+  const handleRevokeJudge = async () => {
+    await window.electronAPI?.revokeJudgeToken(tournamentId)
+    setJudgeRevoked(true)
   }
 
   useEffect(() => {
@@ -101,6 +125,22 @@ export function ServerPanel({ tournamentId, tournamentName }: ServerPanelProps) 
               {t('server.connectedClients', { count: info.clientCount })}
             </p>
           )}
+
+          <div className="space-y-2 border-t border-border pt-4">
+            <p className="text-sm font-medium text-secondary-foreground">{t('server.judgeAccess')}</p>
+            <p className="text-xs text-muted-foreground">{t('server.judgeAccessHint')}</p>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={handleJudgeQr}>
+                {t('server.judgeQr')}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleRevokeJudge}>
+                {t('server.judgeRevoke')}
+              </Button>
+            </div>
+            {judgeRevoked && (
+              <p className="text-xs text-green-600">{t('server.judgeRevoked')}</p>
+            )}
+          </div>
         </div>
       )}
     </div>

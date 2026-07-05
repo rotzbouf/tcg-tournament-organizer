@@ -229,7 +229,13 @@
     "address": "Address",
     "scanQR": "Scan QR code to connect",
     "connectedClients": "{{count}} connected",
-    "openQrWindow": "Open QR code in window"
+    "openQrWindow": "Open QR code in window",
+    "judgeAccess": "Judge access",
+    "judgeAccessHint": "Co-judges scan the judge QR code and can enter results, issue penalties, drop players and see judge calls from their phone. Keep the code secret — anyone with it has judge rights.",
+    "judgeQr": "Show judge QR",
+    "judgeQrHint": "Scan QR code for judge access",
+    "judgeRevoke": "Revoke access",
+    "judgeRevoked": "Judge access revoked — all previous judge QR codes are invalid."
   },
   "discord": {
     "webhookUrl": "Discord Webhook URL",

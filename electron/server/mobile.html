@@ -23,7 +23,7 @@ body{font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:v
 .match .table-num{font-size:20px;font-weight:800;color:var(--accent);min-width:50px;text-align:center}
 .match .names{flex:1;font-size:14px;font-weight:500}
 .match .score{font-size:13px;color:var(--fg2);font-weight:600;margin:0 6px}
-input[type=text],input[type=date],textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:14px;margin-bottom:8px;background:var(--input-bg);color:var(--fg)}
+input[type=text],input[type=date],textarea,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:14px;margin-bottom:8px;background:var(--input-bg);color:var(--fg)}
 textarea{min-height:120px;font-family:monospace;font-size:13px}
 button.primary{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
 button.primary:disabled{opacity:.5}
@@ -52,6 +52,7 @@ button.judge:disabled{opacity:.5}
 .form-group{margin-bottom:4px}
 .optional{font-weight:400;color:var(--fg-muted);font-size:11px}
 .my-match{border:2px solid var(--accent);background:var(--my-match-bg)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:90%}
 </style>
 </head>
 <body>
@@ -75,7 +76,15 @@ const T={
     noDecklists:'No decklists available',cards:'cards',
     reportResult:'Report Result',iWon:'I won',opponentWon:'Opponent won',itsDraw:'Draw',
     resultReported:'Result reported — waiting for TO confirmation.',reportError:'Error reporting result.',
-    claimed:'This name is already claimed by another device — ask the organizer for your QR code.'},
+    claimed:'This name is already claimed by another device — ask the organizer for your QR code.',
+    jMode:'Judge',jCalls:'Calls',jPenalties:'Penalties',jNoCalls:'No judge calls yet',
+    jResultError:'Could not save result',jSelectPlayer:'Player',jPenaltyType:'Penalty',jReason:'Reason',
+    jIssue:'Issue penalty',jPenaltySaved:'Penalty issued.',jPenaltyError:'Could not issue penalty',
+    jDrop:'Drop player',jDropConfirm:'Drop this player? This cannot be undone.',jDropped:'Player dropped.',jDropError:'Could not drop player',
+    jDeck:'Show decklist',jNoDeck:'No decklist submitted',jInvalid:'Judge access is invalid or was revoked.',
+    jClaim:'Take this call',jHandles:'is handling',jYou:'you',
+    jNamePh:'Your name (visible to other judges)',
+    pt_warning:'Warning',pt_game_loss:'Game Loss',pt_match_loss:'Match Loss',pt_disqualification:'Disqualification',pt_note:'Note'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
     games:'Spiele',noData:'Laden...',
@@ -92,13 +101,23 @@ const T={
     noDecklists:'Keine Decklisten verfügbar',cards:'Karten',
     reportResult:'Ergebnis melden',iWon:'Ich habe gewonnen',opponentWon:'Gegner hat gewonnen',itsDraw:'Unentschieden',
     resultReported:'Ergebnis gemeldet — TO bestätigt noch.',reportError:'Fehler beim Melden.',
-    claimed:'Dieser Name ist bereits von einem anderen Gerät beansprucht — QR-Code beim Turnierleiter anfordern.'}
+    claimed:'Dieser Name ist bereits von einem anderen Gerät beansprucht — QR-Code beim Turnierleiter anfordern.',
+    jMode:'Judge',jCalls:'Rufe',jPenalties:'Strafen',jNoCalls:'Noch keine Judge-Rufe',
+    jResultError:'Ergebnis konnte nicht gespeichert werden',jSelectPlayer:'Spieler',jPenaltyType:'Strafe',jReason:'Grund',
+    jIssue:'Strafe vergeben',jPenaltySaved:'Strafe vergeben.',jPenaltyError:'Strafe konnte nicht vergeben werden',
+    jDrop:'Spieler droppen',jDropConfirm:'Diesen Spieler wirklich droppen? Kann nicht rückgängig gemacht werden.',jDropped:'Spieler gedroppt.',jDropError:'Droppen fehlgeschlagen',
+    jDeck:'Deckliste anzeigen',jNoDeck:'Keine Deckliste eingereicht',jInvalid:'Judge-Zugang ungültig oder widerrufen.',
+    jClaim:'Übernehmen',jHandles:'übernimmt',jYou:'du',
+    jNamePh:'Dein Name (für die anderen Judges sichtbar)',
+    pt_warning:'Verwarnung',pt_game_loss:'Game Loss',pt_match_loss:'Match Loss',pt_disqualification:'Disqualifikation',pt_note:'Notiz'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
 const t=k=>T[lang][k]||k;
 let tournament=null,standings=null,timers=null,activeTab='pairings',boundTournamentId=null;
 let timerAlerted=false,pendingVibration=false;
 let session=JSON.parse(localStorage.getItem('tcg-session')||'null');
+let judge=JSON.parse(localStorage.getItem('tcg-judge')||'null');
+let judgeCalls=[],lastCallAt=0,callPollTimer=null;
 let needsFullRender=true;
 const app=document.getElementById('app');
 const timerRoot=document.getElementById('timer-root');
@@ -140,8 +159,103 @@ async function adoptTokenFromHash(){
   }catch{}
 }
 
+// The judge QR carries the shared judge token in the URL fragment (never sent
+// to the server, never logged). Validate it against /api/judge/me: tokens live
+// only in the app's memory, so a stored one dies with an app restart or when
+// the TO revokes judge access — then fall back to the normal player view.
+async function initJudge(){
+  const m=location.hash.match(/judge=([A-Za-z0-9_-]+)/);
+  if(m){history.replaceState(null,'',location.pathname+location.search);judge={token:m[1]}}
+  if(!judge||!judge.token){judge=null;return}
+  try{
+    const r=await fetch(API+'/api/judge/me',{headers:{'Authorization':'Bearer '+judge.token}});
+    if(r.ok){localStorage.setItem('tcg-judge',JSON.stringify(judge));startCallPolling()}
+    else{dropJudgeAccess(false)}
+  }catch{}
+}
+
+function dropJudgeAccess(notify){
+  judge=null;judgeCalls=[];
+  localStorage.removeItem('tcg-judge');
+  if(callPollTimer){clearInterval(callPollTimer);callPollTimer=null}
+  if(notify)alert(t('jInvalid'));
+  needsFullRender=true;
+}
+
+function judgeHeaders(){return judge&&judge.token?{'Authorization':'Bearer '+judge.token}:{}}
+async function jpost(url,body){
+  const r=await fetch(API+url,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},judgeHeaders()),body:JSON.stringify(body)});
+  if(r.status===401){dropJudgeAccess(true);return null}
+  return r.json();
+}
+
+function startCallPolling(){
+  if(callPollTimer)return;
+  pollCalls();
+  callPollTimer=setInterval(pollCalls,5000);
+}
+
+async function pollCalls(){
+  if(!judge)return;
+  try{
+    const r=await fetch(API+'/api/judge/calls',{headers:judgeHeaders()});
+    if(r.status===401){dropJudgeAccess(true);return}
+    if(!r.ok)return;
+    const d=await r.json();
+    const calls=d.calls||[];
+    // A call another judge just claimed gets announced as a toast — that is
+    // how "Judge X übernimmt Tisch Y" reaches the other judge devices.
+    const prevClaims=new Map(judgeCalls.map(c=>[c.id,c.claimedBy]));
+    for(const c of calls){
+      if(c.claimedBy&&prevClaims.has(c.id)&&!prevClaims.get(c.id)&&c.claimedBy!==(judge.name||'')){
+        showToast(c.claimedBy+' '+t('jHandles')+' '+(c.tableNumber?t('table')+c.tableNumber:c.playerName));
+      }
+    }
+    const newest=calls.length?calls[calls.length-1].at:0;
+    const changed=JSON.stringify(calls)!==JSON.stringify(judgeCalls);
+    judgeCalls=calls;
+    if(newest>lastCallAt){if(lastCallAt>0)doVibrate();lastCallAt=newest}
+    if(changed)needsFullRender=true;
+  }catch{}
+}
+
+function showToast(msg){
+  const d=document.createElement('div');
+  d.className='toast';d.textContent=msg;
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),4000);
+}
+
+// The claim carries the judge's display name: all co-judges share one token,
+// so the name is the per-device identity, typed once into the calls tab and
+// kept locally. (No prompt(): Electron does not implement it.)
+async function claimCall(id){
+  if(!judge)return;
+  if(!judge.name){
+    const el=document.getElementById('jn');
+    const n=el?.value?.trim();
+    if(!n){if(el){el.focus();el.style.borderColor='#dc2626'}return}
+    saveJudgeName();
+  }
+  try{
+    const d=await jpost('/api/judge/calls/'+id+'/claim',{judgeName:judge.name});
+    if(d&&!d.ok&&d.claimedBy)showToast(d.claimedBy+' '+t('jHandles'));
+  }catch{}
+  await pollCalls();
+  needsFullRender=true;
+}
+
+function saveJudgeName(){
+  const n=document.getElementById('jn')?.value?.trim();
+  if(!n)return;
+  judge.name=n;
+  localStorage.setItem('tcg-judge',JSON.stringify(judge));
+  needsFullRender=true;
+}
+
 async function init(){
-  await adoptTokenFromHash();
+  await initJudge();
+  if(!judge)await adoptTokenFromHash();
   try{
     const d=await fetch(API+'/api/tournament').then(r=>r.json());
     if(d.tournament){tournament=d.tournament;boundTournamentId=d.tournament.id}
@@ -166,6 +280,7 @@ function isRegistered(){
 
 function render(){
   if(!tournament){app.innerHTML=`<div class="header">TCG Tournament<button onclick="toggleLang()">${lang.toUpperCase()}</button></div><div class="container"><p>${t('noData')}</p></div>`;return}
+  if(judge){renderJudgeMode();return}
   const isReg=tournament.status==='registration';
   const registered=isRegistered();
   if(isReg&&!registered&&activeTab!=='register')activeTab='register';
@@ -182,6 +297,27 @@ function render(){
   else if(activeTab==='standings')renderStandings(tc);
   else if(activeTab==='decklists')renderDecklists(tc);
   else if(activeTab==='register')renderRegister(tc);
+}
+
+function renderJudgeMode(){
+  const recentCalls=judgeCalls.filter(c=>Date.now()-c.at<15*60*1000).length;
+  const tabs=[
+    {k:'pairings',l:t('pairings')},
+    {k:'standings',l:t('standings')},
+    {k:'calls',l:t('jCalls')+(recentCalls?' ('+recentCalls+')':'')},
+    {k:'penalties',l:t('jPenalties')},
+  ];
+  if(!tabs.some(x=>x.k===activeTab))activeTab='pairings';
+  app.innerHTML=`<div class="header"><span>⚖ ${esc(tournament.name)}</span><button onclick="toggleLang()">${lang.toUpperCase()}</button></div>
+    <div class="container">
+      <div class="tabs">${tabs.map(x=>`<div class="tab ${activeTab===x.k?'active':''}" onclick="setTab('${x.k}')">${x.l}</div>`).join('')}</div>
+      <div id="tc"></div>
+    </div>`;
+  const tc=document.getElementById('tc');
+  if(activeTab==='pairings')renderPairings(tc);
+  else if(activeTab==='standings')renderStandings(tc);
+  else if(activeTab==='calls')renderJudgeCalls(tc);
+  else if(activeTab==='penalties')renderJudgePenalties(tc);
 }
 
 function doVibrate(){
@@ -233,10 +369,32 @@ function renderPairings(el){
   const round=tournament.rounds[tournament.rounds.length-1];
   if(!round){el.innerHTML='<p>—</p>';return}
   el.innerHTML=`<div class="filter"><input type="text" id="pf" placeholder="${t('filter')}" oninput="filterPairings()"></div><div id="ml"></div>
-    <p style="margin-top:12px;text-align:center;font-size:12px;color:#94a3b8">${t('reportToTO')}</p>
+    ${judge?'':`<p style="margin-top:12px;text-align:center;font-size:12px;color:#94a3b8">${t('reportToTO')}</p>`}
     <div id="jc"></div>`;
   filterPairings();
-  renderJudgeButton();
+  if(!judge)renderJudgeButton();
+}
+
+// Result buttons under a match, judge mode only: entered results are stored
+// directly (no TO confirmation) and stay editable until the round completes.
+function judgeMatchButtons(m,round){
+  if(!judge||round.isComplete||m.isBye)return'';
+  if(tournament.status!=='in_progress'&&tournament.status!=='top_cut')return'';
+  const gn=id=>tournament.players.find(p=>p.id===id)?.name||'?';
+  const isKo=['top_cut','winners_bracket','losers_bracket','grand_final'].includes(round.phase);
+  const btn=(result,label,active)=>`<button class="secondary" style="margin:0;padding:8px 6px;font-size:12px;flex:1${active?';background:var(--accent);color:#fff':''}" onclick="judgeResult('${m.id}','${result}')">${label}</button>`;
+  return`<div style="display:flex;gap:6px;margin-top:8px">
+    ${btn('player1_win',esc(gn(m.player1Id)),m.result==='player1_win')}
+    ${isKo?'':btn('draw',t('draw'),m.result==='draw')}
+    ${btn('player2_win',esc(gn(m.player2Id)),m.result==='player2_win')}
+  </div>`;
+}
+
+async function judgeResult(matchId,result){
+  try{
+    const d=await jpost('/api/judge/matches/'+matchId+'/result',{result});
+    if(d&&!d.ok)alert(t('jResultError')+(d.error?': '+d.error:''));
+  }catch{alert(t('jResultError'))}
 }
 
 function filterPairings(){
@@ -252,7 +410,7 @@ function filterPairings(){
     const gs=m.player1Games!=null?`<span class="score">${m.player1Games}-${m.player2Games}</span>`:'';
     const rb=m.result==='pending'?`<span class="badge badge-reg">${t('pending')}</span>`:m.result==='draw'?`<span class="badge" style="background:#fef3c7;color:#92400e">${t('draw')}</span>`:`<span class="badge badge-active">${esc(gn(m.result==='player1_win'?m.player1Id:m.player2Id))}</span>`;
     const isMyMatch=myInfo&&m.id===myInfo.match.id;
-    return`<div class="match${isMyMatch?' my-match':''}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div></div>`;
+    return`<div class="match${isMyMatch?' my-match':''}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div>${judgeMatchButtons(m,round)}</div>`;
   }).join('');
 }
 
@@ -452,6 +610,71 @@ async function doDl(playerId){
     else if(rc==='claimed')claimed=true;
   }
   document.getElementById('dm').textContent=ok?t('decklistSaved'):claimed?t('claimed'):t('decklistError');
+}
+
+function renderJudgeCalls(el){
+  const nameRow=`<div class="form-row" style="margin-bottom:10px"><input type="text" id="jn" placeholder="${t('jNamePh')}" value="${esc(judge.name||'').replace(/"/g,'&quot;')}" style="margin:0" onchange="saveJudgeName()"><button class="secondary" style="margin:0;flex:0 0 auto;width:auto;padding:10px 14px" onclick="saveJudgeName()">OK</button></div>`;
+  if(!judgeCalls.length){el.innerHTML=nameRow+`<p style="text-align:center;color:var(--fg-muted);padding:16px 0">${t('jNoCalls')}</p>`;return}
+  el.innerHTML=nameRow+[...judgeCalls].reverse().map(c=>{
+    const time=new Date(c.at).toLocaleTimeString(lang==='de'?'de-DE':'en-GB',{hour:'2-digit',minute:'2-digit'});
+    const mine=judge.name&&c.claimedBy===judge.name;
+    const claim=c.claimedBy
+      ?`<div style="margin-top:8px;font-size:12px;font-weight:600;color:var(--success-fg);background:var(--success-bg);border-radius:6px;padding:6px 10px">✔ ${esc(c.claimedBy)}${mine?' ('+t('jYou')+')':''} ${t('jHandles')}</div>`
+      :`<button class="secondary" style="margin-top:8px;padding:8px" onclick="claimCall('${c.id}')">${t('jClaim')}</button>`;
+    return`<div class="match"><div class="match-header"><span class="table-num">${c.tableNumber?t('table')+c.tableNumber:'—'}</span><span class="names">${esc(c.playerName)}</span><span style="font-size:12px;color:var(--fg-muted)">${time}</span></div>${claim}</div>`;
+  }).join('');
+}
+
+function renderJudgePenalties(el){
+  const players=[...tournament.players].sort((a,b)=>a.name.localeCompare(b.name));
+  const types=['warning','game_loss','match_loss','disqualification','note'];
+  el.innerHTML=`
+    <div class="form-group"><label class="form-label">${t('jSelectPlayer')}</label>
+      <select id="jp">${players.map(p=>`<option value="${p.id}">${esc(p.name)}${p.droppedInRound!==null?' ✕':''}</option>`).join('')}</select></div>
+    <div class="form-group"><label class="form-label">${t('jPenaltyType')}</label>
+      <select id="jt">${types.map(x=>`<option value="${x}">${t('pt_'+x)}</option>`).join('')}</select></div>
+    <div class="form-group"><label class="form-label">${t('jReason')}</label>
+      <input type="text" id="jr" placeholder="${t('jReason')}"></div>
+    <button class="primary" onclick="judgeIssuePenalty()">${t('jIssue')}</button>
+    <div id="pm" class="msg"></div>
+    <button class="secondary" onclick="judgeViewDeck()">${t('jDeck')}</button>
+    <pre id="jd" style="display:none;margin-top:8px;font-size:12px;white-space:pre-wrap;color:var(--fg3)"></pre>
+    <button class="secondary" style="color:#dc2626;border-color:#dc2626" onclick="judgeDrop()">${t('jDrop')}</button>`;
+}
+
+async function judgeIssuePenalty(){
+  const pid=document.getElementById('jp')?.value,type=document.getElementById('jt')?.value;
+  const reason=document.getElementById('jr')?.value?.trim()||'';
+  const pm=document.getElementById('pm');if(!pid||!type)return;
+  try{
+    const d=await jpost('/api/judge/players/'+pid+'/penalty',{type,reason});
+    if(!pm)return;
+    if(d&&d.ok){pm.textContent=t('jPenaltySaved');const jr=document.getElementById('jr');if(jr)jr.value=''}
+    else if(d)pm.textContent=t('jPenaltyError')+(d.error?': '+d.error:'');
+  }catch{if(pm)pm.textContent=t('jPenaltyError')}
+}
+
+async function judgeDrop(){
+  const pid=document.getElementById('jp')?.value;if(!pid)return;
+  if(!confirm(t('jDropConfirm')))return;
+  const pm=document.getElementById('pm');
+  try{
+    const d=await jpost('/api/judge/players/'+pid+'/drop',{});
+    if(pm)pm.textContent=d&&d.ok?t('jDropped'):t('jDropError')+(d&&d.error?': '+d.error:'');
+  }catch{if(pm)pm.textContent=t('jDropError')}
+}
+
+async function judgeViewDeck(){
+  const pid=document.getElementById('jp')?.value;const jd=document.getElementById('jd');
+  if(!pid||!jd)return;
+  if(jd.style.display!=='none'){jd.style.display='none';return}
+  try{
+    const r=await fetch(API+'/api/judge/players/'+pid+'/decklist',{headers:judgeHeaders()});
+    if(r.status===401){dropJudgeAccess(true);return}
+    const d=await r.json();
+    jd.textContent=d.decklist&&d.decklist.length?(d.deckName?d.deckName+'\n\n':'')+d.decklist.map(e=>e.quantity+'x '+e.cardName).join('\n'):t('jNoDeck');
+    jd.style.display='block';
+  }catch{}
 }
 
 function setTab(k){activeTab=k;needsFullRender=true}
