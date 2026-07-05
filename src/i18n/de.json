@@ -79,6 +79,9 @@
     "count": "{{count}} Spieler",
     "bulkImport": "Massenimport",
     "bulkImportHint": "Ein Spielername pro Zeile",
+    "search": "Suchen (Name, ID, Deck)…",
+    "searchNoResults": "Keine Spieler gefunden",
+    "searchResults": "{{shown}} von {{total}} Spielern",
     "deckName": "Deck",
     "addFromDatabase": "Spieler aus Datenbank hinzufügen...",
     "playerId": "Spieler-ID",
@@ -95,7 +98,10 @@
     "allResultsRequired": "Alle Ergebnisse müssen eingetragen werden",
     "bye": "Freilos",
     "print": "Drucken",
-    "swapHint": "Klicke auf einen zweiten Spieler zum Tauschen"
+    "swapHint": "Klicke auf einen zweiten Spieler zum Tauschen",
+    "search": "Spieler oder Tisch suchen…",
+    "searchNoResults": "Kein Match gefunden",
+    "searchResults": "{{shown}} von {{total}} Matches"
   },
   "match": {
     "vs": "vs",

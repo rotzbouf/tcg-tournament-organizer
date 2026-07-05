@@ -79,6 +79,9 @@
     "count": "{{count}} Players",
     "bulkImport": "Bulk Import",
     "bulkImportHint": "One player name per line",
+    "search": "Search (name, ID, deck)…",
+    "searchNoResults": "No players found",
+    "searchResults": "{{shown}} of {{total}} players",
     "deckName": "Deck",
     "addFromDatabase": "Add player from database...",
     "playerId": "Player ID",
@@ -95,7 +98,10 @@
     "allResultsRequired": "All results must be entered",
     "bye": "Bye",
     "print": "Print",
-    "swapHint": "Click on a second player to swap"
+    "swapHint": "Click on a second player to swap",
+    "search": "Search player or table…",
+    "searchNoResults": "No matches found",
+    "searchResults": "{{shown}} of {{total}} matches"
   },
   "match": {
     "vs": "vs",

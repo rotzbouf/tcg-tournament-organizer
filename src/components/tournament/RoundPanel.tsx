@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Round } from '@/types/round'
+import { Round, Match } from '@/types/round'
 import { Player } from '@/types/player'
 import { MatchCard } from './MatchCard'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +8,10 @@ import { useTournamentContext } from '@/state/useTournamentContext'
 import { generatePairingsPdfHtml } from '@/lib/exportResults'
 import { usePendingReports } from '@/hooks/usePendingReports'
 import { MatchResult } from '@/types/round'
+import { matchesSearch } from '@/lib/search'
+import { cn } from '@/lib/utils'
+
+const SEARCH_THRESHOLD = 8
 
 interface RoundPanelProps {
   round: Round
@@ -33,7 +37,22 @@ export function RoundPanel({
   const { t } = useTranslation()
   const { state, dispatch } = useTournamentContext()
   const [selectedPlayer, setSelectedPlayer] = useState<{ matchId: string; playerId: string } | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const { reports, reportsByMatch, conflictedMatchIds, dismiss } = usePendingReports()
+
+  // Search by player name/ID, or by table number if the query is numeric —
+  // Konami IDs are numeric too, so a numeric query checks both.
+  const playerById = new Map(players.map(p => [p.id, p]))
+  const query = searchQuery.trim()
+  const queryAsTable = /^\d+$/.test(query) ? parseInt(query, 10) : null
+  const matchIsVisible = (m: Match): boolean => {
+    if (query === '') return true
+    if (queryAsTable !== null && m.tableNumber === queryAsTable) return true
+    const p1 = playerById.get(m.player1Id)
+    const p2 = m.player2Id ? playerById.get(m.player2Id) : undefined
+    return matchesSearch(query, p1?.name, p1?.playerId, p2?.name, p2?.playerId)
+  }
+  const visibleCount = round.matches.filter(matchIsVisible).length
 
   const pendingMatchIds = [...new Set(
     reports
@@ -196,19 +215,42 @@ export function RoundPanel({
           </button>
         </div>
       )}
-      <div className="space-y-3">
-        {round.matches.map(match => (
-          <MatchCard
-            key={match.id}
-            match={match}
-            players={players}
-            tournamentId={tournamentId}
-            readonly={round.isComplete}
-            hideDrawOption={isTopCut}
-            showGameScores={showGameScores}
-            selectedPlayerId={selectedPlayer?.playerId ?? null}
-            onPlayerClick={swapEnabled ? handlePlayerClick : undefined}
+      {round.matches.length >= SEARCH_THRESHOLD && (
+        <div className="flex items-center gap-3 print:hidden">
+          <input
+            type="search"
+            placeholder={t('rounds.search')}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-64 rounded-lg border border-input bg-card px-3 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
+          {query !== '' && (
+            <span className="text-sm text-muted-foreground">
+              {t('rounds.searchResults', { shown: visibleCount, total: round.matches.length })}
+            </span>
+          )}
+        </div>
+      )}
+      {query !== '' && visibleCount === 0 && (
+        <p className="p-4 text-center text-sm text-muted-foreground print:hidden">
+          {t('rounds.searchNoResults')}
+        </p>
+      )}
+      <div className="space-y-3">
+        {/* Hidden (not unmounted) when filtered, so printing always yields the full pairing list */}
+        {round.matches.map(match => (
+          <div key={match.id} className={cn(!matchIsVisible(match) && 'hidden print:block')}>
+            <MatchCard
+              match={match}
+              players={players}
+              tournamentId={tournamentId}
+              readonly={round.isComplete}
+              hideDrawOption={isTopCut}
+              showGameScores={showGameScores}
+              selectedPlayerId={selectedPlayer?.playerId ?? null}
+              onPlayerClick={swapEnabled ? handlePlayerClick : undefined}
+            />
+          </div>
         ))}
       </div>
 

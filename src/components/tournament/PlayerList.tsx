@@ -11,6 +11,9 @@ import { AddPlayerForm } from './AddPlayerForm'
 import { BulkImportDialog } from './BulkImportDialog'
 import { DecklistDialog } from './DecklistDialog'
 import { cn } from '@/lib/utils'
+import { matchesSearch } from '@/lib/search'
+
+const SEARCH_THRESHOLD = 10
 
 interface PlayerListProps {
   tournamentId: string
@@ -29,9 +32,17 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
   const [dropPlayerId, setDropPlayerId] = useState<string | null>(null)
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [decklistPlayerId, setDecklistPlayerId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const activePlayers = players.filter(p => p.droppedInRound === null)
   const dropPlayer = players.find(p => p.id === dropPlayerId)
+
+  // Keep the original list position as the displayed number, so a filtered
+  // view still shows each player's stable registration number.
+  const visiblePlayers = players
+    .map((player, index) => ({ player, index }))
+    .filter(({ player }) => matchesSearch(searchQuery, player.name, player.playerId, player.deckName))
+  const isFiltering = searchQuery.trim() !== ''
 
   // The per-player QR button needs the LAN server: it encodes a pre-bound
   // session token into the mobile-page URL, so a player claims their spot by
@@ -86,17 +97,32 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
         </div>
       )}
 
-      <p className="text-sm text-muted-foreground">
-        {inProgress
-          ? t('players.activeCount', { active: activePlayers.length, total: players.length })
-          : t('players.count', { count: players.length })}
-      </p>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          {isFiltering
+            ? t('players.searchResults', { shown: visiblePlayers.length, total: players.length })
+            : inProgress
+              ? t('players.activeCount', { active: activePlayers.length, total: players.length })
+              : t('players.count', { count: players.length })}
+        </p>
+        {players.length >= SEARCH_THRESHOLD && (
+          <input
+            type="search"
+            placeholder={t('players.search')}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-64 rounded-lg border border-input bg-card px-3 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        )}
+      </div>
 
       <div className="divide-y divide-muted rounded-lg border border-border">
         {players.length === 0 ? (
           <p className="p-4 text-center text-sm text-muted-foreground">{t('dashboard.empty')}</p>
+        ) : visiblePlayers.length === 0 ? (
+          <p className="p-4 text-center text-sm text-muted-foreground">{t('players.searchNoResults')}</p>
         ) : (
-          players.map((player, index) => (
+          visiblePlayers.map(({ player, index }) => (
             <div
               key={player.id}
               className={cn(
