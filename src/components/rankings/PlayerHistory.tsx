@@ -80,7 +80,11 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
                 <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
                   {t(`penalties.type.${p.type}`)}
                 </span>
-                <span className="text-secondary-foreground">{p.reason}</span>
+                <span className="text-secondary-foreground">
+                  {p.infractionId ? t(`penalties.infraction.${p.infractionId}`) : ''}
+                  {p.infractionId && p.reason ? ' — ' : ''}
+                  {p.reason}
+                </span>
                 <span className="ml-auto text-xs text-muted-foreground">{p.tournamentName} — {new Date(p.date).toLocaleDateString()}</span>
               </div>
             ))}

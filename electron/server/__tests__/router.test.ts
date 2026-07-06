@@ -10,10 +10,11 @@ vi.mock('../../ipc/stateSync', () => ({
   dispatchToRenderer: vi.fn(),
   sendJudgeCall: vi.fn(),
   sendMatchReport: vi.fn(),
+  sendDecklistSubmitted: vi.fn(),
 }))
 
 import { handleRequest, clearJudgeCallLog } from '../router'
-import { getCurrentState, dispatchToRenderer, sendMatchReport } from '../../ipc/stateSync'
+import { getCurrentState, dispatchToRenderer, sendMatchReport, sendDecklistSubmitted } from '../../ipc/stateSync'
 import { clearSessions, createPlayerSession, createJudgeSession, revokeJudgeSession, isJudgeSession } from '../sessions'
 import { resetRateLimits } from '../rateLimit'
 
@@ -299,6 +300,31 @@ describe('POST /api/players/:id/decklist', () => {
     })
   })
 
+  it('does not flag a submission to the TO before the tournament starts', async () => {
+    const token = await registerToken('Alice Alpha') // default state is registration
+    vi.mocked(sendDecklistSubmitted).mockClear()
+    await request('POST', '/api/players/p1/decklist', { token, body: { decklistText: '3x Blue-Eyes White Dragon' } })
+    expect(sendDecklistSubmitted).not.toHaveBeenCalled()
+  })
+
+  it('flags a submission to the TO once the tournament is running', async () => {
+    const token = await registerToken('Alice Alpha')
+    vi.mocked(getCurrentState).mockReturnValue(makeState('in_progress'))
+    vi.mocked(sendDecklistSubmitted).mockClear()
+    await request('POST', '/api/players/p1/decklist', { token, body: { decklistText: '3x Blue-Eyes White Dragon' } })
+    expect(sendDecklistSubmitted).toHaveBeenCalledWith({
+      tournamentId: BOUND_ID,
+      playerId: 'p1',
+      playerName: 'Alice Alpha',
+      entries: expect.arrayContaining([expect.objectContaining({ cardName: 'Blue-Eyes White Dragon', quantity: 3 })]),
+    })
+
+    // An empty/cleared list is not a submission worth flagging.
+    vi.mocked(sendDecklistSubmitted).mockClear()
+    await request('POST', '/api/players/p1/decklist', { token, body: { decklistText: '   ' } })
+    expect(sendDecklistSubmitted).not.toHaveBeenCalled()
+  })
+
   it('rejects writing another player\'s decklist', async () => {
     const token = await registerToken('Alice Alpha')
     vi.mocked(dispatchToRenderer).mockClear()
@@ -477,6 +503,18 @@ describe('judge endpoints', () => {
 
     vi.mocked(getCurrentState).mockReturnValue(makeState('registration'))
     expect((await request('POST', '/api/judge/players/p1/penalty', { token, body: { type: 'warning' } })).status).toBe(409)
+  })
+
+  it('accepts a valid catalog infractionId and rejects an unknown one', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+    const ok = await request('POST', '/api/judge/players/p1/penalty', { token, body: { type: 'game_loss', reason: '', infractionId: 'mtg_slow_play' } })
+    expect(ok.status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'ISSUE_PENALTY',
+      payload: { tournamentId: BOUND_ID, playerId: 'p1', type: 'game_loss', reason: '', infractionId: 'mtg_slow_play' },
+    })
+    expect((await request('POST', '/api/judge/players/p1/penalty', { token, body: { type: 'warning', infractionId: 'not_a_real_infraction' } })).status).toBe(400)
   })
 
   it('drops a player once', async () => {

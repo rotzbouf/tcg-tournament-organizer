@@ -24,7 +24,7 @@ export type TournamentAction =
   | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; gameFormat?: string | null; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility; countForSeason?: boolean } }
   | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
   | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName?: string | null; decklist?: DecklistEntry[] | null } }
-  | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string } }
+  | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string; infractionId?: string } }
   | { type: 'REMOVE_PENALTY'; payload: { tournamentId: string; penaltyId: string } }
   | { type: 'ADVANCE_PHASE'; payload: { tournamentId: string } }
   | { type: 'UPDATE_ELO_RATINGS'; payload: { tournamentId: string } }

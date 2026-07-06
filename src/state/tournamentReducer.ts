@@ -612,6 +612,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         playerId: action.payload.playerId,
         roundNumber: tournament.currentRound,
         type: action.payload.type,
+        ...(action.payload.infractionId ? { infractionId: action.payload.infractionId } : {}),
         reason: action.payload.reason,
         issuedAt: new Date().toISOString(),
       }
@@ -682,6 +683,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
               tournamentName: tournament.name,
               date: penalty.issuedAt,
               type: action.payload.type,
+              ...(action.payload.infractionId ? { infractionId: action.payload.infractionId } : {}),
               reason: action.payload.reason,
             }
             updatedState = {

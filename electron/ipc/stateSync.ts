@@ -157,4 +157,13 @@ export function sendMatchReport(data: { matchId: string; result: string; reporte
   }
 }
 
+// A player submitted a decklist from their phone. The renderer holds the
+// banlist data and game config, so it (not the server) decides legality and
+// raises a banner for the TO. Sent only after the tournament has started.
+export function sendDecklistSubmitted(data: { tournamentId: string; playerId: string; playerName: string; entries: unknown }): void {
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    mainWindowRef.webContents.send('decklist:submitted', JSON.stringify(data))
+  }
+}
+
 export { getClientCount } from '../server/sse'

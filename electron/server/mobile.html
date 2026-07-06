@@ -84,6 +84,7 @@ const T={
     jDeck:'Show decklist',jNoDeck:'No decklist submitted',jInvalid:'Judge access is invalid or was revoked.',
     jClaim:'Take this call',jHandles:'is handling',jYou:'you',
     jNamePh:'Your name (visible to other judges)',
+    jInfraction:'Infraction',jCustom:'Custom / free text',jRec:'Recommended:',jRepeat:'Repeat offence',jEsc:'escalated to',
     pt_warning:'Warning',pt_game_loss:'Game Loss',pt_match_loss:'Match Loss',pt_disqualification:'Disqualification',pt_note:'Note'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
@@ -109,6 +110,7 @@ const T={
     jDeck:'Deckliste anzeigen',jNoDeck:'Keine Deckliste eingereicht',jInvalid:'Judge-Zugang ungültig oder widerrufen.',
     jClaim:'Übernehmen',jHandles:'übernimmt',jYou:'du',
     jNamePh:'Dein Name (für die anderen Judges sichtbar)',
+    jInfraction:'Vergehen',jCustom:'Eigenes / Freitext',jRec:'Empfohlen:',jRepeat:'Wiederholung',jEsc:'hochgestuft auf',
     pt_warning:'Verwarnung',pt_game_loss:'Game Loss',pt_match_loss:'Match Loss',pt_disqualification:'Disqualifikation',pt_note:'Notiz'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
@@ -625,14 +627,106 @@ function renderJudgeCalls(el){
   }).join('');
 }
 
+// Mirror of src/lib/penaltyCatalog.ts (this page is standalone, no bundler).
+const PL_LADDER=['warning','game_loss','match_loss','disqualification'];
+const PENALTY_MTYPES=['warning','game_loss','match_loss','disqualification','note'];
+const PCAT_ORDER=['game_play_error','tournament_error','unsporting_conduct','serious'];
+const PCAT_LABEL={
+  game_play_error:{en:'Game Play Errors',de:'Spielfehler'},
+  tournament_error:{en:'Tournament Errors',de:'Turnierfehler'},
+  unsporting_conduct:{en:'Unsporting Conduct',de:'Unsportliches Verhalten'},
+  serious:{en:'Serious / Disqualification',de:'Schwerwiegend / Disqualifikation'}
+};
+const PCATALOG={
+  mtg:[
+    {i:'mtg_missed_trigger',c:'game_play_error',d:'warning',e:1,l:{en:'Missed Trigger',de:'Verpasster Trigger'}},
+    {i:'mtg_game_rule_violation',c:'game_play_error',d:'warning',e:1,l:{en:'Game Rule Violation',de:'Regelverstoß'}},
+    {i:'mtg_hidden_card_error',c:'game_play_error',d:'warning',e:1,l:{en:'Hidden Card Error',de:'Fehler mit verdeckten Karten'}},
+    {i:'mtg_looking_extra_cards',c:'game_play_error',d:'warning',e:1,l:{en:'Looking at Extra Cards',de:'Zusätzliche Karten gesehen'}},
+    {i:'mtg_mulligan_error',c:'game_play_error',d:'warning',e:1,l:{en:'Mulligan Procedure Error',de:'Mulligan-Verfahrensfehler'}},
+    {i:'mtg_failure_maintain_game_state',c:'game_play_error',d:'warning',e:1,l:{en:'Failure to Maintain Game State',de:'Spielzustand nicht aufrechterhalten'}},
+    {i:'mtg_tardiness',c:'tournament_error',d:'game_loss',e:1,l:{en:'Tardiness',de:'Verspätung'}},
+    {i:'mtg_slow_play',c:'tournament_error',d:'warning',e:1,l:{en:'Slow Play',de:'Langsames Spiel'}},
+    {i:'mtg_insufficient_shuffling',c:'tournament_error',d:'warning',e:1,l:{en:'Insufficient Shuffling',de:'Unzureichendes Mischen'}},
+    {i:'mtg_deck_problem',c:'tournament_error',d:'game_loss',e:1,l:{en:'Deck / Decklist Problem',de:'Deck-/Decklisten-Problem'}},
+    {i:'mtg_marked_cards',c:'tournament_error',d:'warning',e:1,l:{en:'Marked Cards',de:'Markierte Karten'}},
+    {i:'mtg_limited_procedure',c:'tournament_error',d:'warning',e:1,l:{en:'Limited Procedure Violation',de:'Limited-Verfahrensverstoß'}},
+    {i:'mtg_communication_violation',c:'tournament_error',d:'warning',e:1,l:{en:'Communication Policy Violation',de:'Verstoß gegen Kommunikationsregeln'}},
+    {i:'mtg_outside_assistance',c:'tournament_error',d:'game_loss',e:0,l:{en:'Outside Assistance',de:'Hilfe von außen'}},
+    {i:'mtg_usc_minor',c:'unsporting_conduct',d:'warning',e:1,l:{en:'Unsporting Conduct — Minor',de:'Unsportliches Verhalten — Gering'}},
+    {i:'mtg_usc_major',c:'unsporting_conduct',d:'match_loss',e:0,l:{en:'Unsporting Conduct — Major',de:'Unsportliches Verhalten — Schwer'}},
+    {i:'mtg_improperly_determining_winner',c:'unsporting_conduct',d:'match_loss',e:0,l:{en:'Improperly Determining a Winner',de:'Unzulässige Gewinnerermittlung'}},
+    {i:'mtg_cheating',c:'serious',d:'disqualification',e:0,l:{en:'Cheating',de:'Betrug'}},
+    {i:'mtg_stalling',c:'serious',d:'disqualification',e:0,l:{en:'Stalling',de:'Zeitspiel (Stalling)'}},
+    {i:'mtg_bribery',c:'serious',d:'disqualification',e:0,l:{en:'Bribery & Wagering',de:'Bestechung & Wetten'}},
+    {i:'mtg_aggressive_behavior',c:'serious',d:'disqualification',e:0,l:{en:'Aggressive Behavior',de:'Aggressives Verhalten'}},
+    {i:'mtg_theft',c:'serious',d:'disqualification',e:0,l:{en:'Theft of Tournament Material',de:'Diebstahl von Turniermaterial'}}
+  ],
+  pokemon:[
+    {i:'pkmn_tardiness',c:'tournament_error',d:'game_loss',e:1,l:{en:'Tardiness',de:'Verspätung'}},
+    {i:'pkmn_procedural_error',c:'tournament_error',d:'warning',e:1,l:{en:'Procedural Error',de:'Verfahrensfehler'}},
+    {i:'pkmn_deck_error',c:'tournament_error',d:'game_loss',e:1,l:{en:'Deck / Decklist Error',de:'Deck-/Decklisten-Fehler'}},
+    {i:'pkmn_slow_play',c:'tournament_error',d:'warning',e:1,l:{en:'Slow Play',de:'Langsames Spiel'}},
+    {i:'pkmn_marked_cards',c:'tournament_error',d:'warning',e:1,l:{en:'Marked Cards',de:'Markierte Karten'}},
+    {i:'pkmn_unsporting_minor',c:'unsporting_conduct',d:'warning',e:1,l:{en:'Unsporting Conduct — Minor',de:'Unsportliches Verhalten — Gering'}},
+    {i:'pkmn_unsporting_major',c:'unsporting_conduct',d:'game_loss',e:1,l:{en:'Unsporting Conduct — Major',de:'Unsportliches Verhalten — Schwer'}},
+    {i:'pkmn_cheating',c:'serious',d:'disqualification',e:0,l:{en:'Cheating',de:'Betrug'}},
+    {i:'pkmn_bribery',c:'serious',d:'disqualification',e:0,l:{en:'Bribery',de:'Bestechung'}},
+    {i:'pkmn_theft',c:'serious',d:'disqualification',e:0,l:{en:'Theft of Tournament Material',de:'Diebstahl von Turniermaterial'}}
+  ],
+  yugioh:[
+    {i:'ygo_procedural_error',c:'game_play_error',d:'warning',e:1,l:{en:'Procedural Error',de:'Verfahrensfehler'}},
+    {i:'ygo_drawing_extra',c:'game_play_error',d:'warning',e:1,l:{en:'Drawing Extra Cards',de:'Zusätzliche Karten gezogen'}},
+    {i:'ygo_slow_play',c:'tournament_error',d:'warning',e:1,l:{en:'Slow Play',de:'Langsames Spiel'}},
+    {i:'ygo_tardiness',c:'tournament_error',d:'game_loss',e:1,l:{en:'Tardiness',de:'Verspätung'}},
+    {i:'ygo_deck_error',c:'tournament_error',d:'game_loss',e:1,l:{en:'Deck / Decklist Error',de:'Deck-/Decklisten-Fehler'}},
+    {i:'ygo_marked_cards',c:'tournament_error',d:'warning',e:1,l:{en:'Marked Cards',de:'Markierte Karten'}},
+    {i:'ygo_unsporting_minor',c:'unsporting_conduct',d:'warning',e:1,l:{en:'Unsporting Conduct — Minor',de:'Unsportliches Verhalten — Gering'}},
+    {i:'ygo_unsporting_major',c:'unsporting_conduct',d:'match_loss',e:0,l:{en:'Unsporting Conduct — Major',de:'Unsportliches Verhalten — Schwer'}},
+    {i:'ygo_cheating',c:'serious',d:'disqualification',e:0,l:{en:'Cheating',de:'Betrug'}},
+    {i:'ygo_bribery',c:'serious',d:'disqualification',e:0,l:{en:'Bribery',de:'Bestechung'}},
+    {i:'ygo_theft',c:'serious',d:'disqualification',e:0,l:{en:'Theft of Tournament Material',de:'Diebstahl von Turniermaterial'}}
+  ],
+  _gen:[
+    {i:'gen_procedural_error',c:'game_play_error',d:'warning',e:1,l:{en:'Procedural Error',de:'Verfahrensfehler'}},
+    {i:'gen_slow_play',c:'tournament_error',d:'warning',e:1,l:{en:'Slow Play',de:'Langsames Spiel'}},
+    {i:'gen_tardiness',c:'tournament_error',d:'game_loss',e:1,l:{en:'Tardiness',de:'Verspätung'}},
+    {i:'gen_deck_error',c:'tournament_error',d:'game_loss',e:1,l:{en:'Deck / Decklist Error',de:'Deck-/Decklisten-Fehler'}},
+    {i:'gen_marked_cards',c:'tournament_error',d:'warning',e:1,l:{en:'Marked Cards',de:'Markierte Karten'}},
+    {i:'gen_unsporting_minor',c:'unsporting_conduct',d:'warning',e:1,l:{en:'Unsporting Conduct — Minor',de:'Unsportliches Verhalten — Gering'}},
+    {i:'gen_unsporting_major',c:'unsporting_conduct',d:'match_loss',e:0,l:{en:'Unsporting Conduct — Major',de:'Unsportliches Verhalten — Schwer'}},
+    {i:'gen_cheating',c:'serious',d:'disqualification',e:0,l:{en:'Cheating',de:'Betrug'}},
+    {i:'gen_bribery',c:'serious',d:'disqualification',e:0,l:{en:'Bribery',de:'Bestechung'}},
+    {i:'gen_theft',c:'serious',d:'disqualification',e:0,l:{en:'Theft of Tournament Material',de:'Diebstahl von Turniermaterial'}}
+  ]
+};
+function jGameCatalog(){return PCATALOG[(tournament&&tournament.game)||'']||PCATALOG._gen}
+function jFindInf(id){for(const g in PCATALOG){const f=PCATALOG[g].find(x=>x.i===id);if(f)return f}return null}
+function jPriorCount(pid,infId){return((tournament&&tournament.penalties)||[]).filter(p=>p.playerId===pid&&p.infractionId===infId&&p.type!=='note').length}
+function jSuggest(inf,prior){
+  const base=PL_LADDER.indexOf(inf.d),offense=prior+1;
+  if(!inf.e||prior===0||base<0)return{level:inf.d,esc:false,offense};
+  const idx=Math.min(base+prior,PL_LADDER.length-1);
+  return{level:PL_LADDER[idx],esc:idx>base,offense};
+}
+function ilabel(inf){return inf.l[lang]||inf.l.en}
+function clabel(c){return PCAT_LABEL[c][lang]||PCAT_LABEL[c].en}
+
 function renderJudgePenalties(el){
   const players=[...tournament.players].sort((a,b)=>a.name.localeCompare(b.name));
-  const types=['warning','game_loss','match_loss','disqualification','note'];
+  const cat=jGameCatalog();
+  const groups=PCAT_ORDER.map(c=>{
+    const g=cat.filter(x=>x.c===c);if(!g.length)return'';
+    return`<optgroup label="${esc(clabel(c))}">`+g.map(x=>`<option value="${x.i}">${esc(ilabel(x))}</option>`).join('')+`</optgroup>`;
+  }).join('');
   el.innerHTML=`
     <div class="form-group"><label class="form-label">${t('jSelectPlayer')}</label>
-      <select id="jp">${players.map(p=>`<option value="${p.id}">${esc(p.name)}${p.droppedInRound!==null?' ✕':''}</option>`).join('')}</select></div>
+      <select id="jp" onchange="updatePenaltySuggest()">${players.map(p=>`<option value="${p.id}">${esc(p.name)}${p.droppedInRound!==null?' ✕':''}</option>`).join('')}</select></div>
+    <div class="form-group"><label class="form-label">${t('jInfraction')}</label>
+      <select id="ji" onchange="updatePenaltySuggest()"><option value="">${t('jCustom')}</option>${groups}</select></div>
+    <div id="jesc" class="msg" style="display:none"></div>
     <div class="form-group"><label class="form-label">${t('jPenaltyType')}</label>
-      <select id="jt">${types.map(x=>`<option value="${x}">${t('pt_'+x)}</option>`).join('')}</select></div>
+      <select id="jt">${PENALTY_MTYPES.map(x=>`<option value="${x}">${t('pt_'+x)}</option>`).join('')}</select></div>
     <div class="form-group"><label class="form-label">${t('jReason')}</label>
       <input type="text" id="jr" placeholder="${t('jReason')}"></div>
     <button class="primary" onclick="judgeIssuePenalty()">${t('jIssue')}</button>
@@ -642,12 +736,33 @@ function renderJudgePenalties(el){
     <button class="secondary" style="color:#dc2626;border-color:#dc2626" onclick="judgeDrop()">${t('jDrop')}</button>`;
 }
 
+// Selecting an infraction (or a different player) pre-fills the recommended
+// level and shows how far a repeat offence has escalated it.
+function updatePenaltySuggest(){
+  const pid=document.getElementById('jp')?.value;
+  const infId=document.getElementById('ji')?.value;
+  const escEl=document.getElementById('jesc'),jt=document.getElementById('jt');
+  const inf=infId?jFindInf(infId):null;
+  if(!inf){if(escEl)escEl.style.display='none';return}
+  const s=jSuggest(inf,jPriorCount(pid,infId));
+  if(jt)jt.value=s.level;
+  if(escEl){
+    escEl.style.display='';
+    escEl.textContent=s.esc
+      ?t('jRepeat')+' #'+s.offense+' — '+t('jEsc')+' '+t('pt_'+s.level)
+      :t('jRec')+' '+t('pt_'+s.level);
+    escEl.style.color=s.esc?'#b45309':'var(--fg-muted)';
+  }
+}
+
 async function judgeIssuePenalty(){
   const pid=document.getElementById('jp')?.value,type=document.getElementById('jt')?.value;
+  const infId=document.getElementById('ji')?.value||'';
   const reason=document.getElementById('jr')?.value?.trim()||'';
   const pm=document.getElementById('pm');if(!pid||!type)return;
+  const body={type,reason};if(infId)body.infractionId=infId;
   try{
-    const d=await jpost('/api/judge/players/'+pid+'/penalty',{type,reason});
+    const d=await jpost('/api/judge/players/'+pid+'/penalty',body);
     if(!pm)return;
     if(d&&d.ok){pm.textContent=t('jPenaltySaved');const jr=document.getElementById('jr');if(jr)jr.value=''}
     else if(d)pm.textContent=t('jPenaltyError')+(d.error?': '+d.error:'');

@@ -5,7 +5,7 @@ import { Player } from '@/types/player'
 import { MatchCard } from './MatchCard'
 import { Button } from '@/components/ui/Button'
 import { useTournamentContext } from '@/state/useTournamentContext'
-import { generatePairingsPdfHtml } from '@/lib/exportResults'
+import { generatePairingsPdfHtml, generatePairingsByNameHtml, generateMatchSlipsHtml } from '@/lib/exportResults'
 import { usePendingReports } from '@/hooks/usePendingReports'
 import { MatchResult } from '@/types/round'
 import { matchesSearch } from '@/lib/search'
@@ -266,6 +266,24 @@ export function RoundPanel({
           }
         }}>
           {t('export.pairings')}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => {
+          const tournament = state.tournaments[tournamentId]
+          if (tournament) {
+            const html = generatePairingsByNameHtml(tournament, round.roundNumber)
+            window.electronAPI?.savePdf(html, `${(tournamentName ?? 'pairings').replace(/\s+/g, '-')}-R${round.roundNumber}-name.pdf`)
+          }
+        }}>
+          {t('export.pairingsByName')}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => {
+          const tournament = state.tournaments[tournamentId]
+          if (tournament) {
+            const html = generateMatchSlipsHtml(tournament, round.roundNumber)
+            window.electronAPI?.savePdf(html, `${(tournamentName ?? 'slips').replace(/\s+/g, '-')}-R${round.roundNumber}-slips.pdf`)
+          }
+        }}>
+          {t('export.matchSlips')}
         </Button>
         {!round.isComplete && (
           <Button onClick={handleComplete} disabled={!allResultsIn}>

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('file:save', data, defaultName),
   openFile: () => ipcRenderer.invoke('file:open'),
   saveCsv: (data: string, defaultName?: string) => ipcRenderer.invoke('file:saveCsv', data, defaultName),
+  saveTextFile: (data: string, defaultName: string, filter: { name: string; extensions: string[] }) => ipcRenderer.invoke('file:saveText', data, defaultName, filter),
   savePdf: (html: string, defaultName?: string) => ipcRenderer.invoke('file:savePdf', html, defaultName),
   syncState: (state: string) => ipcRenderer.send('state:sync', state),
   loadStorageState: () => ipcRenderer.sendSync('storage:load'),
@@ -28,6 +29,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onMatchReport: (callback: (data: string) => void) => {
     ipcRenderer.on('match:report', (_event, data: string) => callback(data))
+  },
+  onDecklistSubmitted: (callback: (data: string) => void) => {
+    ipcRenderer.on('decklist:submitted', (_event, data: string) => callback(data))
   },
   loadBanlists: () => ipcRenderer.invoke('banlist:load'),
   fetchBanlist: (game: string, format: string) => ipcRenderer.invoke('banlist:fetch', game, format),

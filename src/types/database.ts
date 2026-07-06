@@ -12,6 +12,7 @@ export interface DatabasePenalty {
   tournamentName: string
   date: string
   type: string
+  infractionId?: string
   reason: string
 }
 

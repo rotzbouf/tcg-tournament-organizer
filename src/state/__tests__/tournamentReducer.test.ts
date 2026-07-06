@@ -436,6 +436,30 @@ describe('tournamentReducer', () => {
       state = dispatch(state, { type: 'COMPLETE_TOURNAMENT', payload: { tournamentId: id } })
       expect(state.playerDatabase.db1.penalties).toHaveLength(1)
     })
+
+    it('stores the catalog infractionId on both the tournament and database penalty', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Alice' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Bob' } })
+      state = {
+        ...state,
+        playerDatabase: {
+          db1: {
+            id: 'db1', name: 'Alice', game: 'yugioh', playerId: null,
+            elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [], penalties: [], lastUpdated: '2026-01-01',
+          },
+        },
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const alice = getTournament(state).players.find(p => p.name === 'Alice')!
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: alice.id, type: 'warning', reason: '', infractionId: 'ygo_slow_play' },
+      })
+      expect(getTournament(state).penalties[0].infractionId).toBe('ygo_slow_play')
+      expect(state.playerDatabase.db1.penalties[0].infractionId).toBe('ygo_slow_play')
+    })
   })
 
   describe('REMOVE_PENALTY', () => {

@@ -8,12 +8,14 @@ import { RankingsView } from './components/rankings/RankingsView'
 import { SeasonView } from './components/seasons/SeasonView'
 import { BanlistView } from './components/settings/BanlistView'
 import { JudgeCallNotification } from './components/ui/JudgeCallNotification'
+import { IllegalDecklistNotification } from './components/ui/IllegalDecklistNotification'
 
 export default function App() {
   return (
     <TournamentProvider>
       <TimerProvider>
         <JudgeCallNotification />
+        <IllegalDecklistNotification />
         <AppShell>
           <Routes>
             <Route path="/" element={<Dashboard />} />

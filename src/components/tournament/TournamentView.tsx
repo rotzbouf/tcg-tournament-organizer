@@ -5,7 +5,8 @@ import { useTournamentContext } from '@/state/useTournamentContext'
 import { selectTournament, selectCurrentRound, selectStandings, selectDivisionStandings } from '@/state/selectors'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { DIVISION_LABELS, DIVISION_ORDER } from '@/lib/ageDivision'
-import { generateCsv, generatePdfHtml } from '@/lib/exportResults'
+import { generateCsv, generatePdfHtml, generateStandingsPosterHtml } from '@/lib/exportResults'
+import { generatePokemonTdf, generateMatchResultsCsv } from '@/lib/exportBridges'
 import { generateTournamentReport } from '@/lib/reportGenerator'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -218,7 +219,9 @@ export function TournamentView() {
         open={showPenaltyDialog}
         onClose={() => setShowPenaltyDialog(false)}
         tournamentId={tournament.id}
+        game={tournament.game}
         players={tournament.players}
+        penalties={tournament.penalties}
       />
 
       {showEditDialog && (
@@ -330,6 +333,31 @@ export function TournamentView() {
               }}>
                 {t('export.pdf')}
               </Button>
+              {tournament.rounds.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => {
+                  const lastComplete = [...tournament.rounds].reverse().find(r => r.isComplete)
+                  const posterRound = lastComplete?.roundNumber ?? tournament.currentRound
+                  const html = generateStandingsPosterHtml(tournament, standings, posterRound)
+                  window.electronAPI?.savePdf(html, `${tournament.name.replace(/\s+/g, '-')}-aushang-R${posterRound}.pdf`)
+                }}>
+                  {t('export.standingsPoster')}
+                </Button>
+              )}
+              {tournament.rounds.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => {
+                  const safe = tournament.name.replace(/\s+/g, '-')
+                  if (tournament.game === 'pokemon') {
+                    window.electronAPI?.saveTextFile(generatePokemonTdf(tournament), `${safe}.tdf`, { name: 'Pokémon TOM', extensions: ['tdf', 'xml'] })
+                  } else {
+                    window.electronAPI?.saveCsv(generateMatchResultsCsv(tournament, standings), `${safe}-ergebnisse.csv`)
+                  }
+                }}>
+                  {tournament.game === 'pokemon' ? t('export.bridgePokemon')
+                    : tournament.game === 'mtg' ? t('export.bridgeMtg')
+                    : tournament.game === 'yugioh' ? t('export.bridgeYugioh')
+                    : t('export.bridgeGeneric')}
+                </Button>
+              )}
               {tournament.status === 'completed' && (
                 <Button variant="secondary" size="sm" onClick={() => {
                   const html = generateTournamentReport(tournament, standings)

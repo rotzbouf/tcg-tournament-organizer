@@ -3,12 +3,13 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport } from '../ipc/stateSync'
+import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport, sendDecklistSubmitted } from '../ipc/stateSync'
 import { addClient, sanitizeTournament } from './sse'
 import { createSession, getSession, bindSessionToPlayer, isNameClaimed, isJudgeSession } from './sessions'
 import { allowPost } from './rateLimit'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
+import { getInfraction } from '../../src/lib/penaltyCatalog'
 
 let mobileHtmlCache: string | null = null
 
@@ -212,6 +213,19 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         type: 'UPDATE_PLAYER',
         payload: { tournamentId: boundTournamentId, playerId: decklistMatch[1], decklist: entries.length > 0 ? entries : null },
       })
+      // After the tournament has started, flag a fresh submission to the TO so
+      // the renderer (which owns the banlist) can check legality and warn. The
+      // notification is informational only — the TO decides any action manually.
+      if (entries.length > 0) {
+        const state = getCurrentState() as { tournaments?: Record<string, Tournament> } | null
+        const tournament = state?.tournaments?.[boundTournamentId]
+        if (tournament && (tournament.status === 'in_progress' || tournament.status === 'top_cut')) {
+          const player = tournament.players.find(p => p.id === decklistMatch[1])
+          if (player) {
+            sendDecklistSubmitted({ tournamentId: boundTournamentId, playerId: player.id, playerName: player.name, entries })
+          }
+        }
+      }
       jsonResponse(res, { ok: true })
     })
     return
@@ -359,8 +373,11 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
   const penaltyMatch = reqPath.match(/^\/api\/judge\/players\/([^/]+)\/penalty$/)
   if (penaltyMatch && req.method === 'POST') {
     readBody(req, res, (body) => {
-      const { type, reason } = body as { type?: string; reason?: string }
+      const { type, reason, infractionId } = body as { type?: string; reason?: string; infractionId?: string }
       if (!type || !PENALTY_TYPES.includes(type)) { jsonResponse(res, { error: 'invalid penalty type' }, 400); return }
+      // An infraction id is optional (a judge can log a free-text penalty), but
+      // if supplied it must be a real catalog key so history stays consistent.
+      if (infractionId && !getInfraction(infractionId)) { jsonResponse(res, { error: 'invalid infraction' }, 400); return }
       if (tournament.status !== 'in_progress' && tournament.status !== 'top_cut') {
         jsonResponse(res, { error: 'tournament not running' }, 409); return
       }
@@ -368,7 +385,13 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
       if (!player) { jsonResponse(res, { error: 'player not found' }, 404); return }
       dispatchToRenderer({
         type: 'ISSUE_PENALTY',
-        payload: { tournamentId: boundTournamentId, playerId: player.id, type, reason: (reason ?? '').trim() },
+        payload: {
+          tournamentId: boundTournamentId,
+          playerId: player.id,
+          type,
+          reason: (reason ?? '').trim(),
+          ...(infractionId ? { infractionId } : {}),
+        },
       })
       jsonResponse(res, { ok: true })
     })
