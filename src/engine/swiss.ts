@@ -98,18 +98,19 @@ const REMATCH_PENALTY = 1_000_000_000
 const POINT_DIFF_SCALE = 10_000
 const PAIR_WEIGHT_BASE = 2_000_000_000
 
-// Exact maximum-weight matching over all possible pairings: minimizes the
-// number of rematches globally, then the sum of squared match-point
-// differences (one big pair-down is worse than two small ones), then prefers
-// pairing neighbors in the sorted order (keeps power pairings rank-adjacent).
-function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match[] {
-  if (candidates.length < 2) return []
+// Above this pool size the full pairing graph (n²/2 edges into an O(V·E)
+// blossom matching) gets slow; a window over the score-sorted order keeps the
+// graph sparse. 48 neighbors give every player far more non-rematch options
+// than the round count could ever exhaust, and adjacent-index edges guarantee
+// a perfect matching exists.
+const SPARSE_POOL_THRESHOLD = 128
+const SPARSE_WINDOW = 48
 
-  candidates.sort((a, b) => b.matchPoints - a.matchPoints)
-
+function buildEdges(candidates: PairingCandidate[], window?: number): [number, number, number][] {
   const edges: [number, number, number][] = []
   for (let i = 0; i < candidates.length; i++) {
-    for (let j = i + 1; j < candidates.length; j++) {
+    const jMax = window ? Math.min(candidates.length - 1, i + window) : candidates.length - 1
+    for (let j = i + 1; j <= jMax; j++) {
       const diff = candidates[i].matchPoints - candidates[j].matchPoints
       let weight = PAIR_WEIGHT_BASE - diff * diff * POINT_DIFF_SCALE - (j - i)
       if (candidates[i].previousOpponents.has(candidates[j].playerId)) {
@@ -118,8 +119,32 @@ function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match
       edges.push([i, j, weight])
     }
   }
+  return edges
+}
 
-  const mate = maximumWeightMatching(edges, true)
+// Exact maximum-weight matching over all possible pairings: minimizes the
+// number of rematches globally, then the sum of squared match-point
+// differences (one big pair-down is worse than two small ones), then prefers
+// pairing neighbors in the sorted order (keeps power pairings rank-adjacent).
+// Large pools run on the sparse window graph first; if that leaves anyone
+// unpaired or forces a rematch, the full graph decides (so pruning can never
+// produce a worse pairing than before — only a faster one).
+function pairPlayers(candidates: PairingCandidate[], roundNumber: number): Match[] {
+  if (candidates.length < 2) return []
+
+  candidates.sort((a, b) => b.matchPoints - a.matchPoints)
+
+  const useSparse = candidates.length > SPARSE_POOL_THRESHOLD
+  let mate = maximumWeightMatching(buildEdges(candidates, useSparse ? SPARSE_WINDOW : undefined), true)
+
+  if (useSparse) {
+    const degraded = candidates.some((c, i) => {
+      const j = mate[i]
+      if (j === undefined || j < 0) return true // unpaired
+      return c.previousOpponents.has(candidates[j].playerId) // rematch
+    })
+    if (degraded) mate = maximumWeightMatching(buildEdges(candidates), true)
+  }
 
   const matches: Match[] = []
   for (let i = 0; i < candidates.length; i++) {

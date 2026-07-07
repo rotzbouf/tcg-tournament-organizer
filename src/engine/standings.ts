@@ -2,8 +2,97 @@ import { Player } from '../types/player'
 import { Round } from '../types/round'
 import { Standing } from '../types/standing'
 import { GameType } from '../types/tournament'
-import { calculateMatchPoints, getPlayerRecord, getTiebreakerRecord } from './scoring'
+import { WIN_POINTS, DRAW_POINTS, BYE_POINTS } from './scoring'
 import { GAME_CONFIG, TiebreakerConfig } from '../lib/gameConfig'
+
+// Per-player aggregates collected in a single pass over all completed swiss
+// rounds. Every tiebreaker below is derived from these maps instead of
+// re-scanning the rounds per player (the old O(n²·matches) approach made
+// 500-player standings take seconds).
+interface PlayerAggregate {
+  matchPoints: number
+  wins: number
+  losses: number
+  draws: number
+  // Tiebreaker record: byes excluded per official Pokémon/MTG rules.
+  tbWins: number
+  tbLosses: number
+  tbDraws: number
+  gameWins: number
+  totalGames: number
+  opponents: string[]
+  decided: { oppId: string; won: boolean; draw: boolean }[]
+}
+
+function emptyAggregate(): PlayerAggregate {
+  return { matchPoints: 0, wins: 0, losses: 0, draws: 0, tbWins: 0, tbLosses: 0, tbDraws: 0, gameWins: 0, totalGames: 0, opponents: [], decided: [] }
+}
+
+function buildAggregates(rounds: Round[]): { aggregates: Map<string, PlayerAggregate>; headToHead: Map<string, string> } {
+  const aggregates = new Map<string, PlayerAggregate>()
+  // Unordered pair key → winner of the FIRST decisive encounter (draws skipped),
+  // mirroring the scan order of the old checkHeadToHead.
+  const headToHead = new Map<string, string>()
+  const get = (id: string): PlayerAggregate => {
+    let agg = aggregates.get(id)
+    if (!agg) { agg = emptyAggregate(); aggregates.set(id, agg) }
+    return agg
+  }
+
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      if (match.isBye) {
+        if (match.result === 'pending') continue
+        const a = get(match.player1Id)
+        a.matchPoints += BYE_POINTS
+        a.wins++ // byes show as wins in the record but stay out of tiebreakers
+        continue
+      }
+      if (!match.player2Id) continue
+      const a = get(match.player1Id)
+      const b = get(match.player2Id)
+      // Opponents count even while a result is pending (matches the old
+      // getOpponentIds); everything score-related requires a decided match.
+      a.opponents.push(match.player2Id)
+      b.opponents.push(match.player1Id)
+      if (match.result === 'pending') continue
+
+      const p1Won = match.result === 'player1_win'
+      const p2Won = match.result === 'player2_win'
+      const draw = match.result === 'draw'
+      a.matchPoints += p1Won ? WIN_POINTS : draw ? DRAW_POINTS : 0
+      b.matchPoints += p2Won ? WIN_POINTS : draw ? DRAW_POINTS : 0
+      if (p1Won) { a.wins++; a.tbWins++; b.losses++; b.tbLosses++ }
+      else if (p2Won) { b.wins++; b.tbWins++; a.losses++; a.tbLosses++ }
+      else { a.draws++; a.tbDraws++; b.draws++; b.tbDraws++ }
+
+      if (match.player1Games !== undefined && match.player2Games !== undefined) {
+        const total = match.player1Games + match.player2Games
+        a.gameWins += match.player1Games
+        a.totalGames += total
+        b.gameWins += match.player2Games
+        b.totalGames += total
+      } else {
+        a.gameWins += p1Won ? 1 : draw ? 0.5 : 0
+        b.gameWins += p2Won ? 1 : draw ? 0.5 : 0
+        a.totalGames += 1
+        b.totalGames += 1
+      }
+
+      a.decided.push({ oppId: match.player2Id, won: p1Won, draw })
+      b.decided.push({ oppId: match.player1Id, won: p2Won, draw })
+
+      if (!draw && (p1Won || p2Won)) {
+        const key = match.player1Id < match.player2Id
+          ? `${match.player1Id}|${match.player2Id}`
+          : `${match.player2Id}|${match.player1Id}`
+        if (!headToHead.has(key)) headToHead.set(key, p1Won ? match.player1Id : match.player2Id)
+      }
+    }
+  }
+
+  return { aggregates, headToHead }
+}
 
 export function calculateStandings(players: Player[], rounds: Round[], game?: GameType, playerFilter?: Set<string>): Standing[] {
   const filteredPlayers = playerFilter ? players.filter(p => playerFilter.has(p.id)) : players
@@ -15,30 +104,63 @@ export function calculateStandings(players: Player[], rounds: Round[], game?: Ga
 
   const config: TiebreakerConfig = game ? GAME_CONFIG[game].tiebreakers : { system: 'chess', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false }
 
+  const { aggregates, headToHead } = buildAggregates(swissRounds)
+  const zero = emptyAggregate()
+  const aggOf = (id: string): PlayerAggregate => aggregates.get(id) ?? zero
+
+  const tiebreakerWinPct = (id: string): number => {
+    const agg = aggOf(id)
+    const total = agg.tbWins + agg.tbLosses + agg.tbDraws
+    if (total === 0) return config.opponentWinFloor
+    return Math.max(config.opponentWinFloor, agg.tbWins / total)
+  }
+
+  const gameWinPct = (id: string): number => {
+    const agg = aggOf(id)
+    if (agg.totalGames === 0) return config.opponentWinFloor
+    return Math.max(config.opponentWinFloor, agg.gameWins / agg.totalGames)
+  }
+
+  const checkHeadToHead = (aId: string, bId: string): number => {
+    const key = aId < bId ? `${aId}|${bId}` : `${bId}|${aId}`
+    const winner = headToHead.get(key)
+    if (winner === aId) return -1
+    if (winner === bId) return 1
+    return 0
+  }
+
   const standings: Standing[] = filteredPlayers.map(player => {
-    const matchPoints = calculateMatchPoints(player.id, swissRounds)
-    const record = getPlayerRecord(player.id, swissRounds)
-    const opponents = getOpponentIds(player.id, swissRounds)
-    const buchholz = calculateBuchholz(opponents, swissRounds)
-    const medianBuchholz = calculateMedianBuchholz(opponents, swissRounds)
-    const sonnebornBerger = calculateSonnebornBerger(player.id, swissRounds)
-    const opponentMatchWinPct = calculateOpponentMatchWinPct(player.id, swissRounds, config.opponentWinFloor)
-    const gameWinPct = calculateGameWinPct(player.id, swissRounds, config.opponentWinFloor)
-    const opponentGameWinPct = calculateOpponentGameWinPct(player.id, swissRounds, config.opponentWinFloor)
+    const agg = aggOf(player.id)
+    const opponentPoints = agg.opponents.map(oppId => aggOf(oppId).matchPoints)
+    const buchholz = opponentPoints.reduce((sum, p) => sum + p, 0)
+    const medianBuchholz = opponentPoints.length <= 2
+      ? buchholz
+      : [...opponentPoints].sort((a, b) => a - b).slice(1, -1).reduce((sum, p) => sum + p, 0)
+    const sonnebornBerger = agg.decided.reduce((sum, d) => {
+      if (d.won) return sum + aggOf(d.oppId).matchPoints
+      if (d.draw) return sum + aggOf(d.oppId).matchPoints * 0.5
+      return sum
+    }, 0)
+    const opponentMatchWinPct = agg.opponents.length === 0
+      ? 0
+      : agg.opponents.reduce((sum, oppId) => sum + tiebreakerWinPct(oppId), 0) / agg.opponents.length
+    const opponentGameWinPct = agg.opponents.length === 0
+      ? 0
+      : agg.opponents.reduce((sum, oppId) => sum + gameWinPct(oppId), 0) / agg.opponents.length
 
     return {
       playerId: player.id,
       playerName: player.name,
       rank: 0,
-      matchPoints,
-      wins: record.wins,
-      losses: record.losses,
-      draws: record.draws,
+      matchPoints: agg.matchPoints,
+      wins: agg.wins,
+      losses: agg.losses,
+      draws: agg.draws,
       buchholz,
       medianBuchholz,
       sonnebornBerger,
       opponentMatchWinPct,
-      gameWinPct,
+      gameWinPct: gameWinPct(player.id),
       opponentGameWinPct,
       dropped: player.droppedInRound !== null,
     }
@@ -53,7 +175,7 @@ export function calculateStandings(players: Player[], rounds: Round[], game?: Ga
         if (b.opponentGameWinPct !== a.opponentGameWinPct) return b.opponentGameWinPct - a.opponentGameWinPct
       }
       if (config.useHeadToHead) {
-        const h2h = checkHeadToHead(a.playerId, b.playerId, swissRounds)
+        const h2h = checkHeadToHead(a.playerId, b.playerId)
         if (h2h !== 0) return h2h
       }
       return 0
@@ -87,78 +209,6 @@ export function calculateStandings(players: Player[], rounds: Round[], game?: Ga
   standings.forEach((s, i) => { s.rank = i + 1 })
 
   return standings
-}
-
-function calculateOpponentMatchWinPct(playerId: string, rounds: Round[], floor: number): number {
-  const opponents = getOpponentIds(playerId, rounds)
-  if (opponents.length === 0) return 0
-
-  const pcts = opponents.map(oppId => {
-    // Byes are excluded from win percentages per official Pokémon/MTG rules.
-    const record = getTiebreakerRecord(oppId, rounds)
-    const total = record.wins + record.losses + record.draws
-    if (total === 0) return floor
-    return Math.max(floor, record.wins / total)
-  })
-
-  return pcts.reduce((sum, p) => sum + p, 0) / pcts.length
-}
-
-function calculateGameWinPct(playerId: string, rounds: Round[], floor: number): number {
-  let gameWins = 0
-  let totalGames = 0
-
-  for (const round of rounds) {
-    for (const match of round.matches) {
-      if (match.isBye || match.result === 'pending') continue
-
-      if (match.player1Id === playerId) {
-        if (match.player1Games !== undefined && match.player2Games !== undefined) {
-          gameWins += match.player1Games
-          totalGames += match.player1Games + match.player2Games
-        } else {
-          gameWins += match.result === 'player1_win' ? 1 : match.result === 'draw' ? 0.5 : 0
-          totalGames += 1
-        }
-      } else if (match.player2Id === playerId) {
-        if (match.player1Games !== undefined && match.player2Games !== undefined) {
-          gameWins += match.player2Games
-          totalGames += match.player1Games + match.player2Games
-        } else {
-          gameWins += match.result === 'player2_win' ? 1 : match.result === 'draw' ? 0.5 : 0
-          totalGames += 1
-        }
-      }
-    }
-  }
-
-  if (totalGames === 0) return floor
-  return Math.max(floor, gameWins / totalGames)
-}
-
-function calculateOpponentGameWinPct(playerId: string, rounds: Round[], floor: number): number {
-  const opponents = getOpponentIds(playerId, rounds)
-  if (opponents.length === 0) return 0
-
-  const pcts = opponents.map(oppId => calculateGameWinPct(oppId, rounds, floor))
-  return pcts.reduce((sum, p) => sum + p, 0) / pcts.length
-}
-
-function checkHeadToHead(playerAId: string, playerBId: string, rounds: Round[]): number {
-  for (const round of rounds) {
-    for (const match of round.matches) {
-      if (match.isBye || match.result === 'pending') continue
-      if (match.player1Id === playerAId && match.player2Id === playerBId) {
-        if (match.result === 'player1_win') return -1
-        if (match.result === 'player2_win') return 1
-      }
-      if (match.player1Id === playerBId && match.player2Id === playerAId) {
-        if (match.result === 'player1_win') return 1
-        if (match.result === 'player2_win') return -1
-      }
-    }
-  }
-  return 0
 }
 
 function calculateBracketRanking(topCutRounds: Round[]): { playerId: string; rank: number }[] {
@@ -224,70 +274,4 @@ function calculateBracketRanking(topCutRounds: Round[]): { playerId: string; ran
   }
 
   return ranking
-}
-
-function getOpponentIds(playerId: string, rounds: Round[]): string[] {
-  const opponents: string[] = []
-  for (const round of rounds) {
-    for (const match of round.matches) {
-      if (match.isBye) continue
-      if (match.player1Id === playerId && match.player2Id) {
-        opponents.push(match.player2Id)
-      } else if (match.player2Id === playerId) {
-        opponents.push(match.player1Id)
-      }
-    }
-  }
-  return opponents
-}
-
-function calculateBuchholz(opponentIds: string[], rounds: Round[]): number {
-  return opponentIds.reduce((sum, oppId) => {
-    return sum + calculateMatchPoints(oppId, rounds)
-  }, 0)
-}
-
-function calculateMedianBuchholz(opponentIds: string[], rounds: Round[]): number {
-  if (opponentIds.length <= 2) {
-    return calculateBuchholz(opponentIds, rounds)
-  }
-
-  const opponentPoints = opponentIds
-    .map(oppId => calculateMatchPoints(oppId, rounds))
-    .sort((a, b) => a - b)
-
-  const trimmed = opponentPoints.slice(1, -1)
-  return trimmed.reduce((sum, pts) => sum + pts, 0)
-}
-
-function calculateSonnebornBerger(playerId: string, rounds: Round[]): number {
-  let score = 0
-
-  for (const round of rounds) {
-    for (const match of round.matches) {
-      if (match.isBye || match.result === 'pending') continue
-
-      let opponentId: string | null = null
-      let playerWon = false
-      let isDraw = false
-
-      if (match.player1Id === playerId && match.player2Id) {
-        opponentId = match.player2Id
-        playerWon = match.result === 'player1_win'
-        isDraw = match.result === 'draw'
-      } else if (match.player2Id === playerId) {
-        opponentId = match.player1Id
-        playerWon = match.result === 'player2_win'
-        isDraw = match.result === 'draw'
-      }
-
-      if (opponentId) {
-        const oppPoints = calculateMatchPoints(opponentId, rounds)
-        if (playerWon) score += oppPoints
-        else if (isDraw) score += oppPoints * 0.5
-      }
-    }
-  }
-
-  return score
 }
