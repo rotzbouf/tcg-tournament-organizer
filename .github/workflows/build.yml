@@ -18,6 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: rm package-lock.json && npm install
+      - run: npm audit --audit-level=high
       - run: npm test
 
   build:
