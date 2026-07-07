@@ -3,7 +3,7 @@ import { Round } from './round'
 import { Penalty } from './penalty'
 import { TournamentPhase } from './phase'
 
-export type GameType = 'yugioh' | 'pokemon' | 'star_wars_unlimited' | 'riftbound' | 'lorcana' | 'altered' | 'mtg'
+export type GameType = 'yugioh' | 'pokemon' | 'star_wars_unlimited' | 'riftbound' | 'lorcana' | 'altered' | 'mtg' | 'flesh_and_blood' | 'one_piece' | 'dragonball_fusion_world'
 
 export type TournamentStatus = 'registration' | 'in_progress' | 'top_cut' | 'completed'
 

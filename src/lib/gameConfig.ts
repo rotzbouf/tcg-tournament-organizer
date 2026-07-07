@@ -126,6 +126,56 @@ export const GAME_CONFIG: Record<GameType, GameConfig> = {
       { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null, validationType: 'banlist' },
     ],
   },
+  flesh_and_blood: {
+    name: 'Flesh and Blood',
+    color: '#8D1F1B',
+    accent: '#FBE9E7',
+    icon: '⚔️',
+    // Official FaB tiebreakers are MW points → CTB → PML → OML% → OCTB (TRP
+    // appendix) — a system nobody else uses. OMW% is the closest standard
+    // approximation; documented deviation.
+    tiebreakers: { system: 'tcg', opponentWinFloor: 0, useGameWinPct: false, useHeadToHead: false },
+    hasAgeDivisions: false,
+    minSwissRounds: 0,
+    // Classic Constructed: deck min 60, card pool max 80, 3 copies per card
+    deckRules: { mainMin: 60, mainMax: 80, sideMin: 0, sideMax: 20, maxCopies: 3 },
+    formats: [
+      { id: 'classic_constructed', name: 'Classic Constructed', hasBanlist: false, apiSource: null, validationType: 'banlist' },
+      // Blitz: exactly 40 deck cards, card pool max 52, 2 copies per card
+      { id: 'blitz', name: 'Blitz', hasBanlist: false, apiSource: null, validationType: 'banlist', deckRulesOverride: { mainMin: 40, mainMax: 40, sideMax: 12, maxCopies: 2 } },
+    ],
+  },
+  one_piece: {
+    name: 'One Piece Card Game',
+    color: '#C62828',
+    accent: '#FFEBEE',
+    icon: '🏴‍☠️',
+    // Bandai Tournament Rules Manual: own match-win rate, then opponents'
+    // average match-win rate (both floored at 0.33), then the direct match.
+    tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: false, useHeadToHead: true },
+    hasAgeDivisions: false,
+    minSwissRounds: 0,
+    // Deck: exactly 50 cards (leader and DON!! deck are separate), 4 copies max
+    deckRules: { mainMin: 50, mainMax: 50, sideMin: 0, sideMax: 0, maxCopies: 4 },
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null, validationType: 'banlist' },
+    ],
+  },
+  dragonball_fusion_world: {
+    name: 'Dragon Ball Super: Fusion World',
+    color: '#EF6C00',
+    accent: '#FFF3E0',
+    icon: '🐉',
+    // Bandai OP — same tiebreaker scheme as One Piece
+    tiebreakers: { system: 'tcg', opponentWinFloor: 0.33, useGameWinPct: false, useHeadToHead: true },
+    hasAgeDivisions: false,
+    minSwissRounds: 0,
+    // Deck: 50–60 battle/extra cards (leader separate), 4 copies max
+    deckRules: { mainMin: 50, mainMax: 60, sideMin: 0, sideMax: 0, maxCopies: 4 },
+    formats: [
+      { id: 'standard', name: 'Standard', hasBanlist: false, apiSource: null, validationType: 'banlist' },
+    ],
+  },
   mtg: {
     name: 'Magic: The Gathering',
     color: '#BF360C',

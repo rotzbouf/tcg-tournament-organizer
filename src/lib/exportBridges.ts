@@ -150,6 +150,9 @@ export function playerIdLabel(game: string): string {
     case 'pokemon': return 'POP ID'
     case 'yugioh': return 'KONAMI ID'
     case 'mtg': return 'DCI / Account'
+    case 'flesh_and_blood': return 'GEM ID'
+    case 'one_piece':
+    case 'dragonball_fusion_world': return 'Bandai TCG+ ID'
     default: return 'Spieler-ID'
   }
 }
