@@ -49,6 +49,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
             isRunning: remaining > 0,
             endTimestamp: remaining > 0 ? timer.endTimestamp : null,
             notified: timer.notified || expired,
+            expiredAt: remaining > 0 ? null : (timer.expiredAt ?? timer.endTimestamp),
           }
           if (expired && soundEnabledRef.current) {
             playAlarmSound()
@@ -79,6 +80,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           isRunning: true,
           endTimestamp: Date.now() + remainingSeconds * 1000,
           notified: existing?.notified ?? false,
+          expiredAt: null,
         },
       }
     })
@@ -113,6 +115,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         isRunning: false,
         endTimestamp: null,
         notified: false,
+        expiredAt: null,
       },
     }))
   }, [])

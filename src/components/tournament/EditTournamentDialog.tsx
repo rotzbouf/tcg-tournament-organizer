@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useTournamentContext } from '@/state/useTournamentContext'
 import { GAME_CONFIG } from '@/lib/gameConfig'
-import { Tournament, TournamentFormat } from '@/types/tournament'
+import { cutRuleKey, recommendedTopCut } from '@/lib/cutRules'
+import { Tournament, TopCutSize, TournamentFormat } from '@/types/tournament'
 
 interface EditTournamentDialogProps {
   open: boolean
@@ -22,6 +23,7 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
   const { dispatch } = useTournamentContext()
   const [name, setName] = useState(tournament.name)
   const [format, setFormat] = useState<TournamentFormat>(tournament.format)
+  const [topCut, setTopCut] = useState<TopCutSize>(tournament.topCut)
   const [roundTime, setRoundTime] = useState(tournament.roundTimeMinutes)
   const [countForSeason, setCountForSeason] = useState(tournament.countForSeason !== false)
   const gameFormats = GAME_CONFIG[tournament.game].formats
@@ -47,7 +49,7 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
         name: name.trim(),
         format,
         roundTimeMinutes: roundTime,
-        topCut: 0,
+        topCut: format === 'swiss_topcut' ? topCut : 0,
         gameFormat: gameFormat || null,
         countForSeason,
       },
@@ -82,7 +84,38 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
           onChange={e => setFormat(e.target.value as TournamentFormat)}
         />
         {format === 'swiss_topcut' && (
-          <p className="text-sm text-muted-foreground">{t('tournament.topCutAutoHint')}</p>
+          <>
+            <Select
+              id="edit-tournament-top-cut"
+              label={t('tournament.topCut')}
+              options={[
+                { value: '0', label: t('tournament.topCutAuto') },
+                ...[4, 8, 16, 32].map(n => ({ value: String(n), label: `Top ${n}` })),
+              ]}
+              value={String(topCut)}
+              onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
+            />
+            {(() => {
+              // With enough registered players the official size is concrete —
+              // point out a deviation instead of showing the abstract rule.
+              const official = recommendedTopCut(tournament.game, tournament.players.length)
+              if (tournament.players.length >= 2 && topCut !== 0 && topCut !== official) {
+                return (
+                  <p className="text-sm text-amber-600">
+                    ℹ {t('tournament.topCutOfficialHint', {
+                      count: tournament.players.length,
+                      cut: official === 0 ? t('tournament.topCutNone') : `Top ${official}`,
+                    })}
+                  </p>
+                )
+              }
+              return (
+                <p className="text-sm text-muted-foreground">
+                  {t(`tournament.topCutRule.${cutRuleKey(tournament.game)}`)}
+                </p>
+              )
+            })()}
+          </>
         )}
         <Select
           id="edit-tournament-round-time"

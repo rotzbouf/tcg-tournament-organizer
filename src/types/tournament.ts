@@ -13,6 +13,22 @@ export type TournamentFormat = 'swiss' | 'swiss_topcut' | 'double_elimination' |
 
 export type DecklistVisibility = 'hidden' | 'to_only' | 'public'
 
+export type DeckCheckResult = 'ok' | 'issue'
+
+// One deck check on a table. Started by the TO (random or targeted table),
+// completed with a result; the completed check auto-grants the official time
+// extension (check duration + 3 minutes) to the match.
+export interface DeckCheck {
+  id: string
+  roundNumber: number
+  matchId: string
+  tableNumber: number
+  playerIds: string[]
+  startedAt: string
+  completedAt: string | null
+  result: DeckCheckResult | null
+}
+
 export interface Tournament {
   id: string
   name: string
@@ -23,6 +39,7 @@ export interface Tournament {
   players: Player[]
   rounds: Round[]
   penalties: Penalty[]
+  deckChecks?: DeckCheck[]
   phases: TournamentPhase[]
   currentPhaseIndex: number
   roundTimeMinutes: number

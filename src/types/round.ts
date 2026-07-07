@@ -10,6 +10,9 @@ export interface Match {
   isBye: boolean
   player1Games?: number
   player2Games?: number
+  // Time extension in minutes granted to this table (judge ruling, deck
+  // check, …) — counts down after the round timer expires.
+  extraTimeMinutes?: number
 }
 
 export type RoundPhase = 'swiss' | 'top_cut' | 'winners_bracket' | 'losers_bracket' | 'grand_final' | 'round_robin'

@@ -55,7 +55,16 @@
     "grandFinal": "Grand Final",
     "grandFinalReset": "Grand Final Bracket Reset",
     "grandFinalResetHint": "Losers-Bracket-Sieger muss zweimal gewinnen",
-    "topCutAutoHint": "Top-Cut-Größe wird automatisch anhand der Spieleranzahl berechnet (9–16: Top 4, 17–32: Top 8, 33–64: Top 16, 65+: Top 32)",
+    "topCut": "Top Cut",
+    "topCutAuto": "Automatisch (offizielle Größe)",
+    "topCutNone": "kein Cut",
+    "topCutOfficialHint": "Offiziell für {{count}} Spieler: {{cut}}",
+    "topCutRule": {
+      "mtg": "Offiziell (MTR Anhang E): bis 8 Spieler kein Cut, ab 9 Top 8",
+      "pokemon": "Offiziell (Play! Pokémon): bis 8 Spieler kein Cut, 9–20 Top 4, ab 21 Top 8",
+      "yugioh": "Offiziell (Konami Policy 2.5): bis 8 Spieler kein Cut, 9–32 Top 4, ab 33 Top 8",
+      "generic": "Üblich: bis 8 Spieler kein Cut, 9–16 Top 4, ab 17 Top 8"
+    },
     "ageDivisions": "Altersklassen (Junior / Senior / Masters)",
     "ageDivisionsHint": "Spieler werden nach Geburtsjahr in Divisionen eingeteilt und getrennt gepaart",
     "edit": "Turnier bearbeiten",
@@ -111,7 +120,19 @@
     "pending": "Ausstehend",
     "table": "Tisch {{number}}",
     "gameScore": "Spielstand",
-    "games": "Spiele"
+    "games": "Spiele",
+    "extraTime": "Extra-Zeit",
+    "extraTimeClear": "Extra-Zeit entfernen"
+  },
+  "deckCheck": {
+    "title": "Deck-Check",
+    "random": "Deck-Check (Zufallstisch)",
+    "viewDecklist": "Deckliste {{name}}",
+    "ok": "OK — kein Befund",
+    "issue": "Befund → Strafe",
+    "log": "Deck-Check-Protokoll ({{count}})",
+    "resultOk": "OK",
+    "resultIssue": "Befund"
   },
   "standings": {
     "title": "Rangliste",

@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next'
 import { Round, Match } from '@/types/round'
 import { Player } from '@/types/player'
 import { MatchCard } from './MatchCard'
+import { DecklistDialog } from './DecklistDialog'
+import { PenaltyDialog } from './PenaltyDialog'
 import { Button } from '@/components/ui/Button'
 import { useTournamentContext } from '@/state/useTournamentContext'
 import { generatePairingsPdfHtml, generatePairingsByNameHtml, generateMatchSlipsHtml } from '@/lib/exportResults'
 import { usePendingReports } from '@/hooks/usePendingReports'
 import { MatchResult } from '@/types/round'
 import { matchesSearch } from '@/lib/search'
-import { cn } from '@/lib/utils'
+import { cn, formatTime } from '@/lib/utils'
 
 const SEARCH_THRESHOLD = 8
 
@@ -40,6 +42,20 @@ export function RoundPanel({
   const [searchQuery, setSearchQuery] = useState('')
   const { reports, reportsByMatch, conflictedMatchIds, dismiss } = usePendingReports()
 
+  const tournament = state.tournaments[tournamentId]
+  const deckChecks = tournament?.deckChecks ?? []
+  const roundChecks = deckChecks.filter(c => c.roundNumber === round.roundNumber)
+  const openChecks = roundChecks.filter(c => c.result === null)
+  const completedChecks = deckChecks.filter(c => c.result !== null)
+  const [deckCheckPlayer, setDeckCheckPlayer] = useState<Player | null>(null)
+  const [penaltyPlayerId, setPenaltyPlayerId] = useState<string | null>(null)
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    if (openChecks.length === 0) return
+    const interval = setInterval(() => setNowTick(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [openChecks.length])
+
   // Search by player name/ID, or by table number if the query is numeric —
   // Konami IDs are numeric too, so a numeric query checks both.
   const playerById = new Map(players.map(p => [p.id, p]))
@@ -53,6 +69,13 @@ export function RoundPanel({
     return matchesSearch(query, p1?.name, p1?.playerId, p2?.name, p2?.playerId)
   }
   const visibleCount = round.matches.filter(matchIsVisible).length
+
+  const checkedMatchIds = new Set(roundChecks.map(c => c.matchId))
+  const eligibleForCheck = round.matches.filter(m => !m.isBye && m.result === 'pending' && !checkedMatchIds.has(m.id))
+  const startRandomDeckCheck = () => {
+    const match = eligibleForCheck[Math.floor(Math.random() * eligibleForCheck.length)]
+    if (match) dispatch({ type: 'START_DECK_CHECK', payload: { tournamentId, matchId: match.id } })
+  }
 
   const pendingMatchIds = [...new Set(
     reports
@@ -198,6 +221,47 @@ export function RoundPanel({
           })}
         </div>
       )}
+      {openChecks.map(check => {
+        const p1 = playerById.get(check.playerIds[0])
+        const p2 = check.playerIds[1] ? playerById.get(check.playerIds[1]) : undefined
+        const elapsed = Math.max(0, Math.floor((nowTick - new Date(check.startedAt).getTime()) / 1000))
+        return (
+          <div key={check.id} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm dark:border-amber-800 dark:bg-amber-950 print:hidden">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-amber-900 dark:text-amber-200">
+                🔍 {t('deckCheck.title')} · {t('match.table', { number: check.tableNumber })}
+              </span>
+              <span className="text-amber-800 dark:text-amber-300">
+                {p1?.name}{p2 ? ` ${t('match.vs')} ${p2.name}` : ''}
+              </span>
+              <span className="ml-auto font-mono tabular-nums text-amber-700 dark:text-amber-400">{formatTime(elapsed)}</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[p1, p2].map(p => p && (
+                <Button key={p.id} size="sm" variant="secondary" onClick={() => setDeckCheckPlayer(p)}>
+                  {t('deckCheck.viewDecklist', { name: p.name })}
+                </Button>
+              ))}
+              <Button size="sm" onClick={() => dispatch({ type: 'COMPLETE_DECK_CHECK', payload: { tournamentId, checkId: check.id, result: 'ok' } })}>
+                {t('deckCheck.ok')}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  dispatch({ type: 'COMPLETE_DECK_CHECK', payload: { tournamentId, checkId: check.id, result: 'issue' } })
+                  setPenaltyPlayerId(check.playerIds[0])
+                }}
+              >
+                {t('deckCheck.issue')}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => dispatch({ type: 'CANCEL_DECK_CHECK', payload: { tournamentId, checkId: check.id } })}>
+                {t('common.cancel')}
+              </Button>
+            </div>
+          </div>
+        )
+      })}
       {tournamentName && (
         <div className="hidden print:block mb-4">
           <h2 className="text-xl font-bold">{tournamentName}</h2>
@@ -254,7 +318,12 @@ export function RoundPanel({
         ))}
       </div>
 
-      <div className="flex gap-2 print:hidden">
+      <div className="flex flex-wrap gap-2 print:hidden">
+        {!round.isComplete && eligibleForCheck.length > 0 && (
+          <Button variant="secondary" size="sm" onClick={startRandomDeckCheck}>
+            🎲 {t('deckCheck.random')}
+          </Button>
+        )}
         <Button variant="secondary" size="sm" onClick={() => window.print()}>
           {t('rounds.print')}
         </Button>
@@ -304,6 +373,51 @@ export function RoundPanel({
           </p>
         )}
       </div>
+
+      {completedChecks.length > 0 && (
+        <details className="print:hidden">
+          <summary className="cursor-pointer text-sm text-muted-foreground">
+            {t('deckCheck.log', { count: completedChecks.length })}
+          </summary>
+          <ul className="mt-2 space-y-1 text-sm">
+            {[...completedChecks].reverse().map(c => {
+              const names = c.playerIds.map(id => playerById.get(id)?.name ?? '?').join(` ${t('match.vs')} `)
+              const when = new Date(c.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              return (
+                <li key={c.id} className="text-muted-foreground">
+                  R{c.roundNumber} · {t('match.table', { number: c.tableNumber })} · {names} · {when} ·{' '}
+                  <span className={c.result === 'issue' ? 'font-semibold text-red-600' : 'font-semibold text-green-700'}>
+                    {c.result === 'issue' ? t('deckCheck.resultIssue') : t('deckCheck.resultOk')}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </details>
+      )}
+
+      {deckCheckPlayer && tournament && (
+        <DecklistDialog
+          open
+          onClose={() => setDeckCheckPlayer(null)}
+          tournamentId={tournamentId}
+          player={deckCheckPlayer}
+          readonly
+          game={tournament.game}
+          gameFormat={tournament.gameFormat}
+        />
+      )}
+      {penaltyPlayerId && tournament && (
+        <PenaltyDialog
+          open
+          onClose={() => setPenaltyPlayerId(null)}
+          tournamentId={tournamentId}
+          game={tournament.game}
+          players={tournament.players}
+          penalties={tournament.penalties}
+          initialPlayerId={penaltyPlayerId}
+        />
+      )}
     </div>
   )
 }

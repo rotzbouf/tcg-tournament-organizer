@@ -297,6 +297,54 @@ describe('tournamentReducer', () => {
       expect(getTournament(started).topCut).toBe(4)
     })
 
+    it('auto cut follows the official per-game table (YGO 33+ → Top 8, not 16)', () => {
+      const { state, id } = tournamentWithPlayers(0, 40)
+      const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(started).topCut).toBe(8)
+    })
+
+    it('Pokémon with cut plays the official round count (14 players → 5 swiss rounds)', () => {
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'Pkmn Cut', game: 'pokemon', format: 'swiss_topcut', roundTimeMinutes: 30, topCut: 0 },
+      })
+      const id = getTournament(state).id
+      const names = Array.from({ length: 14 }, (_, i) => `P${i + 1}`)
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: names } })
+      const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(started).topCut).toBe(4)
+      expect(getTournament(started).totalRounds).toBe(5) // ceil(log2) wäre 4
+
+      // Ohne Cut bleibt es bei der Swiss-only-Tabelle (4 Runden)
+      let plain = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'Pkmn Swiss', game: 'pokemon', format: 'swiss', roundTimeMinutes: 30, topCut: 0 },
+      })
+      const pid = getTournament(plain).id
+      plain = dispatch(plain, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: pid, playerNames: names } })
+      const plainStarted = dispatch(plain, { type: 'START_TOURNAMENT', payload: { tournamentId: pid } })
+      expect(getTournament(plainStarted).totalRounds).toBe(4)
+    })
+
+    it('YGO with cut keeps ceil(log2) rounds (14 players → 4)', () => {
+      const { state, id } = tournamentWithPlayers(0, 14)
+      const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(started).totalRounds).toBe(4)
+      expect(getTournament(started).topCut).toBe(4)
+    })
+
+    it('auto cut is game-aware (MTG: Top 8 already at 10 players)', () => {
+      let state = dispatch(initialState, {
+        type: 'CREATE_TOURNAMENT',
+        payload: { name: 'MTG Cut', game: 'mtg', format: 'swiss_topcut', roundTimeMinutes: 50, topCut: 0 },
+      })
+      const id = getTournament(state).id
+      const names = Array.from({ length: 10 }, (_, i) => `P${i + 1}`)
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: names } })
+      const started = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      expect(getTournament(started).topCut).toBe(8)
+    })
+
     it('seeds the top cut as a standard bracket (1 vs 8, 4 vs 5, 2 vs 7, 3 vs 6)', () => {
       const { state: created, id } = tournamentWithPlayers(8, 16)
       let state = dispatch(created, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
@@ -536,6 +584,160 @@ describe('tournamentReducer', () => {
         payload: { tournamentId: id, matchId1: m1.id, playerId1: m1.player1Id, matchId2: m2.id, playerId2: m1.player1Id },
       })
       expect(state).toBe(started)
+    })
+  })
+
+  describe('ADD_MATCH_EXTRA_TIME', () => {
+    function startedFourPlayerTournament() {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: ['A', 'B', 'C', 'D'] } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      return { state, id }
+    }
+
+    it('accumulates extensions on the match', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      let state = dispatch(started, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 3 } })
+      state = dispatch(state, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 5 } })
+      expect(getTournament(state).rounds[0].matches[0].extraTimeMinutes).toBe(8)
+    })
+
+    it('clears the field when a negative correction reaches zero', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      let state = dispatch(started, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 5 } })
+      state = dispatch(state, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: -5 } })
+      expect(getTournament(state).rounds[0].matches[0].extraTimeMinutes).toBeUndefined()
+    })
+
+    it('caps the total at 99 minutes and floors at 0', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      let state = dispatch(started, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 98 } })
+      state = dispatch(state, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 50 } })
+      expect(getTournament(state).rounds[0].matches[0].extraTimeMinutes).toBe(99)
+      // A pure floor-hit without change keeps the state object identical
+      const unchanged = dispatch(started, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: -10 } })
+      expect(unchanged).toBe(started)
+    })
+
+    it('rejects non-integer and zero minutes', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      expect(dispatch(started, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 2.5 } })).toBe(started)
+      expect(dispatch(started, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: match.id, minutes: 0 } })).toBe(started)
+    })
+
+    it('rejects matches outside the current incomplete round', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const t = getTournament(started)
+      let state = started
+      for (const m of t.rounds[0].matches) {
+        state = dispatch(state, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId: m.id, result: 'player1_win' } })
+      }
+      state = dispatch(state, { type: 'COMPLETE_ROUND', payload: { tournamentId: id } })
+      const after = dispatch(state, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: t.rounds[0].matches[0].id, minutes: 3 } })
+      expect(after).toBe(state)
+    })
+
+    it('rejects bye matches', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: ['A', 'B', 'C'] } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const bye = getTournament(state).rounds[0].matches.find(m => m.isBye)!
+      expect(dispatch(state, { type: 'ADD_MATCH_EXTRA_TIME', payload: { tournamentId: id, matchId: bye.id, minutes: 3 } })).toBe(state)
+    })
+  })
+
+  describe('deck checks', () => {
+    function startedFourPlayerTournament() {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'BULK_ADD_PLAYERS', payload: { tournamentId: id, playerNames: ['A', 'B', 'C', 'D'] } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      return { state, id }
+    }
+
+    it('starts a check on a pending match and records table + players', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      const state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })
+      const checks = getTournament(state).deckChecks!
+      expect(checks).toHaveLength(1)
+      expect(checks[0]).toMatchObject({
+        matchId: match.id,
+        roundNumber: 1,
+        tableNumber: match.tableNumber,
+        playerIds: [match.player1Id, match.player2Id],
+        completedAt: null,
+        result: null,
+      })
+    })
+
+    it('refuses a second check on the same table in the same round', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      const state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })
+      expect(dispatch(state, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })).toBe(state)
+    })
+
+    it('refuses checks on byes and decided matches', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      const decided = dispatch(started, { type: 'SUBMIT_MATCH_RESULT', payload: { tournamentId: id, matchId: match.id, result: 'player1_win' } })
+      expect(dispatch(decided, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })).toBe(decided)
+    })
+
+    it('completing a check stores the result and grants duration + 3 minutes extra time', () => {
+      vi.useFakeTimers()
+      try {
+        const { state: started, id } = startedFourPlayerTournament()
+        const match = getTournament(started).rounds[0].matches[0]
+        let state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })
+        vi.advanceTimersByTime(4 * 60000) // check runs 4 minutes
+        const checkId = getTournament(state).deckChecks![0].id
+        state = dispatch(state, { type: 'COMPLETE_DECK_CHECK', payload: { tournamentId: id, checkId, result: 'ok' } })
+        const t = getTournament(state)
+        expect(t.deckChecks![0].result).toBe('ok')
+        expect(t.deckChecks![0].completedAt).not.toBeNull()
+        expect(t.rounds[0].matches[0].extraTimeMinutes).toBe(4 + 3)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('completing with an issue keeps the log entry marked', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      let state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })
+      const checkId = getTournament(state).deckChecks![0].id
+      state = dispatch(state, { type: 'COMPLETE_DECK_CHECK', payload: { tournamentId: id, checkId, result: 'issue' } })
+      expect(getTournament(state).deckChecks![0].result).toBe('issue')
+      // instant check: 0 min duration + 3 min official extension
+      expect(getTournament(state).rounds[0].matches[0].extraTimeMinutes).toBe(3)
+    })
+
+    it('a completed check cannot be completed or cancelled again', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      let state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })
+      const checkId = getTournament(state).deckChecks![0].id
+      state = dispatch(state, { type: 'COMPLETE_DECK_CHECK', payload: { tournamentId: id, checkId, result: 'ok' } })
+      expect(dispatch(state, { type: 'COMPLETE_DECK_CHECK', payload: { tournamentId: id, checkId, result: 'issue' } })).toBe(state)
+      expect(dispatch(state, { type: 'CANCEL_DECK_CHECK', payload: { tournamentId: id, checkId } })).toBe(state)
+    })
+
+    it('cancelling an open check removes it without granting time', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      let state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id } })
+      const checkId = getTournament(state).deckChecks![0].id
+      state = dispatch(state, { type: 'CANCEL_DECK_CHECK', payload: { tournamentId: id, checkId } })
+      expect(getTournament(state).deckChecks).toHaveLength(0)
+      expect(getTournament(state).rounds[0].matches[0].extraTimeMinutes).toBeUndefined()
     })
   })
 

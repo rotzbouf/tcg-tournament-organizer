@@ -4,7 +4,8 @@ import { Penalty } from '@/types/penalty'
 import { Match, Round } from '@/types/round'
 import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
-import { calculateTotalRounds, calculateTopCutSize } from '@/engine/scoring'
+import { calculateTotalRounds } from '@/engine/scoring'
+import { recommendedTopCut, recommendedSwissRounds } from '@/lib/cutRules'
 import { generatePairings, generatePowerPairings, generateFirstRoundPairings, generateEloSeededPairings } from '@/engine/swiss'
 import { generateTopCutRound, bracketSeedOrder } from '@/engine/topcut'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
@@ -79,11 +80,11 @@ function generateDivisionPowerPairings(players: Player[], rounds: Round[], round
   return renumberTables(allMatches)
 }
 
-function calculateDivisionTotalRounds(players: Player[], createdAt: string, minRounds = 0): number {
+function calculateDivisionTotalRounds(players: Player[], createdAt: string, game: Tournament['game'], withTopCut: boolean, minRounds = 0): number {
   const groups = groupByDivision(players, createdAt)
   let max = 0
   for (const divPlayers of groups.values()) {
-    if (divPlayers.length >= 2) max = Math.max(max, calculateTotalRounds(divPlayers.length, minRounds))
+    if (divPlayers.length >= 2) max = Math.max(max, recommendedSwissRounds(game, divPlayers.length, withTopCut, minRounds))
   }
   return max
 }
@@ -335,9 +336,16 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
       const useDivisions = tournament.ageDivisionsEnabled
       const minRounds = GAME_CONFIG[tournament.game].minSwissRounds
+      // A manually configured cut size wins; only 0 means "pick the official
+      // size for this game and attendance". Decided before the round count:
+      // the official with-cut structures play more swiss rounds in some
+      // brackets (MTG/Pokémon), so the round table depends on it.
+      const autoTopCut = tournament.format === 'swiss_topcut'
+        ? (tournament.topCut > 0 ? tournament.topCut : recommendedTopCut(tournament.game, tournament.players.length))
+        : 0
       const totalRounds = useDivisions
-        ? calculateDivisionTotalRounds(tournament.players, tournament.createdAt, minRounds)
-        : calculateTotalRounds(tournament.players.length, minRounds)
+        ? calculateDivisionTotalRounds(tournament.players, tournament.createdAt, tournament.game, autoTopCut > 0, minRounds)
+        : recommendedSwissRounds(tournament.game, tournament.players.length, autoTopCut > 0, minRounds)
       const buildEloMap = () => {
         const m = new Map<string, number>()
         for (const p of tournament.players) {
@@ -356,10 +364,6 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         const hasBye = matches.some(m => m.isBye && m.player1Id === p.id)
         return hasBye ? { ...p, hasBye: true } : p
       })
-      // A manually configured cut size wins; only 0 means "pick one for me".
-      const autoTopCut = tournament.format === 'swiss_topcut'
-        ? (tournament.topCut > 0 ? tournament.topCut : calculateTopCutSize(tournament.players.length))
-        : 0
       return updateTournament(state, action.payload.tournamentId, {
         status: 'in_progress',
         totalRounds,
@@ -892,6 +896,99 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           : round
       )
       return updateTournament(state, action.payload.tournamentId, { rounds })
+    }
+
+    case 'ADD_MATCH_EXTRA_TIME': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || (tournament.status !== 'in_progress' && tournament.status !== 'top_cut')) return state
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      if (!currentRound || currentRound.isComplete) return state
+      const match = currentRound.matches.find(m => m.id === action.payload.matchId)
+      if (!match || match.isBye) return state
+      const { minutes } = action.payload
+      if (!Number.isInteger(minutes) || minutes === 0) return state
+      // Extensions accumulate; negative minutes correct a mistaken grant.
+      const total = Math.min(Math.max((match.extraTimeMinutes ?? 0) + minutes, 0), 99)
+      if (total === (match.extraTimeMinutes ?? 0)) return state
+      const rounds = tournament.rounds.map(round =>
+        round.roundNumber === currentRound.roundNumber
+          ? {
+              ...round,
+              matches: round.matches.map(m =>
+                m.id === match.id
+                  ? { ...m, extraTimeMinutes: total > 0 ? total : undefined }
+                  : m
+              ),
+            }
+          : round
+      )
+      return updateTournament(state, action.payload.tournamentId, { rounds })
+    }
+
+    case 'START_DECK_CHECK': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || (tournament.status !== 'in_progress' && tournament.status !== 'top_cut')) return state
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      if (!currentRound || currentRound.isComplete) return state
+      const match = currentRound.matches.find(m => m.id === action.payload.matchId)
+      if (!match || match.isBye || match.result !== 'pending') return state
+      const deckChecks = tournament.deckChecks ?? []
+      // One check per table and round — a second one would grant double time.
+      if (deckChecks.some(c => c.matchId === match.id && c.roundNumber === currentRound.roundNumber)) return state
+      const check = {
+        id: generateId(),
+        roundNumber: currentRound.roundNumber,
+        matchId: match.id,
+        tableNumber: match.tableNumber,
+        playerIds: [match.player1Id, ...(match.player2Id ? [match.player2Id] : [])],
+        startedAt: new Date().toISOString(),
+        completedAt: null,
+        result: null,
+      }
+      return updateTournament(state, action.payload.tournamentId, {
+        deckChecks: [...deckChecks, check],
+      })
+    }
+
+    case 'COMPLETE_DECK_CHECK': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament) return state
+      const deckChecks = tournament.deckChecks ?? []
+      const check = deckChecks.find(c => c.id === action.payload.checkId && c.result === null)
+      if (!check) return state
+      const now = new Date()
+      const updates: Partial<Tournament> = {
+        deckChecks: deckChecks.map(c =>
+          c.id === check.id ? { ...c, completedAt: now.toISOString(), result: action.payload.result } : c
+        ),
+      }
+      // Official rule (MTG/Pokémon/YGO alike): the checked table receives a
+      // time extension equal to the duration of the check plus 3 minutes.
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      const match = currentRound && !currentRound.isComplete && currentRound.roundNumber === check.roundNumber
+        ? currentRound.matches.find(m => m.id === check.matchId)
+        : undefined
+      if (match && !match.isBye) {
+        const durationMinutes = Math.max(0, Math.round((now.getTime() - new Date(check.startedAt).getTime()) / 60000))
+        const total = Math.min((match.extraTimeMinutes ?? 0) + durationMinutes + 3, 99)
+        updates.rounds = tournament.rounds.map(round =>
+          round.roundNumber === currentRound!.roundNumber
+            ? { ...round, matches: round.matches.map(m => m.id === match.id ? { ...m, extraTimeMinutes: total } : m) }
+            : round
+        )
+      }
+      return updateTournament(state, action.payload.tournamentId, updates)
+    }
+
+    case 'CANCEL_DECK_CHECK': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament) return state
+      const deckChecks = tournament.deckChecks ?? []
+      const check = deckChecks.find(c => c.id === action.payload.checkId && c.result === null)
+      if (!check) return state
+      return updateTournament(state, action.payload.tournamentId, {
+        deckChecks: deckChecks.filter(c => c.id !== check.id),
+      })
     }
 
     case 'SAVE_TEMPLATE': {

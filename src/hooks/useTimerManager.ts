@@ -6,6 +6,9 @@ export interface TimerState {
   isRunning: boolean
   endTimestamp: number | null
   notified: boolean
+  // Wall-clock moment the timer hit zero — anchor for per-table time
+  // extensions, which keep counting after the round timer expires.
+  expiredAt?: number | null
 }
 
 export interface TimerManager {

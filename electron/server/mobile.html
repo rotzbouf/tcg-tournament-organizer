@@ -85,6 +85,7 @@ const T={
     jClaim:'Take this call',jHandles:'is handling',jYou:'you',
     jNamePh:'Your name (visible to other judges)',
     jInfraction:'Infraction',jCustom:'Custom / free text',jRec:'Recommended:',jRepeat:'Repeat offence',jEsc:'escalated to',
+    jExtra:'Extra time',jExtraError:'Could not set extra time',
     pt_warning:'Warning',pt_game_loss:'Game Loss',pt_match_loss:'Match Loss',pt_disqualification:'Disqualification',pt_note:'Note'},
   de:{pairings:'Paarungen',standings:'Rangliste',register:'Registrieren',
     table:'T',bye:'Freilos',vs:'vs',round:'Runde',pending:'Ausstehend',draw:'Unentschieden',
@@ -111,6 +112,7 @@ const T={
     jClaim:'Übernehmen',jHandles:'übernimmt',jYou:'du',
     jNamePh:'Dein Name (für die anderen Judges sichtbar)',
     jInfraction:'Vergehen',jCustom:'Eigenes / Freitext',jRec:'Empfohlen:',jRepeat:'Wiederholung',jEsc:'hochgestuft auf',
+    jExtra:'Extra-Zeit',jExtraError:'Extra-Zeit konnte nicht gesetzt werden',
     pt_warning:'Verwarnung',pt_game_loss:'Game Loss',pt_match_loss:'Match Loss',pt_disqualification:'Disqualifikation',pt_note:'Notiz'}
 };
 let lang=localStorage.getItem('tcg-lang')||'de';
@@ -385,11 +387,23 @@ function judgeMatchButtons(m,round){
   const gn=id=>tournament.players.find(p=>p.id===id)?.name||'?';
   const isKo=['top_cut','winners_bracket','losers_bracket','grand_final'].includes(round.phase);
   const btn=(result,label,active)=>`<button class="secondary" style="margin:0;padding:8px 6px;font-size:12px;flex:1${active?';background:var(--accent);color:#fff':''}" onclick="judgeResult('${m.id}','${result}')">${label}</button>`;
+  const xbtn=min=>`<button class="secondary" style="margin:0;padding:6px 10px;font-size:12px;width:auto" onclick="judgeExtra('${m.id}',${min})">${min>0?'+'+min:'✕'}</button>`;
   return`<div style="display:flex;gap:6px;margin-top:8px">
     ${btn('player1_win',esc(gn(m.player1Id)),m.result==='player1_win')}
     ${isKo?'':btn('draw',t('draw'),m.result==='draw')}
     ${btn('player2_win',esc(gn(m.player2Id)),m.result==='player2_win')}
+  </div>
+  <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+    <span style="font-size:11px;color:var(--fg2)">⏱ ${t('jExtra')}</span>
+    ${xbtn(1)}${xbtn(3)}${xbtn(5)}${m.extraTimeMinutes?xbtn(-m.extraTimeMinutes):''}
   </div>`;
+}
+
+async function judgeExtra(matchId,minutes){
+  try{
+    const d=await jpost('/api/judge/matches/'+matchId+'/extratime',{minutes});
+    if(d&&!d.ok)alert(t('jExtraError')+(d.error?': '+d.error:''));
+  }catch{alert(t('jExtraError'))}
 }
 
 async function judgeResult(matchId,result){
@@ -410,9 +424,10 @@ function filterPairings(){
   }).map(m=>{
     if(m.isBye)return`<div class="match"><div class="match-header"><span class="table-num">—</span><span class="names">${esc(gn(m.player1Id))}</span><span class="badge badge-reg">${t('bye')}</span></div></div>`;
     const gs=m.player1Games!=null?`<span class="score">${m.player1Games}-${m.player2Games}</span>`:'';
+    const ex=m.extraTimeMinutes?`<span class="badge" style="background:#fef3c7;color:#92400e;margin-right:4px">⏱+${m.extraTimeMinutes}'</span>`:'';
     const rb=m.result==='pending'?`<span class="badge badge-reg">${t('pending')}</span>`:m.result==='draw'?`<span class="badge" style="background:#fef3c7;color:#92400e">${t('draw')}</span>`:`<span class="badge badge-active">${esc(gn(m.result==='player1_win'?m.player1Id:m.player2Id))}</span>`;
     const isMyMatch=myInfo&&m.id===myInfo.match.id;
-    return`<div class="match${isMyMatch?' my-match':''}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${rb}</div>${judgeMatchButtons(m,round)}</div>`;
+    return`<div class="match${isMyMatch?' my-match':''}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${esc(gn(m.player1Id))} ${gs} ${t('vs')} ${esc(gn(m.player2Id))}</span>${ex}${rb}</div>${judgeMatchButtons(m,round)}</div>`;
   }).join('');
 }
 

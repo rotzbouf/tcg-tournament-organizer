@@ -23,16 +23,18 @@ interface PenaltyDialogProps {
   game: GameType
   players: Player[]
   penalties: Penalty[]
+  // Preselects the player (deck-check flow); only read on mount.
+  initialPlayerId?: string
 }
 
 const PENALTY_TYPES: PenaltyType[] = ['warning', 'game_loss', 'match_loss', 'disqualification', 'note']
 const CUSTOM = ''
 
-export function PenaltyDialog({ open, onClose, tournamentId, game, players, penalties }: PenaltyDialogProps) {
+export function PenaltyDialog({ open, onClose, tournamentId, game, players, penalties, initialPlayerId }: PenaltyDialogProps) {
   const { t } = useTranslation()
   const { dispatch } = useTournamentContext()
   const activePlayers = players.filter(p => p.droppedInRound === null)
-  const [playerId, setPlayerId] = useState(activePlayers[0]?.id ?? '')
+  const [playerId, setPlayerId] = useState(initialPlayerId ?? activePlayers[0]?.id ?? '')
   const [infractionId, setInfractionId] = useState<string>(CUSTOM)
   const [type, setType] = useState<PenaltyType>('warning')
   // True once the TO overrides the auto-suggested level, so we stop steering it.

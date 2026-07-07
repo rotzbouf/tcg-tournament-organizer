@@ -370,6 +370,34 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
     return
   }
 
+  // Time extension for a table (judge ruling, deck check, …). Judges add
+  // minutes; a negative value corrects a mistaken grant (reducer floors at 0).
+  const extraTimeMatch = reqPath.match(/^\/api\/judge\/matches\/([^/]+)\/extratime$/)
+  if (extraTimeMatch && req.method === 'POST') {
+    readBody(req, res, (body) => {
+      const minutes = Number((body as { minutes?: unknown }).minutes)
+      if (!Number.isInteger(minutes) || minutes === 0 || Math.abs(minutes) > 99) {
+        jsonResponse(res, { error: 'invalid minutes' }, 400); return
+      }
+      if (tournament.status !== 'in_progress' && tournament.status !== 'top_cut') {
+        jsonResponse(res, { error: 'tournament not running' }, 409); return
+      }
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      if (!currentRound || currentRound.isComplete) {
+        jsonResponse(res, { error: 'round complete' }, 409); return
+      }
+      const match = currentRound.matches.find(m => m.id === extraTimeMatch[1])
+      if (!match) { jsonResponse(res, { error: 'match not in current round' }, 404); return }
+      if (match.isBye) { jsonResponse(res, { error: 'bye match' }, 400); return }
+      dispatchToRenderer({
+        type: 'ADD_MATCH_EXTRA_TIME',
+        payload: { tournamentId: boundTournamentId, matchId: match.id, minutes },
+      })
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
   const penaltyMatch = reqPath.match(/^\/api\/judge\/players\/([^/]+)\/penalty$/)
   if (penaltyMatch && req.method === 'POST') {
     readBody(req, res, (body) => {

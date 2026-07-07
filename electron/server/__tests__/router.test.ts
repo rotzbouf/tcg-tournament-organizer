@@ -489,6 +489,36 @@ describe('judge endpoints', () => {
     expect((await request('POST', '/api/judge/matches/m1/result', { token, body: { result: 'player1_win' } })).status).toBe(409)
   })
 
+  it('grants extra time for a match in the current round', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const res = await request('POST', '/api/judge/matches/m1/extratime', {
+      token: judgeToken(), body: { minutes: 5 },
+    })
+    expect(res.status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'ADD_MATCH_EXTRA_TIME',
+      payload: { tournamentId: BOUND_ID, matchId: 'm1', minutes: 5 },
+    })
+  })
+
+  it('rejects invalid extra-time requests', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+    expect((await request('POST', '/api/judge/matches/m1/extratime', { token, body: { minutes: 0 } })).status).toBe(400)
+    expect((await request('POST', '/api/judge/matches/m1/extratime', { token, body: { minutes: 2.5 } })).status).toBe(400)
+    expect((await request('POST', '/api/judge/matches/m1/extratime', { token, body: { minutes: 100 } })).status).toBe(400)
+    expect((await request('POST', '/api/judge/matches/nope/extratime', { token, body: { minutes: 3 } })).status).toBe(404)
+
+    const done = makeRunningState()
+    done.tournaments[BOUND_ID].rounds[0].isComplete = true
+    vi.mocked(getCurrentState).mockReturnValue(done)
+    expect((await request('POST', '/api/judge/matches/m1/extratime', { token, body: { minutes: 3 } })).status).toBe(409)
+
+    vi.mocked(getCurrentState).mockReturnValue(makeState('registration'))
+    expect((await request('POST', '/api/judge/matches/m1/extratime', { token, body: { minutes: 3 } })).status).toBe(409)
+    expect(dispatchToRenderer).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'ADD_MATCH_EXTRA_TIME' }))
+  })
+
   it('issues a penalty for an existing player while the tournament runs', async () => {
     vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
     const token = judgeToken()
