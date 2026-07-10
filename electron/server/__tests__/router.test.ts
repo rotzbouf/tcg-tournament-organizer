@@ -13,7 +13,7 @@ vi.mock('../../ipc/stateSync', () => ({
   sendDecklistSubmitted: vi.fn(),
 }))
 
-import { handleRequest, clearJudgeCallLog } from '../router'
+import { handleRequest, clearJudgeCallLog, clearMatchReportLog } from '../router'
 import { getCurrentState, dispatchToRenderer, sendMatchReport, sendDecklistSubmitted } from '../../ipc/stateSync'
 import { clearSessions, createPlayerSession, createJudgeSession, revokeJudgeSession, isJudgeSession } from '../sessions'
 import { resetRateLimits } from '../rateLimit'
@@ -37,6 +37,9 @@ function makeState(status = 'registration', decklistVisibility = 'hidden') {
             droppedInRound: null, dateOfBirth: '2000-01-01', playerId: 'K-123', hasBye: false,
           },
           { id: 'p2', name: 'Bob Beta', deckName: null, decklist: null, droppedInRound: null, hasBye: false },
+        ],
+        penalties: [
+          { id: 'pen1', playerId: 'p1', infractionId: 'ygo_slow_play', type: 'warning', reason: 'Slow play' },
         ],
         rounds: [],
         roundTimeMinutes: 50,
@@ -97,6 +100,7 @@ beforeEach(() => {
   clearSessions()
   resetRateLimits()
   clearJudgeCallLog()
+  clearMatchReportLog()
 })
 
 describe('host guard (DNS rebinding)', () => {
@@ -123,6 +127,37 @@ describe('GET /api/state', () => {
       expect(player).not.toHaveProperty('dateOfBirth')
       expect(player).not.toHaveProperty('playerId')
     }
+  })
+
+  it('strips the penalty list from the broadcast state', async () => {
+    const res = await request('GET', '/api/state')
+    const state = res.body.state as { tournaments: Record<string, Record<string, unknown>> }
+    expect(state.tournaments[BOUND_ID]).not.toHaveProperty('penalties')
+  })
+})
+
+describe('GET / (mobile page)', () => {
+  function requestText(path: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      http.get({ host: '127.0.0.1', port, path }, res => {
+        let data = ''
+        res.on('data', c => { data += c })
+        res.on('end', () => resolve(data))
+      }).on('error', reject)
+    })
+  }
+
+  it('serves the page with the penalty catalog injected from penaltyCatalog.ts', async () => {
+    const html = await requestText('/')
+    // The placeholder was replaced with real data …
+    expect(html).not.toContain('/*__PENALTY_CATALOG__*/null||')
+    // … containing catalog entries and the i18n labels of both languages.
+    expect(html).toContain('"mtg_cheating"')
+    expect(html).toContain('"ygo_slow_play"')
+    expect(html).toContain('"gen_tardiness"')
+    expect(html).toContain('Verspätung')
+    expect(html).toContain('Tardiness')
+    expect(html).toContain('"unsporting_conduct"')
   })
 })
 
@@ -601,6 +636,77 @@ describe('judge endpoints', () => {
     expect((await request('POST', `/api/judge/calls/${id}/claim`, { token, body: {} })).status).toBe(400)
     expect((await request('POST', '/api/judge/calls/nope/claim', { token, body: { judgeName: 'Max' } })).status).toBe(404)
     expect((await request('POST', `/api/judge/calls/${id}/claim`, { body: { judgeName: 'Mallory' } })).status).toBe(401)
+  })
+
+  it('serves the penalty list to judges only (stripped from the broadcast)', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    expect((await request('GET', '/api/judge/penalties')).status).toBe(401)
+    const res = await request('GET', '/api/judge/penalties', { token: judgeToken() })
+    expect(res.status).toBe(200)
+    expect(res.body.penalties).toEqual([
+      { id: 'pen1', playerId: 'p1', infractionId: 'ygo_slow_play', type: 'warning', reason: 'Slow play' },
+    ])
+  })
+
+  it('returns an empty penalty list for tournaments without penalties', async () => {
+    const state = makeRunningState()
+    delete (state.tournaments[BOUND_ID] as { penalties?: unknown }).penalties
+    vi.mocked(getCurrentState).mockReturnValue(state)
+    const res = await request('GET', '/api/judge/penalties', { token: judgeToken() })
+    expect(res.status).toBe(200)
+    expect(res.body.penalties).toEqual([])
+  })
+
+  it('mirrors pending self-reports to judges, latest claim per reporter', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+    expect((await request('GET', '/api/judge/reports')).status).toBe(401)
+
+    // No reports yet
+    expect((await request('GET', '/api/judge/reports', { token })).body.reports).toEqual([])
+
+    // Alice reports a win, then corrects herself — only the last claim remains.
+    await request('POST', '/api/matches/m1/report', { body: { result: 'player1_win', reporterName: 'Alice Alpha' } })
+    await request('POST', '/api/matches/m1/report', { body: { result: 'draw', reporterName: 'alice alpha' } })
+    let reports = (await request('GET', '/api/judge/reports', { token })).body.reports as
+      Array<{ matchId: string; reports: Array<{ reporterName: string; result: string; at: number }> }>
+    expect(reports).toHaveLength(1)
+    expect(reports[0].matchId).toBe('m1')
+    expect(reports[0].reports).toHaveLength(1)
+    expect(reports[0].reports[0]).toMatchObject({ result: 'draw' })
+
+    // Bob disagrees — both claims are visible (the conflict case).
+    await request('POST', '/api/matches/m1/report', { body: { result: 'player2_win', reporterName: 'Bob Beta' } })
+    reports = (await request('GET', '/api/judge/reports', { token })).body.reports as typeof reports
+    expect(reports[0].reports.map(r => r.result)).toEqual(['draw', 'player2_win'])
+  })
+
+  it('hides a report once the match has a stored result or the round completed', async () => {
+    const state = makeRunningState()
+    vi.mocked(getCurrentState).mockReturnValue(state)
+    const token = judgeToken()
+    await request('POST', '/api/matches/m1/report', { body: { result: 'player1_win', reporterName: 'Alice Alpha' } })
+    expect((await request('GET', '/api/judge/reports', { token })).body.reports).toHaveLength(1)
+
+    // TO (or a judge) stored a result — the report is no longer pending.
+    state.tournaments[BOUND_ID].rounds[0].matches[0].result = 'player1_win'
+    expect((await request('GET', '/api/judge/reports', { token })).body.reports).toEqual([])
+
+    // Reset to pending but complete the round — nothing to confirm either.
+    state.tournaments[BOUND_ID].rounds[0].matches[0].result = 'pending'
+    state.tournaments[BOUND_ID].rounds[0].isComplete = true
+    expect((await request('GET', '/api/judge/reports', { token })).body.reports).toEqual([])
+  })
+
+  it('drops reports for matches that left the current round (re-pairing)', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+    await request('POST', '/api/matches/m1/report', { body: { result: 'player1_win', reporterName: 'Alice Alpha' } })
+
+    const repaired = makeRunningState()
+    repaired.tournaments[BOUND_ID].rounds[0].matches[0].id = 'm2'
+    vi.mocked(getCurrentState).mockReturnValue(repaired)
+    expect((await request('GET', '/api/judge/reports', { token })).body.reports).toEqual([])
   })
 
   it('exempts judge POSTs from the per-IP rate limit', async () => {

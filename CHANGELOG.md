@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Spieler-Meldungen jetzt auch auf Judge-Geräten** — Meldet ein Spieler sein Ergebnis vom Handy, sehen Judges die Meldung ab sofort in ihrer Paarungsliste: Der Paarungen-Tab zeigt die Zahl offener Meldungen, das betroffene Match einen Hinweis mit Melder und gemeldetem Ergebnis. Melden beide Spieler unterschiedliche Ergebnisse, wird das rot als Widerspruch markiert — der Judge am Tisch sieht damit dasselbe wie der Turnierleiter am Bestätigungs-Banner. Sobald ein Ergebnis gespeichert ist (TO bestätigt, Judge trägt direkt ein oder die Runde wird abgeschlossen), verschwindet der Hinweis von selbst
+
+### Changed
+- **Strafenliste nicht mehr an alle Handys übertragen** — Die Strafen eines Turniers waren bisher Teil der an alle verbundenen Mobilgeräte übertragenen Turnierdaten (angezeigt wurden sie dort nie). Sie werden jetzt wie Decklisten und Deck-Check-Protokoll vor der Übertragung entfernt; Judge-Geräte beziehen sie über einen eigenen, per Judge-Token geschützten Endpunkt, damit die Eskalations-Empfehlung bei Wiederholungstätern weiterhin korrekt rechnet
+- **Strafkatalog der Judge-Ansicht aus einer Quelle** — Die Mobile-Seite führte eine eigene Kopie des Strafkatalogs, die bei Katalog-Änderungen von Hand nachgezogen werden musste. Der Server injiziert Katalog samt deutschen und englischen Bezeichnungen jetzt beim Ausliefern der Seite direkt aus der App-Datenquelle — künftige Katalog-Änderungen erscheinen automatisch auch auf den Judge-Handys
+
 ## [1.7.0] - 2026-07-10
 
 ### Added

@@ -104,6 +104,13 @@ export function getInfractionCatalog(game: GameType): Infraction[] {
   return CATALOGS[game] ?? GENERIC
 }
 
+// All catalogs keyed for the mobile page ('_gen' is its fallback key for games
+// without a published catalog). The server injects this into mobile.html so the
+// page never carries its own copy of the catalog.
+export function getAllCatalogs(): Record<string, Infraction[]> {
+  return { ...CATALOGS, _gen: GENERIC } as Record<string, Infraction[]>
+}
+
 const BY_ID: Record<string, Infraction> = {}
 for (const list of [MTG, POKEMON, YUGIOH, GENERIC]) {
   for (const inf of list) BY_ID[inf.id] = inf

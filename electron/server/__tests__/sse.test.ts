@@ -19,6 +19,7 @@ describe('sanitizeTournament', () => {
       },
     ],
     deckChecks: [{ id: 'c1', matchId: 'm1', roundNumber: 1, result: null }],
+    penalties: [{ id: 'pen1', playerId: 'p1', type: 'warning', reason: 'Slow play' }],
   }
 
   it('strips decklist, dateOfBirth and playerId from every player', () => {
@@ -32,6 +33,12 @@ describe('sanitizeTournament', () => {
     const result = sanitizeTournament(tournament) as typeof tournament
     expect(result).not.toHaveProperty('deckChecks')
     expect(tournament.deckChecks).toHaveLength(1) // original untouched
+  })
+
+  it('strips the penalty list', () => {
+    const result = sanitizeTournament(tournament) as typeof tournament
+    expect(result).not.toHaveProperty('penalties')
+    expect(tournament.penalties).toHaveLength(1) // original untouched
   })
 
   it('keeps the fields the mobile page needs', () => {

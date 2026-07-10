@@ -9,9 +9,34 @@ import { createSession, getSession, bindSessionToPlayer, isNameClaimed, isJudgeS
 import { allowPost } from './rateLimit'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
-import { getInfraction } from '../../src/lib/penaltyCatalog'
+import { getInfraction, getAllCatalogs, CATEGORY_ORDER } from '../../src/lib/penaltyCatalog'
+import deJson from '../../src/i18n/de.json'
+import enJson from '../../src/i18n/en.json'
 
 let mobileHtmlCache: string | null = null
+
+// The penalty catalog the judge view needs, with bilingual labels taken from
+// the app's i18n files. Injected into mobile.html at serve time so the page
+// (which has no bundler) never carries its own copy that could drift.
+function buildPenaltyCatalogPayload(): string {
+  const label = (lang: typeof deJson, key: string): string =>
+    (lang.penalties.infraction as Record<string, string>)[key] ?? key
+  const catalogs: Record<string, unknown[]> = {}
+  for (const [game, infractions] of Object.entries(getAllCatalogs())) {
+    catalogs[game] = infractions.map(inf => ({
+      i: inf.id,
+      c: inf.category,
+      d: inf.defaultPenalty,
+      e: inf.escalates ? 1 : 0,
+      l: { en: label(enJson, inf.id), de: label(deJson, inf.id) },
+    }))
+  }
+  const categories: Record<string, { en: string; de: string }> = {}
+  for (const cat of CATEGORY_ORDER) {
+    categories[cat] = { en: enJson.penalties.category[cat], de: deJson.penalties.category[cat] }
+  }
+  return JSON.stringify({ order: CATEGORY_ORDER, categories, catalogs })
+}
 
 function getMobileHtml(): string {
   if (mobileHtmlCache) return mobileHtmlCache
@@ -23,7 +48,8 @@ function getMobileHtml(): string {
   ]
   for (const p of candidates) {
     try {
-      mobileHtmlCache = fs.readFileSync(p, 'utf-8')
+      const raw = fs.readFileSync(p, 'utf-8')
+      mobileHtmlCache = raw.replace('/*__PENALTY_CATALOG__*/null', buildPenaltyCatalogPayload())
       return mobileHtmlCache
     } catch { /* try next */ }
   }
@@ -38,6 +64,7 @@ interface Tournament {
   status: string
   decklistVisibility: 'hidden' | 'to_only' | 'public'
   players: Array<{ id: string; name: string; deckName: string | null; decklist: unknown; droppedInRound: number | null }>
+  penalties?: Array<{ playerId: string; infractionId?: string; type: string }>
   rounds: Array<{ roundNumber: number; matches: Array<{ id: string; player1Id: string; player2Id: string | null; result: string; tableNumber: number; isBye: boolean; player1Games?: number; player2Games?: number }>; isComplete: boolean; phase: string }>
   roundTimeMinutes: number
   currentRound: number
@@ -270,6 +297,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         jsonResponse(res, { error: 'invalid result' }, 400); return
       }
       sendMatchReport({ matchId: reportMatch[1], result, reporterName: reporterName ?? '?', tournamentId: boundTournamentId })
+      recordMatchReport(boundTournamentId, reportMatch[1], reporterName ?? '?', result)
       jsonResponse(res, { ok: true })
     })
     return
@@ -336,6 +364,37 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
   const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
   const tournament = state?.tournaments[boundTournamentId]
   if (!tournament) { jsonResponse(res, { error: 'not found' }, 404); return }
+
+  // Penalties are stripped from the broadcast state (every phone receives it);
+  // judges need them for the escalation suggestion, so they read them here.
+  if (reqPath === '/api/judge/penalties' && req.method === 'GET') {
+    jsonResponse(res, { penalties: tournament.penalties ?? [] })
+    return
+  }
+
+  // Pending self-reports, mirrored from the player devices: what the TO sees
+  // as a confirmation banner, a judge on the floor sees here. Only matches of
+  // the current round that are still pending — once a result is stored (TO
+  // confirmed, judge entered, round completed) the report disappears.
+  if (reqPath === '/api/judge/reports' && req.method === 'GET') {
+    const currentRound = tournament.rounds[tournament.rounds.length - 1]
+    const byMatch = matchReportLog.get(boundTournamentId)
+    const reports: Array<{ matchId: string; reports: MatchReportEntry[] }> = []
+    if (byMatch && currentRound && !currentRound.isComplete) {
+      // Prune reports for matches no longer in the current round (round
+      // completed and regenerated, re-pairing) so the log cannot grow.
+      for (const matchId of [...byMatch.keys()]) {
+        if (!currentRound.matches.some(m => m.id === matchId)) byMatch.delete(matchId)
+      }
+      for (const match of currentRound.matches) {
+        if (match.result !== 'pending' || match.isBye) continue
+        const entries = byMatch.get(match.id)
+        if (entries?.length) reports.push({ matchId: match.id, reports: entries })
+      }
+    }
+    jsonResponse(res, { reports })
+    return
+  }
 
   const resultMatch = reqPath.match(/^\/api\/judge\/matches\/([^/]+)\/result$/)
   if (resultMatch && req.method === 'POST') {
@@ -474,6 +533,36 @@ function recordJudgeCall(tournamentId: string, entry: { playerName: string; tabl
 // Test helper — the call log is module state shared across a test file.
 export function clearJudgeCallLog(): void {
   judgeCallLog.clear()
+}
+
+// Self-reports from player phones, per tournament and match. The renderer owns
+// the confirmation flow; this log only mirrors the claims to judge devices. One
+// entry per reporter (a re-report replaces the earlier claim), so a match holds
+// at most its two seats plus the odd mistyped name.
+interface MatchReportEntry {
+  reporterName: string
+  result: string
+  at: number
+}
+
+const MAX_REPORTERS_PER_MATCH = 8
+const matchReportLog = new Map<string, Map<string, MatchReportEntry[]>>()
+
+function recordMatchReport(tournamentId: string, matchId: string, reporterName: string, result: string): void {
+  const byMatch = matchReportLog.get(tournamentId) ?? new Map<string, MatchReportEntry[]>()
+  const entries = byMatch.get(matchId) ?? []
+  const entry: MatchReportEntry = { reporterName, result, at: Date.now() }
+  const existing = entries.findIndex(e => e.reporterName.toLowerCase() === reporterName.toLowerCase())
+  if (existing !== -1) entries[existing] = entry
+  else entries.push(entry)
+  if (entries.length > MAX_REPORTERS_PER_MATCH) entries.splice(0, entries.length - MAX_REPORTERS_PER_MATCH)
+  byMatch.set(matchId, entries)
+  matchReportLog.set(tournamentId, byMatch)
+}
+
+// Test helper — module state, same reasoning as clearJudgeCallLog.
+export function clearMatchReportLog(): void {
+  matchReportLog.clear()
 }
 
 function getBearerToken(req: http.IncomingMessage): string | null {
