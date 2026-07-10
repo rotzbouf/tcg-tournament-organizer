@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.0] - 2026-07-10
 
 ### Added
 - **Drei neue Spiele: Flesh and Blood, One Piece Card Game, Dragon Ball Super: Fusion World** — Alle Turnierfunktionen (Swiss, Top Cut, Elo, Saisons, Strafen, Decklisten, Mobile, Druck & Export) stehen damit für zehn Spiele bereit. Deck-Regeln nach den offiziellen Dokumenten: Flesh and Blood mit den Formaten Classic Constructed (60–80 Karten, max. 3 Kopien) und Blitz (exakt 40 Karten, max. 2 Kopien); One Piece exakt 50 Karten, Fusion World 50–60 Karten (je max. 4 Kopien; Leader- und DON!!-Karten zählen nicht zur Deckliste). Die Bandai-Spiele verwenden die offiziellen Tiebreaker aus dem Turnier-Manual (Gegner-Winrate mit 0,33-Untergrenze, dann direkter Vergleich); Flesh and Blood nutzt näherungsweise die Standard-Tiebreaker, da das offizielle CTB-System ein Sonderfall ist. Die Ergebnis-CSV beschriftet die ID-Spalte spielgerecht (GEM ID bzw. Bandai TCG+ ID)
