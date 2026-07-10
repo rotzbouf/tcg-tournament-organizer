@@ -75,8 +75,17 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       saveState(state)
       window.electronAPI?.syncState(JSON.stringify(state))
     }, 500)
+    // On close, persist immediately (synchronously) so changes made within
+    // the debounce window are not lost.
+    const flush = () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current)
+      saveState(state)
+      window.electronAPI?.flushStorageState(JSON.stringify(state))
+    }
+    window.addEventListener('beforeunload', flush)
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current)
+      window.removeEventListener('beforeunload', flush)
     }
   }, [state])
 

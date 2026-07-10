@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { useTournamentContext } from '@/state/useTournamentContext'
-import { DecklistVisibility, GameType, TournamentFormat } from '@/types/tournament'
+import { DecklistVisibility, GameType, TopCutSize, TournamentFormat } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
+import { cutRuleKey } from '@/lib/cutRules'
 
 interface CreateTournamentDialogProps {
   open: boolean
@@ -23,6 +24,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [game, setGame] = useState<GameType>('yugioh')
   const [gameFormat, setGameFormat] = useState<string>(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
   const [format, setFormat] = useState<TournamentFormat>('swiss')
+  const [topCut, setTopCut] = useState<TopCutSize>(0)
   const [roundTime, setRoundTime] = useState(50)
   const [grandFinalReset, setGrandFinalReset] = useState(false)
   const [ageDivisions, setAgeDivisions] = useState(true)
@@ -34,11 +36,6 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
 
   const templates = state.templates ?? []
-
-  const today = new Date().toISOString().slice(0, 10)
-  const hasActiveSeason = (state.seasons ?? []).some(
-    s => s.game === game && !!s.startDate && !!s.endDate && today >= s.startDate && today <= s.endDate
-  )
 
   const handleGameChange = (newGame: GameType) => {
     setGame(newGame)
@@ -106,7 +103,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         gameFormat: gameFormat || null,
         format,
         roundTimeMinutes: roundTime,
-        topCut: 0,
+        topCut: format === 'swiss_topcut' ? topCut : 0,
         grandFinalReset: format === 'double_elimination' ? grandFinalReset : undefined,
         ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions ? ageDivisions : false,
         decklistVisibility,
@@ -119,6 +116,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setGame('yugioh')
     setGameFormat(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
     setFormat('swiss')
+    setTopCut(0)
     setRoundTime(50)
     setGrandFinalReset(false)
     setAgeDivisions(true)
@@ -175,7 +173,21 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           onChange={e => setFormat(e.target.value as TournamentFormat)}
         />
         {format === 'swiss_topcut' && (
-          <p className="text-sm text-muted-foreground">{t('tournament.topCutAutoHint')}</p>
+          <>
+            <Select
+              id="tournament-top-cut"
+              label={t('tournament.topCut')}
+              options={[
+                { value: '0', label: t('tournament.topCutAuto') },
+                ...[4, 8, 16, 32].map(n => ({ value: String(n), label: `Top ${n}` })),
+              ]}
+              value={String(topCut)}
+              onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
+            />
+            <p className="text-sm text-muted-foreground">
+              {t(`tournament.topCutRule.${cutRuleKey(game)}`)}
+            </p>
+          </>
         )}
         {format === 'double_elimination' && (
           <label className="flex items-center gap-2 text-sm text-secondary-foreground">
@@ -239,17 +251,15 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           value={decklistVisibility}
           onChange={e => setDecklistVisibility(e.target.value as DecklistVisibility)}
         />
-        {hasActiveSeason && (
-          <label className="flex items-center gap-2 text-sm text-secondary-foreground">
-            <input
-              type="checkbox"
-              checked={countForSeason}
-              onChange={e => setCountForSeason(e.target.checked)}
-              className="rounded border-input"
-            />
-            <span>{t('season.countForSeason')}</span>
-          </label>
-        )}
+        <label className="flex items-center gap-2 text-sm text-secondary-foreground">
+          <input
+            type="checkbox"
+            checked={countForSeason}
+            onChange={e => setCountForSeason(e.target.checked)}
+            className="rounded border-input"
+          />
+          <span>{t('season.countForSeason')}</span>
+        </label>
 
         <div className="flex items-center justify-between border-t border-muted pt-3">
           {showSaveTemplate ? (

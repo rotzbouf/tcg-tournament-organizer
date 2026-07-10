@@ -98,3 +98,39 @@ describe('import migration (shared with storage load)', () => {
     expect(withDb.playerDatabase.alice.playerId).toBeNull()
   })
 })
+
+describe('PII-free export', () => {
+  const stateWithPii = () => ({
+    tournaments: {
+      t1: makeTournament({
+        format: 'swiss',
+        players: [
+          { id: 'p1', name: 'Alice Alpha', playerId: 'K-1234567890', dateOfBirth: '2010-05-01', deckName: 'Aggro', decklist: [{ cardName: 'X', quantity: 3 }], hasBye: false, droppedInRound: null },
+        ],
+      }),
+    },
+    playerDatabase: {
+      d1: { id: 'd1', name: 'Alice Alpha', game: 'yugioh', playerId: 'K-1234567890', elo: 1234, matchesPlayed: 5, tournamentsPlayed: 2, history: [], penalties: [], lastUpdated: '2026-07-01' },
+    },
+  }) as unknown as AppState
+
+  it('strips birthdates and player IDs but keeps names, decks and Elo', () => {
+    const restored = deserializeState(serializeState(stateWithPii(), { stripPii: true }))
+    const player = restored.tournaments.t1.players[0]
+    expect(player.dateOfBirth).toBeNull()
+    expect(player.playerId).toBeNull()
+    expect(player.name).toBe('Alice Alpha')
+    expect(player.decklist).toEqual([{ cardName: 'X', quantity: 3 }])
+    const dbPlayer = Object.values(restored.playerDatabase)[0]
+    expect(dbPlayer.playerId).toBeNull()
+    expect(dbPlayer.elo).toBe(1234)
+    expect(serializeState(stateWithPii(), { stripPii: true })).not.toContain('K-1234567890')
+  })
+
+  it('does not mutate the live state and exports PII by default', () => {
+    const state = stateWithPii()
+    serializeState(state, { stripPii: true })
+    expect(state.tournaments.t1.players[0].dateOfBirth).toBe('2010-05-01')
+    expect(serializeState(state)).toContain('K-1234567890')
+  })
+})

@@ -1,4 +1,4 @@
-import { DecklistVisibility, GameType, TopCutSize, TournamentFormat } from '@/types/tournament'
+import { DeckCheckResult, DecklistVisibility, GameType, TopCutSize, TournamentFormat } from '@/types/tournament'
 import { MatchResult } from '@/types/round'
 import { PenaltyType } from '@/types/penalty'
 import { TournamentPhase } from '@/types/phase'
@@ -21,10 +21,10 @@ export type TournamentAction =
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'UNARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
-  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility } }
+  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; gameFormat?: string | null; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility; countForSeason?: boolean } }
   | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
   | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName?: string | null; decklist?: DecklistEntry[] | null } }
-  | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string } }
+  | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string; infractionId?: string } }
   | { type: 'REMOVE_PENALTY'; payload: { tournamentId: string; penaltyId: string } }
   | { type: 'ADVANCE_PHASE'; payload: { tournamentId: string } }
   | { type: 'UPDATE_ELO_RATINGS'; payload: { tournamentId: string } }
@@ -33,6 +33,10 @@ export type TournamentAction =
   | { type: 'UPDATE_DATABASE_PLAYER'; payload: { databasePlayerId: string; playerId?: string | null; name?: string } }
   | { type: 'DELETE_DATABASE_PLAYER'; payload: { databasePlayerId: string } }
   | { type: 'SWAP_PLAYERS'; payload: { tournamentId: string; matchId1: string; playerId1: string; matchId2: string; playerId2: string } }
+  | { type: 'ADD_MATCH_EXTRA_TIME'; payload: { tournamentId: string; matchId: string; minutes: number } }
+  | { type: 'START_DECK_CHECK'; payload: { tournamentId: string; matchId: string } }
+  | { type: 'COMPLETE_DECK_CHECK'; payload: { tournamentId: string; checkId: string; result: DeckCheckResult } }
+  | { type: 'CANCEL_DECK_CHECK'; payload: { tournamentId: string; checkId: string } }
   | { type: 'SAVE_TEMPLATE'; payload: Omit<TournamentTemplate, 'id'> }
   | { type: 'DELETE_TEMPLATE'; payload: { templateId: string } }
   | { type: 'CREATE_SEASON'; payload: { name: string; game: GameType; startDate: string; endDate: string; pointTiers: PointTier[] } }

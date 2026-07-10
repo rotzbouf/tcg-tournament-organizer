@@ -3,7 +3,7 @@ import { Round } from './round'
 import { Penalty } from './penalty'
 import { TournamentPhase } from './phase'
 
-export type GameType = 'yugioh' | 'pokemon' | 'star_wars_unlimited' | 'riftbound' | 'lorcana' | 'altered' | 'mtg'
+export type GameType = 'yugioh' | 'pokemon' | 'star_wars_unlimited' | 'riftbound' | 'lorcana' | 'altered' | 'mtg' | 'flesh_and_blood' | 'one_piece' | 'dragonball_fusion_world'
 
 export type TournamentStatus = 'registration' | 'in_progress' | 'top_cut' | 'completed'
 
@@ -12,6 +12,22 @@ export type TopCutSize = 0 | 4 | 8 | 16 | 32
 export type TournamentFormat = 'swiss' | 'swiss_topcut' | 'double_elimination' | 'round_robin'
 
 export type DecklistVisibility = 'hidden' | 'to_only' | 'public'
+
+export type DeckCheckResult = 'ok' | 'issue'
+
+// One deck check on a table. Started by the TO (random or targeted table),
+// completed with a result; the completed check auto-grants the official time
+// extension (check duration + 3 minutes) to the match.
+export interface DeckCheck {
+  id: string
+  roundNumber: number
+  matchId: string
+  tableNumber: number
+  playerIds: string[]
+  startedAt: string
+  completedAt: string | null
+  result: DeckCheckResult | null
+}
 
 export interface Tournament {
   id: string
@@ -23,6 +39,7 @@ export interface Tournament {
   players: Player[]
   rounds: Round[]
   penalties: Penalty[]
+  deckChecks?: DeckCheck[]
   phases: TournamentPhase[]
   currentPhaseIndex: number
   roundTimeMinutes: number

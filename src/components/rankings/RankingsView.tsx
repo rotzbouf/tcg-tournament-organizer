@@ -10,7 +10,7 @@ import { GameType } from '@/types/tournament'
 import { GAME_CONFIG } from '@/lib/gameConfig'
 import { PlayerHistory } from './PlayerHistory'
 
-const GAME_OPTIONS: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
+const GAME_OPTIONS = Object.keys(GAME_CONFIG) as GameType[]
 
 export function RankingsView() {
   const { t } = useTranslation()

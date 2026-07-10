@@ -14,7 +14,7 @@ interface Props {
   onClose: () => void
 }
 
-const GAME_OPTIONS: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
+const GAME_OPTIONS = Object.keys(GAME_CONFIG) as GameType[]
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10)

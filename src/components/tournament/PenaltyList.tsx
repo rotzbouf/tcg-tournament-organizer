@@ -41,7 +41,9 @@ export function PenaltyList({ tournamentId, penalties, players }: PenaltyListPro
               </Badge>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {t('penalties.issuedInRound', { round: penalty.roundNumber })} — {penalty.reason}
+              {t('penalties.issuedInRound', { round: penalty.roundNumber })}
+              {penalty.infractionId ? ` — ${t(`penalties.infraction.${penalty.infractionId}`)}` : ''}
+              {penalty.reason ? ` — ${penalty.reason}` : ''}
             </p>
           </div>
           <Button

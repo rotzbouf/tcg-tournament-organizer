@@ -18,6 +18,7 @@ describe('sanitizeTournament', () => {
         droppedInRound: null,
       },
     ],
+    deckChecks: [{ id: 'c1', matchId: 'm1', roundNumber: 1, result: null }],
   }
 
   it('strips decklist, dateOfBirth and playerId from every player', () => {
@@ -25,6 +26,12 @@ describe('sanitizeTournament', () => {
     expect(result.players[0]).not.toHaveProperty('decklist')
     expect(result.players[0]).not.toHaveProperty('dateOfBirth')
     expect(result.players[0]).not.toHaveProperty('playerId')
+  })
+
+  it('strips the deck-check log', () => {
+    const result = sanitizeTournament(tournament) as typeof tournament
+    expect(result).not.toHaveProperty('deckChecks')
+    expect(tournament.deckChecks).toHaveLength(1) // original untouched
   })
 
   it('keeps the fields the mobile page needs', () => {

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { generatePairings, generateFirstRoundPairings } from '../swiss'
+import { generatePairings, generateFirstRoundPairings, generatePowerPairings } from '../swiss'
 import { Player } from '@/types/player'
 import { Round, Match } from '@/types/round'
+import { Standing } from '@/types/standing'
 
 function makePlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -198,6 +199,115 @@ describe('generatePairings', () => {
           (r1m.player1Id === m.player2Id && r1m.player2Id === m.player1Id))
       )
       expect(wasR1Pair).toBe(false)
+    }
+  })
+})
+
+describe('maximum-weight pairing', () => {
+  it('finds the only rematch-free pairing even when it crosses the sort order', () => {
+    // p1 hat schon gegen p3 und p4 gespielt, p2 gegen p3 und p4 ebenso —
+    // die einzige rematch-freie Paarung ist p1-p2 und p3-p4.
+    const players = makePlayers(4)
+    const rounds: Round[] = [
+      makeCompletedRound([
+        { player1Id: 'p1', player2Id: 'p3', result: 'draw' },
+        { player1Id: 'p2', player2Id: 'p4', result: 'draw' },
+      ], 1),
+      makeCompletedRound([
+        { player1Id: 'p1', player2Id: 'p4', result: 'draw' },
+        { player1Id: 'p2', player2Id: 'p3', result: 'draw' },
+      ], 2),
+    ]
+
+    const matches = generatePairings(players, rounds, 3)
+    const pairs = matches.map(m => [m.player1Id, m.player2Id].sort().join('-')).sort()
+    expect(pairs).toEqual(['p1-p2', 'p3-p4'])
+  })
+
+  it('prefers two small pair-downs over one big one', () => {
+    // Punktstände über Byes (keine gemeinsamen Gegner): p1=6, p2=3, p3=3, p4=0.
+    // Quadratische Differenz-Strafe: 6-3 & 3-0 (9+9) schlägt 6-0 & 3-3 (36+0).
+    const players = makePlayers(4)
+    const byeRound = (byePlayers: string[], roundNumber: number) =>
+      makeCompletedRound(
+        byePlayers.map(id => ({ player1Id: id, player2Id: null, result: 'player1_win' as const, isBye: true })),
+        roundNumber
+      )
+    const rounds = [byeRound(['p1', 'p2'], 1), byeRound(['p1', 'p3'], 2)]
+
+    const matches = generatePairings(players, rounds, 3)
+    const pairs = matches.map(m => [m.player1Id, m.player2Id].sort().join('-'))
+    expect(pairs).not.toContain('p1-p4')
+  })
+
+  it('keeps power pairings rank-adjacent within a score group', () => {
+    const players = makePlayers(4)
+    const standings: Standing[] = ['p3', 'p1', 'p4', 'p2'].map((playerId, i) => ({
+      playerId,
+      playerName: playerId,
+      rank: i + 1,
+      matchPoints: 0, wins: 0, losses: 0, draws: 0,
+      buchholz: 0, medianBuchholz: 0, sonnebornBerger: 0,
+      opponentMatchWinPct: 0, gameWinPct: 0, opponentGameWinPct: 0,
+      dropped: false,
+    }))
+
+    const matches = generatePowerPairings(players, [], 1, standings)
+    const pairs = matches.map(m => [m.player1Id, m.player2Id].sort().join('-')).sort()
+    expect(pairs).toEqual(['p1-p3', 'p2-p4'])
+  })
+
+  it('produces the minimal number of rematches on random histories (vs. brute force)', () => {
+    const n = 8
+    for (let trial = 0; trial < 100; trial++) {
+      const players = makePlayers(n)
+      const historyRounds = 2 + Math.floor(Math.random() * 4)
+      const rounds: Round[] = []
+      for (let r = 1; r <= historyRounds; r++) {
+        const order = players.map(p => p.id).sort(() => Math.random() - 0.5)
+        const roundMatches: Partial<Match>[] = []
+        for (let i = 0; i < n; i += 2) {
+          roundMatches.push({
+            player1Id: order[i],
+            player2Id: order[i + 1],
+            result: Math.random() < 0.5 ? 'player1_win' : 'player2_win',
+          })
+        }
+        rounds.push(makeCompletedRound(roundMatches, r))
+      }
+
+      const played = new Set<string>()
+      for (const round of rounds) {
+        for (const m of round.matches) {
+          played.add([m.player1Id, m.player2Id].sort().join('-'))
+        }
+      }
+
+      // Brute Force: minimale Rematch-Anzahl über alle perfekten Matchings
+      const ids = players.map(p => p.id)
+      const minRematches = (used: boolean[]): number => {
+        const i = used.indexOf(false)
+        if (i === -1) return 0
+        used[i] = true
+        let best = Infinity
+        for (let j = i + 1; j < n; j++) {
+          if (used[j]) continue
+          used[j] = true
+          const cost = (played.has([ids[i], ids[j]].sort().join('-')) ? 1 : 0) + minRematches(used)
+          used[j] = false
+          if (cost < best) best = cost
+        }
+        used[i] = false
+        return best
+      }
+      const optimal = minRematches(new Array(n).fill(false))
+
+      const matches = generatePairings(players, rounds, historyRounds + 1)
+      const rematches = matches.filter(
+        m => !m.isBye && played.has([m.player1Id, m.player2Id].sort().join('-'))
+      ).length
+
+      expect(rematches, `Trial ${trial}: ${rematches} Rematches, optimal wären ${optimal}`).toBe(optimal)
     }
   })
 })

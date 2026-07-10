@@ -31,6 +31,16 @@ export function registerFileHandlers() {
     return filePath
   })
 
+  ipcMain.handle('file:saveText', async (_event, data: string, defaultName: string, filter: { name: string; extensions: string[] }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      defaultPath: defaultName,
+      filters: [filter, { name: 'Alle Dateien', extensions: ['*'] }],
+    })
+    if (canceled || !filePath) return null
+    fs.writeFileSync(filePath, data, 'utf-8')
+    return filePath
+  })
+
   ipcMain.handle('file:savePdf', async (_event, html: string, defaultName?: string) => {
     const { canceled, filePath } = await dialog.showSaveDialog({
       defaultPath: defaultName ?? `tournament-${new Date().toISOString().slice(0, 10)}.pdf`,

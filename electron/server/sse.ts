@@ -22,17 +22,20 @@ interface TournamentLike {
 // data from the local session; a player's own decklist comes from the
 // token-gated /api/my-decklist endpoint, and public decklists from
 // /api/decklists — so nothing here may bypass `decklistVisibility`.
+// The deck-check log is a TO-side working record and stays off the wire too.
 export function sanitizeTournament(tournament: unknown): unknown {
   const t = tournament as TournamentLike | null
   if (!t || !Array.isArray(t.players)) return tournament
+  const clone = { ...t }
+  delete clone.deckChecks
   return {
-    ...t,
+    ...clone,
     players: t.players.map(player => {
-      const clone = { ...player }
-      delete clone.dateOfBirth
-      delete clone.playerId
-      delete clone.decklist
-      return clone
+      const playerClone = { ...player }
+      delete playerClone.dateOfBirth
+      delete playerClone.playerId
+      delete playerClone.decklist
+      return playerClone
     }),
   }
 }
