@@ -9,12 +9,12 @@ Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double El
 - **Multi-Phase-Turniere** — Mehrere Phasen hintereinander (z.B. Round Robin → Swiss → Top Cut)
 - **Penalty-System** — Offizielle Strafkataloge (Magic IPG, Pokémon Penalty Guidelines, Yu-Gi-Oh!-Turnierpolitik) mit automatischem Strafvorschlag und Eskalation bei Wiederholung; Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen; Cross-Tournament-Tracking in der Spieler-Datenbank
 - **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools; Sichtbarkeits-Modi (Versteckt/Nur TO/Öffentlich); Kartenbank-Validierung (Kartenzahl, Kopien-Limit); automatische TO-Warnung bei illegal nachgereichter Liste
-- **Deck-Checks** — Zufallstisch-Auswahl per Klick, Decklisten-Einsicht beider Spieler, Abschluss mit Befund/ohne Befund (Befund öffnet direkt den Strafen-Dialog), automatische Zeitgutschrift (Check-Dauer + 3 Minuten), aufklappbares Protokoll
+- **Deck-Checks** — Zufallstisch-Auswahl per Klick oder Start direkt vom Judge-Handy am Tisch, Decklisten-Einsicht beider Spieler, Abschluss mit Befund/ohne Befund (Befund öffnet direkt den Strafen-Dialog), automatische Zeitgutschrift (Check-Dauer + 3 Minuten), aufklappbares Protokoll
 - **Manuelle Paarungsänderung** — Spieler zwischen Matches per Klick tauschen
 - **Spielersuche** — Spieler-Tab nach Name/Spieler-ID/Deck filtern, Runden-Tab nach Spielername oder Tischnummer; akzent-tolerant („jose" findet „José"), gedruckt wird immer die vollständige Paarungsliste
 - **Saison-Management** — Mehrere Turniere zu einer Saison zusammenfassen. Konfigurierbare Punkte-Tiers nach Platzierung. Automatische Saison-Rangliste über alle verknüpften Events
-- **Spieler Self-Reporting** — Spieler können Ergebnis auf der Mobile-Seite melden; TO bestätigt vor der Speicherung
-- **Judge-Zugang mobil** — Co-Judges arbeiten per QR-Code vom Handy mit: Ergebnisse direkt eintragen, Strafen vergeben, Spieler droppen, Judge-Rufe übernehmen (first-claim-wins), Decklisten für Deck-Checks einsehen; jederzeit widerrufbar
+- **Spieler Self-Reporting** — Spieler können Ergebnis auf der Mobile-Seite melden; TO bestätigt vor der Speicherung, Judges sehen offene Meldungen und Widersprüche in ihrer Paarungsliste
+- **Judge-Zugang mobil** — Ein QR-Code pro Judge mit Namen (einzeln oder gesamt widerrufbar): Ergebnisse mit Spielstand direkt eintragen, Strafen vergeben, Spieler droppen, Deck-Checks am Tisch durchführen, Judge-Rufe mit Grund übernehmen und erledigen; alle Judge-Aktionen sind dem Judge namentlich zugeordnet
 - **Elo Seeding** — Erste Runde optional nach Elo-Wertung per S-Kurve paaren
 - **Visuelles Bracket** — Grafische Top-Cut-Bracket-Ansicht mit Champion-Hervorhebung
 - **Turnier-Abschlussbericht** — HTML-Export mit Champion, Statistiken und allen Runden
