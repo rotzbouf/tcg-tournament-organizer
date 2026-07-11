@@ -13,6 +13,9 @@ export interface Match {
   // Time extension in minutes granted to this table (judge ruling, deck
   // check, …) — counts down after the round timer expires.
   extraTimeMinutes?: number
+  // Judge display name when the result came from a judge device; absent when
+  // the TO entered (or corrected) it on the desktop.
+  resultEnteredBy?: string
 }
 
 export type RoundPhase = 'swiss' | 'top_cut' | 'winners_bracket' | 'losers_bracket' | 'grand_final' | 'round_robin'

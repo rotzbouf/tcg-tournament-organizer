@@ -293,7 +293,11 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
 
       const updatedPlayers = tournament.players.map(p =>
         p.id === action.payload.playerId
-          ? { ...p, droppedInRound: tournament.currentRound }
+          ? {
+              ...p,
+              droppedInRound: tournament.currentRound,
+              ...(action.payload.droppedBy ? { droppedBy: action.payload.droppedBy } : {}),
+            }
           : p
       )
 
@@ -522,6 +526,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
             result: action.payload.result,
             player1Games: hasGames ? action.payload.player1Games : clearStaleGames ? undefined : match.player1Games,
             player2Games: hasGames ? action.payload.player2Games : clearStaleGames ? undefined : match.player2Games,
+            // Always overwritten: a TO correction (no enteredBy) must clear a
+            // stale judge attribution from an earlier submission.
+            resultEnteredBy: action.payload.enteredBy,
           }
         }),
       }))
@@ -619,6 +626,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         ...(action.payload.infractionId ? { infractionId: action.payload.infractionId } : {}),
         reason: action.payload.reason,
         issuedAt: new Date().toISOString(),
+        ...(action.payload.issuedBy ? { issuedBy: action.payload.issuedBy } : {}),
       }
 
       const updates: Partial<Tournament> = {
@@ -628,7 +636,11 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (action.payload.type === 'disqualification') {
         updates.players = tournament.players.map(p =>
           p.id === action.payload.playerId
-            ? { ...p, droppedInRound: tournament.currentRound }
+            ? {
+                ...p,
+                droppedInRound: tournament.currentRound,
+                ...(action.payload.issuedBy ? { droppedBy: action.payload.issuedBy } : {}),
+              }
             : p
         )
         // Like a drop, a DQ decides the running match — otherwise the round
@@ -689,6 +701,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
               type: action.payload.type,
               ...(action.payload.infractionId ? { infractionId: action.payload.infractionId } : {}),
               reason: action.payload.reason,
+              ...(action.payload.issuedBy ? { issuedBy: action.payload.issuedBy } : {}),
             }
             updatedState = {
               ...updatedState,
@@ -944,6 +957,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         startedAt: new Date().toISOString(),
         completedAt: null,
         result: null,
+        ...(action.payload.startedBy ? { startedBy: action.payload.startedBy } : {}),
       }
       return updateTournament(state, action.payload.tournamentId, {
         deckChecks: [...deckChecks, check],

@@ -10,4 +10,8 @@ export interface Penalty {
   infractionId?: string
   reason: string
   issuedAt: string
+  // Display name of the judge who issued this from a judge device. Absent for
+  // penalties entered on the TO desktop — all judges share one access token,
+  // so this is the only attribution.
+  issuedBy?: string
 }

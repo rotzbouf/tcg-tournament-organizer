@@ -129,6 +129,14 @@ export function MatchCard({ match, players, tournamentId, readonly, hideDrawOpti
         {match.result === 'player2_win' && (
           <Badge variant="success">{t('match.player2Win', { name: player2?.name })}</Badge>
         )}
+        {match.result !== 'pending' && match.resultEnteredBy && (
+          <span
+            className="ml-2 text-xs text-muted-foreground whitespace-nowrap"
+            title={t('match.enteredBy', { name: match.resultEnteredBy })}
+          >
+            ⚖ {match.resultEnteredBy}
+          </span>
+        )}
       </div>
 
       {!readonly && (

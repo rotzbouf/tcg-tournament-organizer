@@ -122,7 +122,8 @@
     "gameScore": "Game score",
     "games": "Games",
     "extraTime": "Extra time",
-    "extraTimeClear": "Remove extra time"
+    "extraTimeClear": "Remove extra time",
+    "enteredBy": "Entered by judge {{name}}"
   },
   "deckCheck": {
     "title": "Deck check",
@@ -212,6 +213,7 @@
     "remove": "Remove",
     "noPenalties": "No penalties issued",
     "issuedInRound": "Issued in round {{round}}",
+    "issuedBy": "issued by {{name}}",
     "countBadge": "{{count}} penalties",
     "history": "Penalty History",
     "category": {
@@ -322,7 +324,14 @@
     "judgeQr": "Show judge QR",
     "judgeQrHint": "Scan QR code for judge access",
     "judgeRevoke": "Revoke access",
-    "judgeRevoked": "Judge access revoked — all previous judge QR codes are invalid."
+    "judgeRevoked": "Judge access revoked — all previous judge QR codes are invalid.",
+    "judgeLabelPh": "Judge name",
+    "judgeCreate": "Create judge QR",
+    "judgeUnnamed": "Judge",
+    "judgeShowQr": "QR",
+    "judgeRevokeOne": "Revoke",
+    "judgeRevokeAll": "Revoke all",
+    "judgeIssuedAt": "issued {{time}}"
   },
   "discord": {
     "webhookUrl": "Discord Webhook URL",
@@ -345,7 +354,13 @@
     "dismiss": "Acknowledge",
     "callButton": "Call Judge",
     "callSent": "Judge has been called!",
-    "noTable": "No active match found"
+    "noTable": "No active match found",
+    "reason": {
+      "rule_question": "Rules question",
+      "result_dispute": "Result dispute",
+      "missing_material": "Missing material",
+      "other": "Other"
+    }
   },
   "illegalDecklist": {
     "title": "Illegal decklist submitted",

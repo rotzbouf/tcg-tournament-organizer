@@ -5,7 +5,7 @@ import path from 'node:path'
 import { app } from 'electron'
 import { getCurrentState, getCurrentTimers, dispatchToRenderer, sendJudgeCall, sendMatchReport, sendDecklistSubmitted } from '../ipc/stateSync'
 import { addClient, sanitizeTournament } from './sse'
-import { createSession, getSession, bindSessionToPlayer, isNameClaimed, isJudgeSession } from './sessions'
+import { createSession, getSession, bindSessionToPlayer, isNameClaimed, isJudgeSession, getJudgeLabel } from './sessions'
 import { allowPost } from './rateLimit'
 import { calculateStandings } from '../../src/engine/standings'
 import { parseDecklistText } from '../../src/lib/decklistParser'
@@ -65,6 +65,7 @@ interface Tournament {
   decklistVisibility: 'hidden' | 'to_only' | 'public'
   players: Array<{ id: string; name: string; deckName: string | null; decklist: unknown; droppedInRound: number | null }>
   penalties?: Array<{ playerId: string; infractionId?: string; type: string }>
+  deckChecks?: Array<{ id: string; roundNumber: number; matchId: string; result: string | null }>
   rounds: Array<{ roundNumber: number; matches: Array<{ id: string; player1Id: string; player2Id: string | null; result: string; tableNumber: number; isBye: boolean; player1Games?: number; player2Games?: number }>; isComplete: boolean; phase: string }>
   roundTimeMinutes: number
   currentRound: number
@@ -273,8 +274,13 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
   if (reqPath === '/api/judge-call' && req.method === 'POST') {
     readBody(req, res, (body) => {
-      const { playerName, tableNumber } = body as { playerName?: string; tableNumber?: number }
+      const { playerName, tableNumber, reasonCode, reasonText } = body as {
+        playerName?: string; tableNumber?: number; reasonCode?: unknown; reasonText?: unknown
+      }
       if (!playerName) { jsonResponse(res, { error: 'name required' }, 400); return }
+      if (reasonCode !== undefined && !CALL_REASON_CODES.includes(reasonCode as string)) {
+        jsonResponse(res, { error: 'invalid reason' }, 400); return
+      }
       const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
       const player = state?.tournaments[boundTournamentId]?.players.find(
         p => p.name.toLowerCase() === playerName.toLowerCase()
@@ -282,8 +288,14 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       if (player?.droppedInRound !== null && player?.droppedInRound !== undefined) {
         jsonResponse(res, { error: 'dropped' }, 403); return
       }
-      sendJudgeCall({ playerName, tableNumber: tableNumber ?? 0 })
-      recordJudgeCall(boundTournamentId, { playerName, tableNumber: tableNumber ?? 0, at: Date.now() })
+      const call = {
+        playerName,
+        tableNumber: tableNumber ?? 0,
+        reasonCode: reasonCode !== undefined ? reasonCode as string : null,
+        reasonText: typeof reasonText === 'string' ? reasonText.trim().slice(0, 120) : '',
+      }
+      sendJudgeCall(call)
+      recordJudgeCall(boundTournamentId, { ...call, at: Date.now() })
       jsonResponse(res, { ok: true })
     })
     return
@@ -325,11 +337,21 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
 
 const KO_PHASES = new Set(['top_cut', 'winners_bracket', 'losers_bracket', 'grand_final'])
 const PENALTY_TYPES = ['warning', 'game_loss', 'match_loss', 'disqualification', 'note'] // mirrors PenaltyType
+// Quick reasons a player can attach to a judge call; labels live in the
+// mobile page (player picks) and the app i18n (TO modal shows them).
+const CALL_REASON_CODES = ['rule_question', 'result_dispute', 'missing_material', 'other']
 
 function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse, boundTournamentId: string, reqPath: string): void {
-  // Token validity check for the mobile page when it adopts a judge QR.
+  // The TO-chosen label of this judge token is the authoritative audit
+  // identity; the device-chosen name from the request body is only the
+  // fallback for unlabelled (legacy) tokens.
+  const judgeLabel = getJudgeLabel(getBearerToken(req), boundTournamentId)
+  const attribution = (bodyName: unknown): string => judgeLabel || cleanJudgeName(bodyName)
+
+  // Token validity check for the mobile page when it adopts a judge QR; the
+  // label lets the device prefill the judge name.
   if (reqPath === '/api/judge/me' && req.method === 'GET') {
-    jsonResponse(res, { ok: true, role: 'judge', tournamentId: boundTournamentId })
+    jsonResponse(res, { ok: true, role: 'judge', tournamentId: boundTournamentId, label: judgeLabel })
     return
   }
 
@@ -346,7 +368,7 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
   const claimMatch = reqPath.match(/^\/api\/judge\/calls\/([^/]+)\/claim$/)
   if (claimMatch && req.method === 'POST') {
     readBody(req, res, (body) => {
-      const judgeName = ((body as { judgeName?: string }).judgeName ?? '').trim()
+      const judgeName = attribution((body as { judgeName?: string }).judgeName)
       if (!judgeName) { jsonResponse(res, { error: 'judge name required' }, 400); return }
       const call = (judgeCallLog.get(boundTournamentId) ?? []).find(c => c.id === claimMatch[1])
       if (!call) { jsonResponse(res, { error: 'call not found' }, 404); return }
@@ -356,6 +378,27 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
       }
       call.claimedBy = judgeName
       call.claimedAt ??= Date.now()
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
+  // A judge marks a call as handled. Any judge may resolve (the one who dealt
+  // with it on the floor is not necessarily the claimer); resolving an
+  // unclaimed call claims it implicitly so the log shows who handled it.
+  const resolveMatch = reqPath.match(/^\/api\/judge\/calls\/([^/]+)\/resolve$/)
+  if (resolveMatch && req.method === 'POST') {
+    readBody(req, res, (body) => {
+      const judgeName = attribution((body as { judgeName?: string }).judgeName)
+      if (!judgeName) { jsonResponse(res, { error: 'judge name required' }, 400); return }
+      const call = (judgeCallLog.get(boundTournamentId) ?? []).find(c => c.id === resolveMatch[1])
+      if (!call) { jsonResponse(res, { error: 'call not found' }, 404); return }
+      if (!call.resolvedAt) {
+        call.resolvedBy = judgeName
+        call.resolvedAt = Date.now()
+        call.claimedBy ??= judgeName
+        call.claimedAt ??= call.resolvedAt
+      }
       jsonResponse(res, { ok: true })
     })
     return
@@ -399,7 +442,7 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
   const resultMatch = reqPath.match(/^\/api\/judge\/matches\/([^/]+)\/result$/)
   if (resultMatch && req.method === 'POST') {
     readBody(req, res, (body) => {
-      const { result, player1Games, player2Games } = body as { result?: string; player1Games?: unknown; player2Games?: unknown }
+      const { result, player1Games, player2Games, judgeName } = body as { result?: string; player1Games?: unknown; player2Games?: unknown; judgeName?: unknown }
       if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
         jsonResponse(res, { error: 'invalid result' }, 400); return
       }
@@ -423,6 +466,8 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
         payload.player1Games = g1
         payload.player2Games = g2
       }
+      const enteredBy = attribution(judgeName)
+      if (enteredBy) payload.enteredBy = enteredBy
       dispatchToRenderer({ type: 'SUBMIT_MATCH_RESULT', payload })
       jsonResponse(res, { ok: true })
     })
@@ -460,7 +505,7 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
   const penaltyMatch = reqPath.match(/^\/api\/judge\/players\/([^/]+)\/penalty$/)
   if (penaltyMatch && req.method === 'POST') {
     readBody(req, res, (body) => {
-      const { type, reason, infractionId } = body as { type?: string; reason?: string; infractionId?: string }
+      const { type, reason, infractionId, judgeName } = body as { type?: string; reason?: string; infractionId?: string; judgeName?: unknown }
       if (!type || !PENALTY_TYPES.includes(type)) { jsonResponse(res, { error: 'invalid penalty type' }, 400); return }
       // An infraction id is optional (a judge can log a free-text penalty), but
       // if supplied it must be a real catalog key so history stays consistent.
@@ -470,6 +515,7 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
       }
       const player = tournament.players.find(p => p.id === penaltyMatch[1])
       if (!player) { jsonResponse(res, { error: 'player not found' }, 404); return }
+      const issuedBy = attribution(judgeName)
       dispatchToRenderer({
         type: 'ISSUE_PENALTY',
         payload: {
@@ -478,6 +524,7 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
           type,
           reason: (reason ?? '').trim(),
           ...(infractionId ? { infractionId } : {}),
+          ...(issuedBy ? { issuedBy } : {}),
         },
       })
       jsonResponse(res, { ok: true })
@@ -487,10 +534,84 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
 
   const judgeDropMatch = reqPath.match(/^\/api\/judge\/players\/([^/]+)\/drop$/)
   if (judgeDropMatch && req.method === 'POST') {
-    const player = tournament.players.find(p => p.id === judgeDropMatch[1])
-    if (!player) { jsonResponse(res, { error: 'player not found' }, 404); return }
-    if (player.droppedInRound !== null) { jsonResponse(res, { error: 'already dropped' }, 409); return }
-    dispatchToRenderer({ type: 'DROP_PLAYER', payload: { tournamentId: boundTournamentId, playerId: player.id } })
+    readBody(req, res, (body) => {
+      const player = tournament.players.find(p => p.id === judgeDropMatch[1])
+      if (!player) { jsonResponse(res, { error: 'player not found' }, 404); return }
+      if (player.droppedInRound !== null) { jsonResponse(res, { error: 'already dropped' }, 409); return }
+      const droppedBy = attribution((body as { judgeName?: unknown }).judgeName)
+      dispatchToRenderer({
+        type: 'DROP_PLAYER',
+        payload: { tournamentId: boundTournamentId, playerId: player.id, ...(droppedBy ? { droppedBy } : {}) },
+      })
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
+  // Deck checks are stripped from the broadcast (TO-side working record), so
+  // judge devices read them here — the running check banner needs them.
+  if (reqPath === '/api/judge/deckchecks' && req.method === 'GET') {
+    jsonResponse(res, { deckChecks: tournament.deckChecks ?? [] })
+    return
+  }
+
+  // A judge starts a deck check at the table they stand at (the random-table
+  // pick stays a TO feature). Same guards as the reducer, but failing loudly
+  // so the judge sees why nothing happened.
+  if (reqPath === '/api/judge/deckchecks' && req.method === 'POST') {
+    readBody(req, res, (body) => {
+      const { matchId, judgeName } = body as { matchId?: string; judgeName?: unknown }
+      if (!matchId) { jsonResponse(res, { error: 'match required' }, 400); return }
+      if (tournament.status !== 'in_progress' && tournament.status !== 'top_cut') {
+        jsonResponse(res, { error: 'tournament not running' }, 409); return
+      }
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      if (!currentRound || currentRound.isComplete) {
+        jsonResponse(res, { error: 'round complete' }, 409); return
+      }
+      const match = currentRound.matches.find(m => m.id === matchId)
+      if (!match) { jsonResponse(res, { error: 'match not in current round' }, 404); return }
+      if (match.isBye) { jsonResponse(res, { error: 'bye match' }, 400); return }
+      if (match.result !== 'pending') { jsonResponse(res, { error: 'match already decided' }, 409); return }
+      if ((tournament.deckChecks ?? []).some(c => c.matchId === match.id && c.roundNumber === currentRound.roundNumber)) {
+        jsonResponse(res, { error: 'table already checked this round' }, 409); return
+      }
+      const startedBy = attribution(judgeName)
+      dispatchToRenderer({
+        type: 'START_DECK_CHECK',
+        payload: { tournamentId: boundTournamentId, matchId: match.id, ...(startedBy ? { startedBy } : {}) },
+      })
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
+  const checkCompleteMatch = reqPath.match(/^\/api\/judge\/deckchecks\/([^/]+)\/complete$/)
+  if (checkCompleteMatch && req.method === 'POST') {
+    readBody(req, res, (body) => {
+      const { result } = body as { result?: string }
+      if (result !== 'ok' && result !== 'issue') { jsonResponse(res, { error: 'invalid result' }, 400); return }
+      const check = (tournament.deckChecks ?? []).find(c => c.id === checkCompleteMatch[1])
+      if (!check) { jsonResponse(res, { error: 'check not found' }, 404); return }
+      if (check.result !== null) { jsonResponse(res, { error: 'check already completed' }, 409); return }
+      dispatchToRenderer({
+        type: 'COMPLETE_DECK_CHECK',
+        payload: { tournamentId: boundTournamentId, checkId: check.id, result },
+      })
+      jsonResponse(res, { ok: true })
+    })
+    return
+  }
+
+  const checkCancelMatch = reqPath.match(/^\/api\/judge\/deckchecks\/([^/]+)\/cancel$/)
+  if (checkCancelMatch && req.method === 'POST') {
+    const check = (tournament.deckChecks ?? []).find(c => c.id === checkCancelMatch[1])
+    if (!check) { jsonResponse(res, { error: 'check not found' }, 404); return }
+    if (check.result !== null) { jsonResponse(res, { error: 'check already completed' }, 409); return }
+    dispatchToRenderer({
+      type: 'CANCEL_DECK_CHECK',
+      payload: { tournamentId: boundTournamentId, checkId: check.id },
+    })
     jsonResponse(res, { ok: true })
     return
   }
@@ -509,23 +630,31 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
 }
 
 // Ring buffer of recent judge calls per tournament, served to judge devices.
-// A call can be claimed by one judge (first claim wins); the claim travels to
-// the other judge devices through their regular /api/judge/calls polling.
+// A call can be claimed by one judge (first claim wins) and resolved by any
+// judge once handled; both travel to the other judge devices through their
+// regular /api/judge/calls polling.
 interface JudgeCallEntry {
   id: string
   playerName: string
   tableNumber: number
+  reasonCode: string | null
+  reasonText: string
   at: number
   claimedBy: string | null
   claimedAt: number | null
+  resolvedBy: string | null
+  resolvedAt: number | null
 }
 
 const MAX_JUDGE_CALLS = 50
 const judgeCallLog = new Map<string, JudgeCallEntry[]>()
 
-function recordJudgeCall(tournamentId: string, entry: { playerName: string; tableNumber: number; at: number }): void {
+function recordJudgeCall(
+  tournamentId: string,
+  entry: { playerName: string; tableNumber: number; reasonCode: string | null; reasonText: string; at: number },
+): void {
   const log = judgeCallLog.get(tournamentId) ?? []
-  log.push({ ...entry, id: crypto.randomUUID(), claimedBy: null, claimedAt: null })
+  log.push({ ...entry, id: crypto.randomUUID(), claimedBy: null, claimedAt: null, resolvedBy: null, resolvedAt: null })
   if (log.length > MAX_JUDGE_CALLS) log.splice(0, log.length - MAX_JUDGE_CALLS)
   judgeCallLog.set(tournamentId, log)
 }
@@ -563,6 +692,12 @@ function recordMatchReport(tournamentId: string, matchId: string, reporterName: 
 // Test helper — module state, same reasoning as clearJudgeCallLog.
 export function clearMatchReportLog(): void {
   matchReportLog.clear()
+}
+
+// The judge display name is chosen freely on the phone (all judges share one
+// token), travels into persisted state as attribution, so cap its length.
+function cleanJudgeName(value: unknown): string {
+  return typeof value === 'string' ? value.trim().slice(0, 60) : ''
 }
 
 function getBearerToken(req: http.IncomingMessage): string | null {

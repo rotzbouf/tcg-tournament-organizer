@@ -234,6 +234,9 @@ export function RoundPanel({
               <span className="text-amber-800 dark:text-amber-300">
                 {p1?.name}{p2 ? ` ${t('match.vs')} ${p2.name}` : ''}
               </span>
+              {check.startedBy && (
+                <span className="text-xs text-amber-700 dark:text-amber-400">⚖ {check.startedBy}</span>
+              )}
               <span className="ml-auto font-mono tabular-nums text-amber-700 dark:text-amber-400">{formatTime(elapsed)}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -389,6 +392,7 @@ export function RoundPanel({
                   <span className={c.result === 'issue' ? 'font-semibold text-red-600' : 'font-semibold text-green-700'}>
                     {c.result === 'issue' ? t('deckCheck.resultIssue') : t('deckCheck.resultOk')}
                   </span>
+                  {c.startedBy ? ` · ⚖ ${c.startedBy}` : ''}
                 </li>
               )
             })}

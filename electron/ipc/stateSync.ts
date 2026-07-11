@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, screen } from 'electron'
 import { startServer, stopServer, getServerInfo, stopAllServers } from '../server/index'
 import { broadcastState, broadcastTimers } from '../server/sse'
-import { createPlayerSession, createJudgeSession, revokeJudgeSession } from '../server/sessions'
+import { createPlayerSession, createJudgeSession, listJudgeSessions, revokeJudgeSession } from '../server/sessions'
 import { persistState } from './storageHandlers'
 
 let currentState: string | null = null
@@ -98,14 +98,19 @@ export function registerStateSyncHandlers(mainWindow: BrowserWindow) {
     return createPlayerSession(tournamentId, playerId, player.name)
   })
 
-  // Shared judge token for the tournament, shown as a QR code by the TO.
-  // Re-invoking returns the same token; revoking cuts off all judge devices.
-  ipcMain.handle('server:judgeToken', (_event, tournamentId: string) => {
-    return createJudgeSession(tournamentId)
+  // One token per judge, labelled by the TO and shown as a QR code. Each call
+  // mints a fresh token; revoking with a token cuts off that judge only,
+  // without one it cuts off all judge devices of the tournament.
+  ipcMain.handle('server:judgeToken', (_event, tournamentId: string, label?: string) => {
+    return createJudgeSession(tournamentId, (label ?? '').trim().slice(0, 60))
   })
 
-  ipcMain.handle('server:revokeJudgeToken', (_event, tournamentId: string) => {
-    revokeJudgeSession(tournamentId)
+  ipcMain.handle('server:listJudgeTokens', (_event, tournamentId: string) => {
+    return listJudgeSessions(tournamentId)
+  })
+
+  ipcMain.handle('server:revokeJudgeToken', (_event, tournamentId: string, token?: string) => {
+    revokeJudgeSession(tournamentId, token)
   })
 }
 
@@ -145,7 +150,7 @@ export function dispatchToRenderer(action: unknown): void {
   }
 }
 
-export function sendJudgeCall(data: { playerName: string; tableNumber: number }): void {
+export function sendJudgeCall(data: { playerName: string; tableNumber: number; reasonCode?: string | null; reasonText?: string }): void {
   if (mainWindowRef && !mainWindowRef.isDestroyed()) {
     mainWindowRef.webContents.send('judge:call', JSON.stringify(data))
   }

@@ -14,6 +14,7 @@ export interface DatabasePenalty {
   type: string
   infractionId?: string
   reason: string
+  issuedBy?: string
 }
 
 export interface DatabasePlayer {

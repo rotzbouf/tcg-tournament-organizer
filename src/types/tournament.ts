@@ -15,9 +15,10 @@ export type DecklistVisibility = 'hidden' | 'to_only' | 'public'
 
 export type DeckCheckResult = 'ok' | 'issue'
 
-// One deck check on a table. Started by the TO (random or targeted table),
-// completed with a result; the completed check auto-grants the official time
-// extension (check duration + 3 minutes) to the match.
+// One deck check on a table. Started by the TO (random or targeted table) or
+// by a judge from the mobile page, completed with a result; the completed
+// check auto-grants the official time extension (check duration + 3 minutes)
+// to the match.
 export interface DeckCheck {
   id: string
   roundNumber: number
@@ -27,6 +28,8 @@ export interface DeckCheck {
   startedAt: string
   completedAt: string | null
   result: DeckCheckResult | null
+  // Judge display name when started from a judge device; absent for TO checks.
+  startedBy?: string
 }
 
 export interface Tournament {

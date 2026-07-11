@@ -5,6 +5,8 @@ import { Button } from './Button'
 interface JudgeCall {
   playerName: string
   tableNumber: number
+  reasonCode?: string | null
+  reasonText?: string
   timestamp: number
 }
 
@@ -19,7 +21,7 @@ export function JudgeCallNotification() {
   useEffect(() => {
     window.electronAPI?.onJudgeCall((dataJson: string) => {
       try {
-        const data = JSON.parse(dataJson) as { playerName: string; tableNumber: number }
+        const data = JSON.parse(dataJson) as JudgeCall
         setCalls(prev => [
           ...prev.filter(c => c.playerName !== data.playerName),
           { ...data, timestamp: Date.now() },
@@ -41,6 +43,13 @@ export function JudgeCallNotification() {
               {call.tableNumber > 0 && (
                 <p className="mt-1 text-3xl font-black text-red-600">
                   {t('match.table', { number: call.tableNumber })}
+                </p>
+              )}
+              {(call.reasonCode || call.reasonText) && (
+                <p className="mt-2 text-sm font-medium text-secondary-foreground">
+                  {call.reasonCode ? t(`judge.reason.${call.reasonCode}`) : ''}
+                  {call.reasonCode && call.reasonText ? ' — ' : ''}
+                  {call.reasonText}
                 </p>
               )}
             </div>

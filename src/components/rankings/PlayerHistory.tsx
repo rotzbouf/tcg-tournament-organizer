@@ -84,6 +84,7 @@ export function PlayerHistory({ player, onBack }: PlayerHistoryProps) {
                   {p.infractionId ? t(`penalties.infraction.${p.infractionId}`) : ''}
                   {p.infractionId && p.reason ? ' — ' : ''}
                   {p.reason}
+                  {p.issuedBy ? ` — ${t('penalties.issuedBy', { name: p.issuedBy })}` : ''}
                 </span>
                 <span className="ml-auto text-xs text-muted-foreground">{p.tournamentName} — {new Date(p.date).toLocaleDateString()}</span>
               </div>

@@ -155,6 +155,7 @@ export function PlayerList({ tournamentId, players, editable, inProgress, game, 
                 {player.droppedInRound !== null && (
                   <span className="text-xs text-red-500">
                     {t('players.droppedInRound', { round: player.droppedInRound })}
+                    {player.droppedBy ? ` — ⚖ ${player.droppedBy}` : ''}
                   </span>
                 )}
               </div>

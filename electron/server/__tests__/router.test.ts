@@ -14,8 +14,8 @@ vi.mock('../../ipc/stateSync', () => ({
 }))
 
 import { handleRequest, clearJudgeCallLog, clearMatchReportLog } from '../router'
-import { getCurrentState, dispatchToRenderer, sendMatchReport, sendDecklistSubmitted } from '../../ipc/stateSync'
-import { clearSessions, createPlayerSession, createJudgeSession, revokeJudgeSession, isJudgeSession } from '../sessions'
+import { getCurrentState, dispatchToRenderer, sendMatchReport, sendDecklistSubmitted, sendJudgeCall } from '../../ipc/stateSync'
+import { clearSessions, createPlayerSession, createJudgeSession, listJudgeSessions, revokeJudgeSession, isJudgeSession } from '../sessions'
 import { resetRateLimits } from '../rateLimit'
 
 const BOUND_ID = 't1'
@@ -472,12 +472,51 @@ describe('judge endpoints', () => {
     expect(isJudgeSession(token, 'other')).toBe(false)
   })
 
-  it('reissues the same token and revokes it for all judges at once', async () => {
-    const token = judgeToken()
-    expect(createJudgeSession(BOUND_ID)).toBe(token)
+  it('mints one token per judge; revocation works per token or for all', async () => {
+    const nina = createJudgeSession(BOUND_ID, 'Nina')
+    const max = createJudgeSession(BOUND_ID, 'Max')
+    expect(nina).not.toBe(max)
+    expect(listJudgeSessions(BOUND_ID).map(j => j.label)).toEqual(['Nina', 'Max'])
+
+    // Revoking one judge leaves the other working
+    revokeJudgeSession(BOUND_ID, nina)
+    expect((await request('GET', '/api/judge/me', { token: nina })).status).toBe(401)
+    expect((await request('GET', '/api/judge/me', { token: max })).status).toBe(200)
+    expect(listJudgeSessions(BOUND_ID).map(j => j.label)).toEqual(['Max'])
+
+    // Revoking without a token cuts off everyone
+    const erika = createJudgeSession(BOUND_ID, 'Erika')
     revokeJudgeSession(BOUND_ID)
-    expect((await request('GET', '/api/judge/me', { token })).status).toBe(401)
-    expect(createJudgeSession(BOUND_ID)).not.toBe(token)
+    expect((await request('GET', '/api/judge/me', { token: max })).status).toBe(401)
+    expect((await request('GET', '/api/judge/me', { token: erika })).status).toBe(401)
+    expect(listJudgeSessions(BOUND_ID)).toEqual([])
+  })
+
+  it('the TO label wins over the device name for attribution and prefills /me', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = createJudgeSession(BOUND_ID, 'Nina')
+
+    const me = await request('GET', '/api/judge/me', { token })
+    expect(me.body.label).toBe('Nina')
+
+    // Body name is ignored when the token carries a label
+    await request('POST', '/api/judge/players/p1/penalty', { token, body: { type: 'warning', reason: '', judgeName: 'Mallory' } })
+    expect(dispatchToRenderer).toHaveBeenLastCalledWith({
+      type: 'ISSUE_PENALTY',
+      payload: { tournamentId: BOUND_ID, playerId: 'p1', type: 'warning', reason: '', issuedBy: 'Nina' },
+    })
+    // …and even penalties without any body name stay attributed
+    await request('POST', '/api/judge/matches/m1/result', { token, body: { result: 'player1_win' } })
+    expect(dispatchToRenderer).toHaveBeenLastCalledWith({
+      type: 'SUBMIT_MATCH_RESULT',
+      payload: { tournamentId: BOUND_ID, matchId: 'm1', result: 'player1_win', enteredBy: 'Nina' },
+    })
+    // Claiming a call needs no judgeName when the label exists
+    await request('POST', '/api/judge-call', { body: { playerName: 'Alice Alpha', tableNumber: 3 } })
+    const calls = (await request('GET', '/api/judge/calls', { token })).body.calls as Array<{ id: string }>
+    expect((await request('POST', `/api/judge/calls/${calls[0].id}/claim`, { token, body: {} })).status).toBe(200)
+    const after = (await request('GET', '/api/judge/calls', { token })).body.calls as Array<{ claimedBy: string | null }>
+    expect(after[0].claimedBy).toBe('Nina')
   })
 
   it('submits a match result directly (no TO confirmation)', async () => {
@@ -595,6 +634,50 @@ describe('judge endpoints', () => {
     expect((await request('POST', '/api/judge/players/p2/drop', { token })).status).toBe(409)
   })
 
+  it('attributes results, penalties and drops to the judge name from the device', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+
+    expect((await request('POST', '/api/judge/matches/m1/result', {
+      token, body: { result: 'player1_win', player1Games: 2, player2Games: 1, judgeName: ' Nina ' },
+    })).status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'SUBMIT_MATCH_RESULT',
+      payload: { tournamentId: BOUND_ID, matchId: 'm1', result: 'player1_win', player1Games: 2, player2Games: 1, enteredBy: 'Nina' },
+    })
+
+    expect((await request('POST', '/api/judge/players/p1/penalty', {
+      token, body: { type: 'warning', reason: '', judgeName: 'Nina' },
+    })).status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'ISSUE_PENALTY',
+      payload: { tournamentId: BOUND_ID, playerId: 'p1', type: 'warning', reason: '', issuedBy: 'Nina' },
+    })
+
+    expect((await request('POST', '/api/judge/players/p2/drop', { token, body: { judgeName: 'Nina' } })).status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'DROP_PLAYER',
+      payload: { tournamentId: BOUND_ID, playerId: 'p2', droppedBy: 'Nina' },
+    })
+  })
+
+  it('caps overlong judge names and ignores non-string ones', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+
+    await request('POST', '/api/judge/matches/m1/result', { token, body: { result: 'draw', judgeName: 'x'.repeat(200) } })
+    expect(dispatchToRenderer).toHaveBeenLastCalledWith({
+      type: 'SUBMIT_MATCH_RESULT',
+      payload: { tournamentId: BOUND_ID, matchId: 'm1', result: 'draw', enteredBy: 'x'.repeat(60) },
+    })
+
+    await request('POST', '/api/judge/matches/m1/result', { token, body: { result: 'draw', judgeName: 42 } })
+    expect(dispatchToRenderer).toHaveBeenLastCalledWith({
+      type: 'SUBMIT_MATCH_RESULT',
+      payload: { tournamentId: BOUND_ID, matchId: 'm1', result: 'draw' },
+    })
+  })
+
   it('serves any decklist to a judge regardless of visibility (deck checks)', async () => {
     vi.mocked(getCurrentState).mockReturnValue(makeState('in_progress', 'hidden'))
     const res = await request('GET', '/api/judge/players/p1/decklist', { token: judgeToken() })
@@ -636,6 +719,121 @@ describe('judge endpoints', () => {
     expect((await request('POST', `/api/judge/calls/${id}/claim`, { token, body: {} })).status).toBe(400)
     expect((await request('POST', '/api/judge/calls/nope/claim', { token, body: { judgeName: 'Max' } })).status).toBe(404)
     expect((await request('POST', `/api/judge/calls/${id}/claim`, { body: { judgeName: 'Mallory' } })).status).toBe(401)
+  })
+
+  it('records call reasons, validates the code and caps the free text', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+    expect((await request('POST', '/api/judge-call', {
+      body: { playerName: 'Alice Alpha', tableNumber: 3, reasonCode: 'rule_question', reasonText: '  Trigger timing?  ' },
+    })).status).toBe(200)
+    expect((await request('POST', '/api/judge-call', {
+      body: { playerName: 'Bob Beta', tableNumber: 7, reasonCode: 'other', reasonText: 'x'.repeat(300) },
+    })).status).toBe(200)
+    // Unknown code is rejected; no reason at all stays fine
+    expect((await request('POST', '/api/judge-call', {
+      body: { playerName: 'Alice Alpha', tableNumber: 3, reasonCode: 'free_pizza' },
+    })).status).toBe(400)
+    expect((await request('POST', '/api/judge-call', { body: { playerName: 'Alice Alpha', tableNumber: 3 } })).status).toBe(200)
+
+    const calls = (await request('GET', '/api/judge/calls', { token })).body.calls as Array<{ reasonCode: string | null; reasonText: string }>
+    expect(calls).toHaveLength(3)
+    expect(calls[0].reasonCode).toBe('rule_question')
+    expect(calls[0].reasonText).toBe('Trigger timing?')
+    expect(calls[1].reasonText).toBe('x'.repeat(120))
+    expect(calls[2].reasonCode).toBeNull()
+    expect(calls[2].reasonText).toBe('')
+    expect(sendJudgeCall).toHaveBeenCalledWith(
+      { playerName: 'Alice Alpha', tableNumber: 3, reasonCode: 'rule_question', reasonText: 'Trigger timing?' },
+    )
+  })
+
+  it('resolves a call (implicit claim), idempotent, any judge may resolve', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = judgeToken()
+    await request('POST', '/api/judge-call', { body: { playerName: 'Alice Alpha', tableNumber: 3 } })
+    await request('POST', '/api/judge-call', { body: { playerName: 'Bob Beta', tableNumber: 7 } })
+    let calls = (await request('GET', '/api/judge/calls', { token })).body.calls as Array<{ id: string }>
+
+    // Resolving an unclaimed call claims it implicitly
+    expect((await request('POST', `/api/judge/calls/${calls[0].id}/resolve`, { token, body: { judgeName: 'Max' } })).status).toBe(200)
+    // A call claimed by one judge may be resolved by another; first resolver wins
+    expect((await request('POST', `/api/judge/calls/${calls[1].id}/claim`, { token, body: { judgeName: 'Max' } })).status).toBe(200)
+    expect((await request('POST', `/api/judge/calls/${calls[1].id}/resolve`, { token, body: { judgeName: 'Erika' } })).status).toBe(200)
+    expect((await request('POST', `/api/judge/calls/${calls[1].id}/resolve`, { token, body: { judgeName: 'Max' } })).status).toBe(200)
+
+    const after = (await request('GET', '/api/judge/calls', { token })).body.calls as Array<{ claimedBy: string | null; resolvedBy: string | null; resolvedAt: number | null }>
+    expect(after[0].claimedBy).toBe('Max')
+    expect(after[0].resolvedBy).toBe('Max')
+    expect(typeof after[0].resolvedAt).toBe('number')
+    expect(after[1].claimedBy).toBe('Max')
+    expect(after[1].resolvedBy).toBe('Erika')
+
+    // Validation and auth
+    expect((await request('POST', `/api/judge/calls/${calls[0].id}/resolve`, { token, body: {} })).status).toBe(400)
+    expect((await request('POST', '/api/judge/calls/nope/resolve', { token, body: { judgeName: 'Max' } })).status).toBe(404)
+    expect((await request('POST', `/api/judge/calls/${calls[0].id}/resolve`, { body: { judgeName: 'Mallory' } })).status).toBe(401)
+  })
+
+  it('starts a deck check from a judge device with attribution and guards', async () => {
+    vi.mocked(getCurrentState).mockReturnValue(makeRunningState())
+    const token = createJudgeSession(BOUND_ID, 'Nina')
+
+    expect((await request('POST', '/api/judge/deckchecks', { token, body: {} })).status).toBe(400)
+    expect((await request('POST', '/api/judge/deckchecks', { token, body: { matchId: 'nope' } })).status).toBe(404)
+
+    expect((await request('POST', '/api/judge/deckchecks', { token, body: { matchId: 'm1' } })).status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'START_DECK_CHECK',
+      payload: { tournamentId: BOUND_ID, matchId: 'm1', startedBy: 'Nina' },
+    })
+
+    // Same table+round again → refused (double extra time)
+    const withCheck = makeRunningState()
+    withCheck.tournaments[BOUND_ID].deckChecks = [{ id: 'c1', roundNumber: 1, matchId: 'm1', result: null }]
+    vi.mocked(getCurrentState).mockReturnValue(withCheck)
+    expect((await request('POST', '/api/judge/deckchecks', { token, body: { matchId: 'm1' } })).status).toBe(409)
+
+    // Decided match → refused
+    const decided = makeRunningState()
+    decided.tournaments[BOUND_ID].rounds[0].matches[0].result = 'player1_win'
+    vi.mocked(getCurrentState).mockReturnValue(decided)
+    expect((await request('POST', '/api/judge/deckchecks', { token, body: { matchId: 'm1' } })).status).toBe(409)
+
+    vi.mocked(getCurrentState).mockReturnValue(makeState('registration'))
+    expect((await request('POST', '/api/judge/deckchecks', { token, body: { matchId: 'm1' } })).status).toBe(409)
+  })
+
+  it('serves, completes and cancels deck checks for judges', async () => {
+    const state = makeRunningState()
+    state.tournaments[BOUND_ID].deckChecks = [
+      { id: 'c1', roundNumber: 1, matchId: 'm1', result: null },
+      { id: 'c0', roundNumber: 1, matchId: 'm0', result: 'ok' },
+    ]
+    vi.mocked(getCurrentState).mockReturnValue(state)
+    const token = judgeToken()
+
+    expect((await request('GET', '/api/judge/deckchecks')).status).toBe(401)
+    const list = await request('GET', '/api/judge/deckchecks', { token })
+    expect(list.status).toBe(200)
+    expect((list.body.deckChecks as Array<{ id: string }>).map(c => c.id)).toEqual(['c1', 'c0'])
+
+    expect((await request('POST', '/api/judge/deckchecks/c1/complete', { token, body: { result: 'meh' } })).status).toBe(400)
+    expect((await request('POST', '/api/judge/deckchecks/nope/complete', { token, body: { result: 'ok' } })).status).toBe(404)
+    expect((await request('POST', '/api/judge/deckchecks/c0/complete', { token, body: { result: 'ok' } })).status).toBe(409)
+    expect((await request('POST', '/api/judge/deckchecks/c1/complete', { token, body: { result: 'issue' } })).status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'COMPLETE_DECK_CHECK',
+      payload: { tournamentId: BOUND_ID, checkId: 'c1', result: 'issue' },
+    })
+
+    expect((await request('POST', '/api/judge/deckchecks/c0/cancel', { token })).status).toBe(409)
+    expect((await request('POST', '/api/judge/deckchecks/nope/cancel', { token })).status).toBe(404)
+    expect((await request('POST', '/api/judge/deckchecks/c1/cancel', { token })).status).toBe(200)
+    expect(dispatchToRenderer).toHaveBeenCalledWith({
+      type: 'CANCEL_DECK_CHECK',
+      payload: { tournamentId: BOUND_ID, checkId: 'c1' },
+    })
   })
 
   it('serves the penalty list to judges only (stripped from the broadcast)', async () => {

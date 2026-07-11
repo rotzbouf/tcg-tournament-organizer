@@ -39,6 +39,9 @@ export function sanitizeTournament(tournament: unknown): unknown {
       delete playerClone.dateOfBirth
       delete playerClone.playerId
       delete playerClone.decklist
+      // Judge attribution of a drop can stem from a DQ penalty — like the
+      // penalty list itself, it stays off the broadcast.
+      delete playerClone.droppedBy
       return playerClone
     }),
   }
