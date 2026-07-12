@@ -1,11 +1,12 @@
 # TCG Tournament Organizer
 
-Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double Elimination, Round Robin und Top Cut. Vollständig offline-fähig.
+Desktop-Anwendung zur Organisation von TCG-Turnieren mit Swiss-System, Double Elimination, Round Robin, Top Cut und Commander-Pods. Vollständig offline-fähig.
 
 ## Features
 
 - **Mehrere Turniere gleichzeitig** — Yu-Gi-Oh!, Pokémon TCG, Magic: The Gathering, Star Wars: Unlimited, Riftbound, Disney Lorcana, Altered, Flesh and Blood, One Piece Card Game, Dragon Ball Super: Fusion World
-- **4 Turnier-Formate** — Swiss, Swiss + Top Cut, Double Elimination, Round Robin
+- **5 Turnier-Formate** — Swiss, Swiss + Top Cut, Double Elimination, Round Robin, Commander-Pods (Multiplayer)
+- **Commander-Pods** — 4er-Pods nach TopDeck-Standard (3er-Pods statt Freilos, geloste Zugreihenfolge, Rematch-Vermeidung), Punkte 5/1/0 oder 7/1/0, Top 4/Top 16 mit Snake-Seeding, Sieger-Meldung und Judge-Eingabe vom Handy
 - **Multi-Phase-Turniere** — Mehrere Phasen hintereinander (z.B. Round Robin → Swiss → Top Cut)
 - **Penalty-System** — Offizielle Strafkataloge (Magic IPG, Pokémon Penalty Guidelines, Yu-Gi-Oh!-Turnierpolitik) mit automatischem Strafvorschlag und Eskalation bei Wiederholung; Verwarnungen, Spielverlust, Matchverlust, Disqualifikation, Custom-Notizen; Cross-Tournament-Tracking in der Spieler-Datenbank
 - **Decklisten** — Import aus MTGA, PTCGL, Moxfield, Limitless, Pixelborn, DreamBorn und weiteren Tools; Sichtbarkeits-Modi (Versteckt/Nur TO/Öffentlich); Kartenbank-Validierung (Kartenzahl, Kopien-Limit); automatische TO-Warnung bei illegal nachgereichter Liste
@@ -91,6 +92,15 @@ npm run electron:build
 - Jeder Spieler spielt gegen jeden anderen genau einmal
 - Circle-Algorithmus für optimale Paarung
 - Ideal für kleine Gruppen (4–8 Spieler)
+
+### Commander-Pods (Multiplayer)
+
+- **Pods statt Matches**: 4-Spieler-Tische, top-to-bottom nach Punkten gepaart (TopDeck-Standard); am Tabellenende 3er-Pods statt Freilos (nur bei genau 5 Spielern ein 5er-Pod) — niemand setzt aus
+- **Zugreihenfolge**: Sitzreihenfolge wird pro Pod zufällig gelost und überall angezeigt (Desktop, Handy, Druck); Wiederholungs-Podmates werden über alle Runden vermieden
+- **Punkte**: 5 pro Sieg, 1 pro Unentschieden (TopDeck) oder 7 pro Sieg (2n−1, Judge-Addendum) — wählbar beim Erstellen
+- **Tiebreaker**: Punkte → Match-Win-Rate → Ø Gegner-Punkte → Gegner-Match-Win-Rate
+- **Top Cut**: Top 4 (direkter Final-Pod) oder Top 16 (vier Snake-geseedete Pods 1/8/9/16 …, Sieger → Final-Pod); kein Unentschieden im Cut
+- **Kein Elo**: Pod-Turniere zählen zur Saison und zur Spieler-Historie, verändern aber bewusst keine Elo-Wertung
 
 ## Penalty-System
 
