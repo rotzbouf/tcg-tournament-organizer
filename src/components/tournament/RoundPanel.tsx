@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Round, Match } from '@/types/round'
 import { Player } from '@/types/player'
 import { MatchCard } from './MatchCard'
+import { PodCard } from './PodCard'
 import { DecklistDialog } from './DecklistDialog'
 import { PenaltyDialog } from './PenaltyDialog'
 import { Button } from '@/components/ui/Button'
@@ -64,6 +65,12 @@ export function RoundPanel({
   const matchIsVisible = (m: Match): boolean => {
     if (query === '') return true
     if (queryAsTable !== null && m.tableNumber === queryAsTable) return true
+    if (m.participantIds) {
+      return m.participantIds.some(id => {
+        const p = playerById.get(id)
+        return matchesSearch(query, p?.name, p?.playerId)
+      })
+    }
     const p1 = playerById.get(m.player1Id)
     const p2 = m.player2Id ? playerById.get(m.player2Id) : undefined
     return matchesSearch(query, p1?.name, p1?.playerId, p2?.name, p2?.playerId)
@@ -135,6 +142,13 @@ export function RoundPanel({
     dismiss(matchId)
   }
 
+  // Pod self-reports travel as 'pod:<winnerId>' (or 'draw') in the report
+  // result string, so the generic conflict detection keeps working.
+  function submitPodAndDismiss(matchId: string, winnerId: string | null) {
+    dispatch({ type: 'SUBMIT_POD_RESULT', payload: { tournamentId, matchId, winnerId } })
+    dismiss(matchId)
+  }
+
   return (
     <div className="space-y-4">
       {pendingMatchIds.length > 0 && !round.isComplete && (
@@ -143,8 +157,14 @@ export function RoundPanel({
             const match = round.matches.find(m => m.id === matchId)
             if (!match) return null
 
+            const isPod = match.participantIds !== undefined
             const p1 = players.find(p => p.id === match.player1Id)?.name ?? '?'
             const p2 = match.player2Id ? players.find(p => p.id === match.player2Id)?.name ?? '?' : null
+            const winnerNameFor = (result: string): string | null => {
+              if (result === 'draw') return null
+              if (isPod) return result.startsWith('pod:') ? playerById.get(result.slice(4))?.name ?? '?' : '?'
+              return result === 'player1_win' ? p1 : p2
+            }
             const matchReports = reportsByMatch[matchId] ?? []
             const isConflict = conflictedMatchIds.has(matchId)
 
@@ -153,8 +173,7 @@ export function RoundPanel({
               const r2 = matchReports[1]
               const labelFor = (r: typeof r1) => {
                 if (r.result === 'draw') return t('selfReport.claimsDraw', { reporter: r.reporterName })
-                const winner = r.result === 'player1_win' ? p1 : p2
-                return t('selfReport.claimsWin', { reporter: r.reporterName, winner })
+                return t('selfReport.claimsWin', { reporter: r.reporterName, winner: winnerNameFor(r.result) })
               }
 
               return (
@@ -166,16 +185,26 @@ export function RoundPanel({
                     {labelFor(r1)} · {labelFor(r2)}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => submitAndDismiss(matchId, 'player1_win')}>
-                      {t('match.player1Win', { name: p1 })}
-                    </Button>
-                    {p2 && (
-                      <Button size="sm" onClick={() => submitAndDismiss(matchId, 'player2_win')}>
-                        {t('match.player2Win', { name: p2 })}
-                      </Button>
+                    {isPod ? (
+                      (match.participantIds ?? []).map(id => (
+                        <Button key={id} size="sm" onClick={() => submitPodAndDismiss(matchId, id)}>
+                          {t('pod.winner', { name: playerById.get(id)?.name ?? '?' })}
+                        </Button>
+                      ))
+                    ) : (
+                      <>
+                        <Button size="sm" onClick={() => submitAndDismiss(matchId, 'player1_win')}>
+                          {t('match.player1Win', { name: p1 })}
+                        </Button>
+                        {p2 && (
+                          <Button size="sm" onClick={() => submitAndDismiss(matchId, 'player2_win')}>
+                            {t('match.player2Win', { name: p2 })}
+                          </Button>
+                        )}
+                      </>
                     )}
                     {!isTopCut && (
-                      <Button size="sm" variant="secondary" onClick={() => submitAndDismiss(matchId, 'draw')}>
+                      <Button size="sm" variant="secondary" onClick={() => (isPod ? submitPodAndDismiss(matchId, null) : submitAndDismiss(matchId, 'draw'))}>
                         {t('match.draw')}
                       </Button>
                     )}
@@ -190,7 +219,7 @@ export function RoundPanel({
             // Normal: 1 report or 2 agreeing reports
             const report = matchReports[0]
             const bothAgree = matchReports.length >= 2
-            const winnerName = report.result === 'player1_win' ? p1 : report.result === 'player2_win' ? p2 : null
+            const winnerName = winnerNameFor(report.result)
 
             let resultLabel: string
             if (bothAgree) {
@@ -209,7 +238,14 @@ export function RoundPanel({
                   <span className="font-semibold">{t('selfReport.title')}:</span> {resultLabel}
                 </span>
                 <div className="flex gap-2 flex-shrink-0">
-                  <Button size="sm" onClick={() => submitAndDismiss(matchId, report.result as MatchResult)}>
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      isPod
+                        ? submitPodAndDismiss(matchId, report.result === 'draw' ? null : report.result.slice(4))
+                        : submitAndDismiss(matchId, report.result as MatchResult)
+                    }
+                  >
                     {t('common.confirm')}
                   </Button>
                   <Button size="sm" variant="secondary" onClick={() => dismiss(matchId)}>
@@ -222,8 +258,7 @@ export function RoundPanel({
         </div>
       )}
       {openChecks.map(check => {
-        const p1 = playerById.get(check.playerIds[0])
-        const p2 = check.playerIds[1] ? playerById.get(check.playerIds[1]) : undefined
+        const checkPlayers = check.playerIds.map(id => playerById.get(id)).filter((p): p is Player => p !== undefined)
         const elapsed = Math.max(0, Math.floor((nowTick - new Date(check.startedAt).getTime()) / 1000))
         return (
           <div key={check.id} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm dark:border-amber-800 dark:bg-amber-950 print:hidden">
@@ -232,7 +267,7 @@ export function RoundPanel({
                 🔍 {t('deckCheck.title')} · {t('match.table', { number: check.tableNumber })}
               </span>
               <span className="text-amber-800 dark:text-amber-300">
-                {p1?.name}{p2 ? ` ${t('match.vs')} ${p2.name}` : ''}
+                {checkPlayers.map(p => p.name).join(` ${t('match.vs')} `)}
               </span>
               {check.startedBy && (
                 <span className="text-xs text-amber-700 dark:text-amber-400">⚖ {check.startedBy}</span>
@@ -240,7 +275,7 @@ export function RoundPanel({
               <span className="ml-auto font-mono tabular-nums text-amber-700 dark:text-amber-400">{formatTime(elapsed)}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {[p1, p2].map(p => p && (
+              {checkPlayers.map(p => (
                 <Button key={p.id} size="sm" variant="secondary" onClick={() => setDeckCheckPlayer(p)}>
                   {t('deckCheck.viewDecklist', { name: p.name })}
                 </Button>
@@ -307,16 +342,26 @@ export function RoundPanel({
         {/* Hidden (not unmounted) when filtered, so printing always yields the full pairing list */}
         {round.matches.map(match => (
           <div key={match.id} className={cn(!matchIsVisible(match) && 'hidden print:block')}>
-            <MatchCard
-              match={match}
-              players={players}
-              tournamentId={tournamentId}
-              readonly={round.isComplete}
-              hideDrawOption={isTopCut}
-              showGameScores={showGameScores}
-              selectedPlayerId={selectedPlayer?.playerId ?? null}
-              onPlayerClick={swapEnabled ? handlePlayerClick : undefined}
-            />
+            {match.participantIds ? (
+              <PodCard
+                match={match}
+                players={players}
+                tournamentId={tournamentId}
+                readonly={round.isComplete}
+                hideDrawOption={isTopCut}
+              />
+            ) : (
+              <MatchCard
+                match={match}
+                players={players}
+                tournamentId={tournamentId}
+                readonly={round.isComplete}
+                hideDrawOption={isTopCut}
+                showGameScores={showGameScores}
+                selectedPlayerId={selectedPlayer?.playerId ?? null}
+                onPlayerClick={swapEnabled ? handlePlayerClick : undefined}
+              />
+            )}
           </div>
         ))}
       </div>

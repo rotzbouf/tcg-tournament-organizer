@@ -423,7 +423,7 @@ function getMyMatch(){
   if(!round||round.isComplete)return null;
   const me=tournament.players.find(p=>p.name.toLowerCase()===session.fullName.toLowerCase());
   if(!me)return null;
-  const match=round.matches.find(m=>!m.isBye&&(m.player1Id===me.id||m.player2Id===me.id));
+  const match=round.matches.find(m=>!m.isBye&&(m.participantIds?m.participantIds.includes(me.id):(m.player1Id===me.id||m.player2Id===me.id)));
   return match?{match,playerId:me.id,playerName:me.name}:null;
 }
 
@@ -451,7 +451,7 @@ function reportBanner(m){
   const entries=judgeReports[m.id]||[];
   if(!entries.length||m.result!=='pending')return'';
   const gn=id=>tournament.players.find(p=>p.id===id)?.name||'?';
-  const lbl=r=>r==='draw'?t('draw'):gn(r==='player1_win'?m.player1Id:m.player2Id);
+  const lbl=r=>r==='draw'?t('draw'):r.indexOf('pod:')===0?gn(r.slice(4)):gn(r==='player1_win'?m.player1Id:m.player2Id);
   const conflict=new Set(entries.map(e=>e.result)).size>1;
   const rows=entries.map(e=>`${esc(e.reporterName)} → ${esc(lbl(e.result))}`).join('<br>');
   return`<div style="margin-top:8px;font-size:12px;font-weight:600;border-radius:6px;padding:6px 10px;${conflict?'background:#fee2e2;color:#b91c1c':'background:#fef3c7;color:#92400e'}">📣 ${t('jReports')}${conflict?' — ⚠ '+t('jConflict'):''}<br>${rows}</div>`;
@@ -484,6 +484,15 @@ function judgeMatchButtons(m,round){
     <button class="secondary" style="margin:0;padding:8px 6px;font-size:12px;flex:1" onclick="judgeCheckDone('${activeCheck.id}','ok')">${t('jCheckOk')}</button>
     <button class="secondary" style="margin:0;padding:8px 6px;font-size:12px;flex:1" onclick="judgeCheckIssue('${activeCheck.id}','${(activeCheck.playerIds||[])[0]||''}')">${t('jCheckIssue')}</button>
     <button class="secondary" style="margin:0;padding:8px 10px;font-size:12px;width:auto" onclick="judgeCheckCancel('${activeCheck.id}')">✕</button>
+  </div>`+extraRow;
+  }
+  // Pod match: one button per participant (tap = winner), no game-score step —
+  // multiplayer tables have no game scores.
+  if(m.participantIds){
+    const pbtn=id=>`<button class="secondary" style="margin:0;padding:8px 6px;font-size:12px;flex:1 1 40%${m.result!=='pending'&&m.podWinnerId===id?';background:var(--accent);color:#fff':''}" onclick="judgePodResult('${m.id}','${id}')">${esc(gn(id))}</button>`;
+    return reportBanner(m)+`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+    ${m.participantIds.map(pbtn).join('')}
+    ${isKo?'':`<button class="secondary" style="margin:0;padding:8px 6px;font-size:12px;flex:1 1 40%${m.result==='draw'?';background:var(--accent);color:#fff':''}" onclick="judgePodResult('${m.id}',null)">${t('draw')}</button>`}
   </div>`+extraRow;
   }
   // Step 2: winner/draw is picked, now the game score. The quick picks feed the
@@ -572,6 +581,15 @@ async function judgeExtra(matchId,minutes){
   }catch{alert(t('jExtraError'))}
 }
 
+async function judgePodResult(matchId,winnerId){
+  try{
+    const body={result:'pod',winnerId};
+    if(judge.name)body.judgeName=judge.name;
+    const d=await jpost('/api/judge/matches/'+matchId+'/result',body);
+    if(d&&!d.ok)alert(t('jResultError')+(d.error?': '+d.error:''));
+  }catch{alert(t('jResultError'))}
+}
+
 async function judgeResult(matchId,result,g1,g2){
   jPick=null;filterPairings();
   try{
@@ -590,8 +608,17 @@ function filterPairings(){
   const myInfo=getMyMatch();
   const ml=document.getElementById('ml');if(!ml)return;
   ml.innerHTML=round.matches.filter(m=>{
-    if(!f)return true;return gn(m.player1Id).toLowerCase().includes(f)||(m.player2Id&&gn(m.player2Id).toLowerCase().includes(f));
+    if(!f)return true;
+    if(m.participantIds)return m.participantIds.some(id=>gn(id).toLowerCase().includes(f));
+    return gn(m.player1Id).toLowerCase().includes(f)||(m.player2Id&&gn(m.player2Id).toLowerCase().includes(f));
   }).map(m=>{
+    if(m.participantIds){
+      const ex=m.extraTimeMinutes?`<span class="badge" style="background:#fef3c7;color:#92400e;margin-right:4px">⏱+${m.extraTimeMinutes}'</span>`:'';
+      const rb=m.result==='pending'?`<span class="badge badge-reg">${t('pending')}</span>`:m.result==='draw'?`<span class="badge" style="background:#fef3c7;color:#92400e">${t('draw')}</span>`:`<span class="badge badge-active">🏆 ${esc(gn(m.podWinnerId))}</span>`;
+      const isMyMatch=myInfo&&m.id===myInfo.match.id;
+      const names=m.participantIds.map((id,i)=>`${i+1}. ${esc(gn(id))}`).join('<br>');
+      return`<div class="match${isMyMatch?' my-match':''}"><div class="match-header"><span class="table-num">${t('table')}${m.tableNumber}</span><span class="names">${names}</span>${ex}${rb}</div>${judgeMatchButtons(m,round)}</div>`;
+    }
     if(m.isBye)return`<div class="match"><div class="match-header"><span class="table-num">—</span><span class="names">${esc(gn(m.player1Id))}</span><span class="badge badge-reg">${t('bye')}</span></div></div>`;
     const gs=m.player1Games!=null?`<span class="score">${m.player1Games}-${m.player2Games}</span>`:'';
     const ex=m.extraTimeMinutes?`<span class="badge" style="background:#fef3c7;color:#92400e;margin-right:4px">⏱+${m.extraTimeMinutes}'</span>`:'';
@@ -609,13 +636,21 @@ function renderJudgeButton(){
   const isPending=match.result==='pending';
   const phase=tournament.rounds[tournament.rounds.length-1]?.phase;
   const isKo=['top_cut','winners_bracket','losers_bracket','grand_final'].includes(phase);
+  const gn=id=>tournament.players.find(p=>p.id===id)?.name||'?';
+  // Pod: the reporter claims the winner by name — 'pod:<id>' keeps the
+  // TO-side conflict detection working on plain string comparison.
+  const podButtons=match.participantIds?match.participantIds.map(id=>
+    id===myInfo.playerId
+      ?`<button class="primary" style="margin-top:6px;padding:10px;font-size:13px;width:100%" onclick="reportResult('${match.id}','pod:${id}')">${t('iWon')}</button>`
+      :`<button class="secondary" style="padding:8px;font-size:12px;margin:6px 0 0" onclick="reportResult('${match.id}','pod:${id}')">🏆 ${esc(gn(id))}</button>`
+  ).join(''):'';
   jc.innerHTML=`
     ${isPending?`<div style="margin-top:12px">
       <p style="font-size:12px;color:var(--fg2);margin-bottom:8px;text-align:center">${t('reportResult')}</p>
-      <div style="display:flex;gap:8px">
+      ${match.participantIds?podButtons:`<div style="display:flex;gap:8px">
         <button class="primary" style="flex:1;padding:10px;font-size:13px" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player1_win':'player2_win'}')">${t('iWon')}</button>
         <button class="secondary" style="flex:1;padding:10px;font-size:13px;margin:0" onclick="reportResult('${match.id}','${myInfo.playerId===match.player1Id?'player2_win':'player1_win'}')">${t('opponentWon')}</button>
-      </div>
+      </div>`}
       ${isKo?'':`<button class="secondary" style="margin-top:6px;padding:8px;font-size:12px;color:var(--fg2);border-color:var(--bd)" onclick="reportResult('${match.id}','draw')">${t('itsDraw')}</button>`}
       <div id="rr" class="msg"></div>
     </div>`:''}

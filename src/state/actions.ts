@@ -8,7 +8,7 @@ import { TournamentTemplate } from '@/types/template'
 import { Season, PointTier } from '@/types/season'
 
 export type TournamentAction =
-  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; gameFormat?: string | null; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean; eloSeeding?: boolean; countForSeason?: boolean } }
+  | { type: 'CREATE_TOURNAMENT'; payload: { name: string; game: GameType; gameFormat?: string | null; format: TournamentFormat; roundTimeMinutes: number; topCut: TopCutSize; phases?: TournamentPhase[]; grandFinalReset?: boolean; ageDivisionsEnabled?: boolean; decklistVisibility?: DecklistVisibility; powerPairings?: boolean; eloSeeding?: boolean; countForSeason?: boolean; podWinPoints?: number } }
   | { type: 'DELETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ADD_PLAYER'; payload: { tournamentId: string; playerName: string; playerId?: string | null; dateOfBirth?: string | null } }
   | { type: 'REMOVE_PLAYER'; payload: { tournamentId: string; playerId: string } }
@@ -16,12 +16,13 @@ export type TournamentAction =
   | { type: 'START_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'GENERATE_ROUND'; payload: { tournamentId: string } }
   | { type: 'SUBMIT_MATCH_RESULT'; payload: { tournamentId: string; matchId: string; result: MatchResult; player1Games?: number; player2Games?: number; enteredBy?: string } }
+  | { type: 'SUBMIT_POD_RESULT'; payload: { tournamentId: string; matchId: string; winnerId: string | null; enteredBy?: string } }
   | { type: 'COMPLETE_ROUND'; payload: { tournamentId: string } }
   | { type: 'START_TOP_CUT'; payload: { tournamentId: string } }
   | { type: 'COMPLETE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'ARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
   | { type: 'UNARCHIVE_TOURNAMENT'; payload: { tournamentId: string } }
-  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; gameFormat?: string | null; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility; countForSeason?: boolean } }
+  | { type: 'UPDATE_TOURNAMENT'; payload: { tournamentId: string; name?: string; roundTimeMinutes?: number; topCut?: TopCutSize; format?: TournamentFormat; gameFormat?: string | null; discordWebhookUrl?: string | null; decklistVisibility?: DecklistVisibility; countForSeason?: boolean; podWinPoints?: number } }
   | { type: 'BULK_ADD_PLAYERS'; payload: { tournamentId: string; playerNames: string[] } }
   | { type: 'UPDATE_PLAYER'; payload: { tournamentId: string; playerId: string; deckName?: string | null; decklist?: DecklistEntry[] | null } }
   | { type: 'ISSUE_PENALTY'; payload: { tournamentId: string; playerId: string; type: PenaltyType; reason: string; infractionId?: string; issuedBy?: string } }

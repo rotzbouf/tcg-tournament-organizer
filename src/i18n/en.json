@@ -32,7 +32,8 @@
       "swiss": "Swiss",
       "swiss_topcut": "Swiss + Top Cut",
       "double_elimination": "Double Elimination",
-      "round_robin": "Round Robin"
+      "round_robin": "Round Robin",
+      "multiplayer_pods": "Commander Pods (multiplayer)"
     },
     "topCut": "Top Cut Size",
     "topCutValue": "Top {{count}}",
@@ -63,8 +64,16 @@
       "mtg": "Official (MTR Appendix E): 8 or fewer players no cut, 9+ Top 8",
       "pokemon": "Official (Play! Pokémon): 8 or fewer no cut, 9–20 Top 4, 21+ Top 8",
       "yugioh": "Official (Konami Policy 2.5): 8 or fewer no cut, 9–32 Top 4, 33+ Top 8",
-      "generic": "Customary: 8 or fewer no cut, 9–16 Top 4, 17+ Top 8"
+      "generic": "Customary: 8 or fewer no cut, 9–16 Top 4, 17+ Top 8",
+      "pods": "Customary (TopDeck): Top 4 = final pod; Top 16 = 4 pods (snake seeding), the winners play the final pod"
     },
+    "podWinPoints": "Points per pod win",
+    "podWinPointsOptions": {
+      "5": "5 points per win, 1 per draw (TopDeck standard)",
+      "7": "7 points per win, 1 per draw (2n−1, judge addendum)"
+    },
+    "podHint": "Pods of four by points; the bottom tables become pods of three instead of byes. Seating order = turn order.",
+    "minPlayersPods": "At least 3 players required",
     "ageDivisions": "Age Divisions (Junior / Senior / Masters)",
     "ageDivisionsHint": "Players are divided by birth year into divisions and paired separately",
     "edit": "Edit Tournament",
@@ -125,6 +134,14 @@
     "extraTimeClear": "Remove extra time",
     "enteredBy": "Entered by judge {{name}}"
   },
+  "pod": {
+    "title": "Pod",
+    "seat": "Seat {{number}}",
+    "turnOrderHint": "Order = turn order",
+    "selectWinner": "Select winner:",
+    "winner": "{{name}} wins",
+    "playerCount": "{{count}} players"
+  },
   "deckCheck": {
     "title": "Deck check",
     "random": "Deck check (random table)",
@@ -149,6 +166,8 @@
     "opponentMatchWinPct": "OMW%",
     "gameWinPct": "GW%",
     "opponentGameWinPct": "OGW%",
+    "matchWinPct": "MW%",
+    "avgOppPoints": "Avg opp pts",
     "byDivision": "By Division",
     "global": "Overall"
   },

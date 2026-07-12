@@ -14,8 +14,8 @@ interface CreateTournamentDialogProps {
   onClose: () => void
 }
 
-const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 80, 90]
-const FORMAT_OPTIONS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
+const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 75, 80, 90]
+const FORMAT_OPTIONS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin', 'multiplayer_pods']
 
 export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialogProps) {
   const { t } = useTranslation()
@@ -25,6 +25,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
   const [gameFormat, setGameFormat] = useState<string>(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
   const [format, setFormat] = useState<TournamentFormat>('swiss')
   const [topCut, setTopCut] = useState<TopCutSize>(0)
+  const [podWinPoints, setPodWinPoints] = useState(5)
   const [roundTime, setRoundTime] = useState(50)
   const [grandFinalReset, setGrandFinalReset] = useState(false)
   const [ageDivisions, setAgeDivisions] = useState(true)
@@ -41,6 +42,18 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setGame(newGame)
     setGameFormat(GAME_CONFIG[newGame].formats[0]?.id ?? '')
     setCountForSeason(true)
+  }
+
+  const handleFormatChange = (newFormat: TournamentFormat) => {
+    setFormat(newFormat)
+    if (newFormat === 'multiplayer_pods') {
+      // Pod cuts are Top 4 or Top 16 only; 75-minute rounds are the customary
+      // Commander default.
+      setTopCut(4)
+      setRoundTime(75)
+    } else {
+      setTopCut(0)
+    }
   }
 
   const applyTemplate = (templateId: string) => {
@@ -103,9 +116,10 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
         gameFormat: gameFormat || null,
         format,
         roundTimeMinutes: roundTime,
-        topCut: format === 'swiss_topcut' ? topCut : 0,
+        topCut: format === 'swiss_topcut' || format === 'multiplayer_pods' ? topCut : 0,
+        podWinPoints: format === 'multiplayer_pods' ? podWinPoints : undefined,
         grandFinalReset: format === 'double_elimination' ? grandFinalReset : undefined,
-        ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions ? ageDivisions : false,
+        ageDivisionsEnabled: GAME_CONFIG[game].hasAgeDivisions && format !== 'multiplayer_pods' ? ageDivisions : false,
         decklistVisibility,
         powerPairings,
         eloSeeding,
@@ -117,6 +131,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
     setGameFormat(GAME_CONFIG['yugioh'].formats[0]?.id ?? '')
     setFormat('swiss')
     setTopCut(0)
+    setPodWinPoints(5)
     setRoundTime(50)
     setGrandFinalReset(false)
     setAgeDivisions(true)
@@ -170,8 +185,35 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
           label={t('tournament.format')}
           options={formatOptions}
           value={format}
-          onChange={e => setFormat(e.target.value as TournamentFormat)}
+          onChange={e => handleFormatChange(e.target.value as TournamentFormat)}
         />
+        {format === 'multiplayer_pods' && (
+          <>
+            <p className="text-sm text-muted-foreground">{t('tournament.podHint')}</p>
+            <Select
+              id="tournament-pod-top-cut"
+              label={t('tournament.topCut')}
+              options={[
+                { value: '0', label: t('tournament.topCutNone') },
+                { value: '4', label: 'Top 4' },
+                { value: '16', label: 'Top 16' },
+              ]}
+              value={String(topCut)}
+              onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
+            />
+            <p className="text-sm text-muted-foreground">{t('tournament.topCutRule.pods')}</p>
+            <Select
+              id="tournament-pod-points"
+              label={t('tournament.podWinPoints')}
+              options={[
+                { value: '5', label: t('tournament.podWinPointsOptions.5') },
+                { value: '7', label: t('tournament.podWinPointsOptions.7') },
+              ]}
+              value={String(podWinPoints)}
+              onChange={e => setPodWinPoints(Number(e.target.value))}
+            />
+          </>
+        )}
         {format === 'swiss_topcut' && (
           <>
             <Select
@@ -200,7 +242,7 @@ export function CreateTournamentDialog({ open, onClose }: CreateTournamentDialog
             <span>{t('tournament.grandFinalReset')}</span>
           </label>
         )}
-        {GAME_CONFIG[game].hasAgeDivisions && (
+        {GAME_CONFIG[game].hasAgeDivisions && format !== 'multiplayer_pods' && (
           <label className="flex items-center gap-2 text-sm text-secondary-foreground">
             <input
               type="checkbox"

@@ -33,6 +33,27 @@ export function cutRuleKey(game: GameType): 'mtg' | 'pokemon' | 'yugioh' | 'gene
   return game === 'mtg' || game === 'pokemon' || game === 'yugioh' ? game : 'generic'
 }
 
+// Commander/multiplayer pods have no official structure (WotC treats
+// Commander as casual); these mirror the de-facto TopDeck.gg standard: cuts
+// are Top 4 (one final pod) or Top 16 (four pods, winners advance to the
+// final pod). Below 8 players a cut adds nothing over the standings.
+export function recommendedPodTopCut(playerCount: number): TopCutSize {
+  if (playerCount < 8) return 0
+  return playerCount < 40 ? 4 : 16
+}
+
+// Round count for pod swiss: each round yields 3 opponents, so pods need
+// fewer rounds than heads-up swiss. Matches common cEDH event practice
+// (≤16 → 3, 64 → 5, 100+ → 6).
+export function recommendedPodRounds(playerCount: number): number {
+  if (playerCount <= 4) return 1
+  if (playerCount <= 16) return 3
+  if (playerCount <= 32) return 4
+  if (playerCount <= 64) return 5
+  if (playerCount <= 128) return 6
+  return 7
+}
+
 // Swiss round count, honoring that the official with-cut structures deviate
 // from plain ceil(log2) in a few brackets (same sources as above):
 // - MTG (MTR Appendix E, constructed with Top 8): 9–16 → 5 rounds,

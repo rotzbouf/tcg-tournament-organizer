@@ -5,9 +5,10 @@ import { Match, Round } from '@/types/round'
 import { Player } from '@/types/player'
 import { generateId, nearestPowerOfTwo } from '@/lib/utils'
 import { calculateTotalRounds } from '@/engine/scoring'
-import { recommendedTopCut, recommendedSwissRounds } from '@/lib/cutRules'
+import { recommendedTopCut, recommendedSwissRounds, recommendedPodRounds } from '@/lib/cutRules'
 import { generatePairings, generatePowerPairings, generateFirstRoundPairings, generateEloSeededPairings } from '@/engine/swiss'
 import { generateTopCutRound, bracketSeedOrder } from '@/engine/topcut'
+import { generateFirstRoundPods, generatePodPairings, generatePodCutRound, snakeSeedPods, podWinPointsOf } from '@/engine/pods'
 import { generateRoundRobinRound, getRoundRobinTotalRounds } from '@/engine/roundrobin'
 import { generateDoubleElimFirstRound, advanceDoubleElimBracket, calculateDoubleElimTotalRounds } from '@/engine/doubleelim'
 import { calculateStandings } from '@/engine/standings'
@@ -100,8 +101,10 @@ const KO_PHASES = new Set<Round['phase']>(['top_cut', 'winners_bracket', 'losers
 function applyAutoLoss(rounds: Round[], playerId: string): Round[] {
   const currentRound = rounds[rounds.length - 1]
   if (!currentRound || currentRound.isComplete) return rounds
+  // Pod matches never auto-decide: the remaining three keep playing and the
+  // pod still needs a winner (or draw) from the table.
   const match = currentRound.matches.find(
-    m => !m.isBye && m.result === 'pending' &&
+    m => !m.isBye && !m.participantIds && m.result === 'pending' &&
       (m.player1Id === playerId || m.player2Id === playerId)
   )
   if (!match) return rounds
@@ -141,8 +144,11 @@ function applyTournamentResults(db: PlayerDatabase, tournament: Tournament): Pla
     playerIdMap[p.id] = p.playerId ?? null
   })
 
+  // Pod matches carry no two-player Elo semantics; calculateEloChanges skips
+  // them (player2Id is null), so pod tournaments record participation and
+  // placement with a zero Elo delta.
   const eloUpdates = calculateEloChanges(playerIds, tournament.rounds, db, playerNameMap, tournament.game, playerIdMap)
-  const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game)
+  const standings = calculateStandings(tournament.players, tournament.rounds, tournament.game, undefined, tournament.podWinPoints)
   const now = new Date().toISOString()
 
   // Penalties are normally written to the database live by ISSUE_PENALTY, but
@@ -230,6 +236,9 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         totalRounds: 0,
         currentRound: 0,
         topCut: action.payload.topCut,
+        ...(action.payload.format === 'multiplayer_pods' && action.payload.podWinPoints
+          ? { podWinPoints: action.payload.podWinPoints }
+          : {}),
         grandFinalReset: action.payload.grandFinalReset ?? false,
         ageDivisionsEnabled: action.payload.ageDivisionsEnabled ?? false,
         decklistVisibility: action.payload.decklistVisibility ?? 'hidden',
@@ -314,6 +323,18 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       }
       const pi = tournament.currentPhaseIndex
 
+      if (tournament.format === 'multiplayer_pods') {
+        // A pod needs at least three players; below that there is nothing to run.
+        if (tournament.players.length < 3) return state
+        const matches = generateFirstRoundPods(tournament.players)
+        return updateTournament(state, action.payload.tournamentId, {
+          status: 'in_progress',
+          totalRounds: recommendedPodRounds(tournament.players.length),
+          currentRound: 1,
+          rounds: [makeRound({ roundNumber: 1, matches, isComplete: false, phase: 'swiss' }, pi)],
+        })
+      }
+
       if (tournament.format === 'round_robin') {
         const playerIds = tournament.players.map(p => p.id)
         const totalRounds = getRoundRobinTotalRounds(playerIds.length)
@@ -384,6 +405,41 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const lastRound = tournament.rounds[tournament.rounds.length - 1]
       if (lastRound && !lastRound.isComplete) return state
       const pi = tournament.currentPhaseIndex
+
+      if (tournament.format === 'multiplayer_pods') {
+        if (tournament.status === 'in_progress') {
+          if (tournament.currentRound >= tournament.totalRounds) return state
+          const nextRoundNumber = tournament.currentRound + 1
+          const matches = generatePodPairings(tournament.players, tournament.rounds, nextRoundNumber, podWinPointsOf(tournament))
+          if (matches.length === 0) return state
+          return updateTournament(state, action.payload.tournamentId, {
+            currentRound: nextRoundNumber,
+            rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'swiss' }, pi)],
+          })
+        }
+        if (tournament.status === 'top_cut') {
+          const cutRounds = tournament.rounds.filter(r => r.phase === 'top_cut')
+          const lastCut = cutRounds[cutRounds.length - 1]
+          // Only a multi-pod stage advances; one pod was already the final.
+          if (!lastCut || lastCut.matches.length < 2) return state
+          const winners = lastCut.matches
+            .map(m => m.podWinnerId)
+            .filter((id): id is string => typeof id === 'string')
+          if (winners.length !== lastCut.matches.length) return state
+          // Final pod in swiss-seed order (turn order is decided at the table).
+          const swissRounds = tournament.rounds.filter(r => r.phase === 'swiss')
+          const standings = calculateStandings(tournament.players, swissRounds, tournament.game, undefined, podWinPointsOf(tournament))
+          const seedOf = new Map(standings.map((s, i) => [s.playerId, i]))
+          winners.sort((a, b) => (seedOf.get(a) ?? 0) - (seedOf.get(b) ?? 0))
+          const nextRoundNumber = tournament.currentRound + 1
+          const matches = generatePodCutRound([winners], nextRoundNumber)
+          return updateTournament(state, action.payload.tournamentId, {
+            currentRound: nextRoundNumber,
+            rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }, pi)],
+          })
+        }
+        return state
+      }
 
       // Branch on the running round's phase too: in a multi-phase tournament
       // `tournament.format` describes the first phase only.
@@ -480,6 +536,27 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (!tournament || tournament.status !== 'in_progress') return state
       if (tournament.topCut === 0) return state
 
+      if (tournament.format === 'multiplayer_pods') {
+        // Pod cuts come in exactly two shapes: one final pod (Top 4) or four
+        // pods whose winners meet in the final (Top 16, snake-seeded).
+        if (tournament.topCut !== 4 && tournament.topCut !== 16) return state
+        const swissRounds = tournament.rounds.filter(r => r.phase === 'swiss')
+        const standings = calculateStandings(tournament.players, swissRounds, tournament.game, undefined, podWinPointsOf(tournament))
+        const eligible = standings.filter(s => !s.dropped)
+        const size = eligible.length >= tournament.topCut ? tournament.topCut : eligible.length >= 4 ? 4 : 0
+        if (size === 0) return state
+        const seededIds = eligible.slice(0, size).map(s => s.playerId)
+        const pods = size === 16 ? snakeSeedPods(seededIds) : [seededIds]
+        const nextRoundNumber = tournament.currentRound + 1
+        const matches = generatePodCutRound(pods, nextRoundNumber)
+        return updateTournament(state, action.payload.tournamentId, {
+          status: 'top_cut',
+          currentRound: nextRoundNumber,
+          totalRounds: tournament.totalRounds + (size === 16 ? 2 : 1),
+          rounds: [...tournament.rounds, makeRound({ roundNumber: nextRoundNumber, matches, isComplete: false, phase: 'top_cut' }, tournament.currentPhaseIndex)],
+        })
+      }
+
       const swissRounds = tournament.rounds.filter(r => r.phase === 'swiss')
       const standings = calculateStandings(tournament.players, swissRounds, tournament.game)
       const eligible = standings.filter(s => !s.dropped)
@@ -532,6 +609,39 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
           }
         }),
       }))
+      return updateTournament(state, action.payload.tournamentId, { rounds })
+    }
+
+    case 'SUBMIT_POD_RESULT': {
+      const tournament = state.tournaments[action.payload.tournamentId]
+      if (!tournament || (tournament.status !== 'in_progress' && tournament.status !== 'top_cut')) return state
+      const currentRound = tournament.rounds[tournament.rounds.length - 1]
+      if (!currentRound || currentRound.isComplete) return state
+      const match = currentRound.matches.find(m => m.id === action.payload.matchId)
+      if (!match?.participantIds) return state
+      const { winnerId } = action.payload
+      if (winnerId !== null && !match.participantIds.includes(winnerId)) return state
+      // Cut pods must produce a winner — a timed-out final is decided by the TO.
+      if (winnerId === null && KO_PHASES.has(currentRound.phase)) return state
+      const rounds = tournament.rounds.map(round =>
+        round.roundNumber === currentRound.roundNumber
+          ? {
+              ...round,
+              matches: round.matches.map(m =>
+                m.id === match.id
+                  ? {
+                      ...m,
+                      // 'player1_win' is the generic "decided" marker for pods;
+                      // the winner lives in podWinnerId.
+                      result: winnerId ? 'player1_win' as const : 'draw' as const,
+                      podWinnerId: winnerId,
+                      resultEnteredBy: action.payload.enteredBy,
+                    }
+                  : m
+              ),
+            }
+          : round
+      )
       return updateTournament(state, action.payload.tournamentId, { rounds })
     }
 
@@ -609,6 +719,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         if (action.payload.topCut !== undefined) updates.topCut = action.payload.topCut
         if (action.payload.format !== undefined) updates.format = action.payload.format
         if (action.payload.gameFormat !== undefined) updates.gameFormat = action.payload.gameFormat
+        if (action.payload.podWinPoints !== undefined) updates.podWinPoints = action.payload.podWinPoints
       }
       if (Object.keys(updates).length === 0) return state
       return updateTournament(state, action.payload.tournamentId, updates)
@@ -651,8 +762,10 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (action.payload.type === 'game_loss') {
         const currentRound = tournament.rounds[tournament.rounds.length - 1]
         if (currentRound && !currentRound.isComplete) {
+          // Pod matches carry no game scores — the penalty is recorded, the
+          // table outcome stays a judge/TO ruling.
           const match = currentRound.matches.find(
-            m => !m.isBye && (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
+            m => !m.isBye && !m.participantIds && (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
           )
           if (match) {
             const isPlayer1 = match.player1Id === action.payload.playerId
@@ -673,8 +786,10 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       if (action.payload.type === 'match_loss') {
         const currentRound = tournament.rounds[tournament.rounds.length - 1]
         if (currentRound && !currentRound.isComplete) {
+          // A match loss has no pod equivalent (three others keep playing);
+          // for pods only the penalty entry itself is stored.
           const match = currentRound.matches.find(
-            m => !m.isBye && (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
+            m => !m.isBye && !m.participantIds && (m.player1Id === action.payload.playerId || m.player2Id === action.payload.playerId)
           )
           if (match) {
             const result = match.player1Id === action.payload.playerId ? 'player2_win' as const : 'player1_win' as const
@@ -883,6 +998,8 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
       const match1 = currentRound.matches.find(m => m.id === action.payload.matchId1)
       const match2 = currentRound.matches.find(m => m.id === action.payload.matchId2)
       if (!match1 || !match2 || match1.isBye || match2.isBye) return state
+      // Pod seats are not swappable — regenerating the round is the TO's tool.
+      if (match1.participantIds || match2.participantIds) return state
       if (match1.id === match2.id) return state
 
       const { playerId1, playerId2 } = action.payload
@@ -953,7 +1070,7 @@ export function tournamentReducer(state: AppState, action: TournamentAction): Ap
         roundNumber: currentRound.roundNumber,
         matchId: match.id,
         tableNumber: match.tableNumber,
-        playerIds: [match.player1Id, ...(match.player2Id ? [match.player2Id] : [])],
+        playerIds: match.participantIds ?? [match.player1Id, ...(match.player2Id ? [match.player2Id] : [])],
         startedAt: new Date().toISOString(),
         completedAt: null,
         result: null,

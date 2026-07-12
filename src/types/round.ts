@@ -8,6 +8,13 @@ export interface Match {
   player2Id: string | null
   result: MatchResult
   isBye: boolean
+  // Multiplayer pod (Commander): 3–5 players at one table, array order is the
+  // turn order. Set only in 'multiplayer_pods' tournaments; player1Id mirrors
+  // the first participant, player2Id stays null so every two-player code path
+  // skips pod matches. A decided pod stores result 'player1_win' as the
+  // generic "decided" marker — the actual winner is podWinnerId.
+  participantIds?: string[]
+  podWinnerId?: string | null
   player1Games?: number
   player2Games?: number
   // Time extension in minutes granted to this table (judge ruling, deck

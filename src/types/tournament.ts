@@ -9,7 +9,7 @@ export type TournamentStatus = 'registration' | 'in_progress' | 'top_cut' | 'com
 
 export type TopCutSize = 0 | 4 | 8 | 16 | 32
 
-export type TournamentFormat = 'swiss' | 'swiss_topcut' | 'double_elimination' | 'round_robin'
+export type TournamentFormat = 'swiss' | 'swiss_topcut' | 'double_elimination' | 'round_robin' | 'multiplayer_pods'
 
 export type DecklistVisibility = 'hidden' | 'to_only' | 'public'
 
@@ -49,6 +49,10 @@ export interface Tournament {
   totalRounds: number
   currentRound: number
   topCut: TopCutSize
+  // Points per pod win in 'multiplayer_pods' tournaments (draw is always 1):
+  // 5 = TopDeck standard, 7 = 2n−1 per the community Multiplayer Addendum.
+  // Absent everywhere else; treated as 5 when missing.
+  podWinPoints?: number
   grandFinalReset: boolean
   ageDivisionsEnabled: boolean
   decklistVisibility: DecklistVisibility

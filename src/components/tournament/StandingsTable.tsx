@@ -6,18 +6,21 @@ import { GAME_CONFIG } from '@/lib/gameConfig'
 interface StandingsTableProps {
   standings: Standing[]
   game?: GameType
+  // Pod tournaments: points → MW% → avg opponent points → OMW% instead of the
+  // per-game two-player tiebreakers (gameWinPct carries the own MW% there).
+  podMode?: boolean
 }
 
 function pct(n: number): string {
   return (n * 100).toFixed(2) + '%'
 }
 
-export function StandingsTable({ standings, game }: StandingsTableProps) {
+export function StandingsTable({ standings, game, podMode }: StandingsTableProps) {
   const { t } = useTranslation()
 
   if (standings.length === 0) return null
 
-  const config = game ? GAME_CONFIG[game].tiebreakers : null
+  const config = game && !podMode ? GAME_CONFIG[game].tiebreakers : null
   const isTcg = config?.system === 'tcg'
 
   return (
@@ -31,7 +34,13 @@ export function StandingsTable({ standings, game }: StandingsTableProps) {
             <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.wins')}</th>
             <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.losses')}</th>
             <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.draws')}</th>
-            {isTcg ? (
+            {podMode ? (
+              <>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.matchWinPct')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.avgOppPoints')}</th>
+                <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.opponentMatchWinPct')}</th>
+              </>
+            ) : isTcg ? (
               <>
                 <th className="px-3 py-2 text-center font-medium text-secondary-foreground">{t('standings.opponentMatchWinPct')}</th>
                 {config.useGameWinPct && (
@@ -62,7 +71,13 @@ export function StandingsTable({ standings, game }: StandingsTableProps) {
               <td className="px-3 py-2 text-center text-green-600">{standing.wins}</td>
               <td className="px-3 py-2 text-center text-red-600">{standing.losses}</td>
               <td className="px-3 py-2 text-center text-yellow-600">{standing.draws}</td>
-              {isTcg ? (
+              {podMode ? (
+                <>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{pct(standing.gameWinPct)}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{(standing.avgOpponentPoints ?? 0).toFixed(2)}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{pct(standing.opponentMatchWinPct)}</td>
+                </>
+              ) : isTcg ? (
                 <>
                   <td className="px-3 py-2 text-center text-muted-foreground">{pct(standing.opponentMatchWinPct)}</td>
                   {config.useGameWinPct && (

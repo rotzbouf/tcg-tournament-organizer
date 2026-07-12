@@ -2,7 +2,7 @@
 // (storage.ts) and when importing a file (serialization.ts), so the two paths
 // can never drift apart. Each function mutates the raw parsed object in place.
 
-const VALID_FORMATS = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
+const VALID_FORMATS = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin', 'multiplayer_pods']
 
 export function migrateTournament(t: Record<string, unknown>): void {
   if (!t.format || !VALID_FORMATS.includes(t.format as string)) {

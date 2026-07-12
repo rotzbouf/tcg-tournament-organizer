@@ -66,10 +66,11 @@ interface Tournament {
   players: Array<{ id: string; name: string; deckName: string | null; decklist: unknown; droppedInRound: number | null }>
   penalties?: Array<{ playerId: string; infractionId?: string; type: string }>
   deckChecks?: Array<{ id: string; roundNumber: number; matchId: string; result: string | null }>
-  rounds: Array<{ roundNumber: number; matches: Array<{ id: string; player1Id: string; player2Id: string | null; result: string; tableNumber: number; isBye: boolean; player1Games?: number; player2Games?: number }>; isComplete: boolean; phase: string }>
+  rounds: Array<{ roundNumber: number; matches: Array<{ id: string; player1Id: string; player2Id: string | null; result: string; tableNumber: number; isBye: boolean; player1Games?: number; player2Games?: number; participantIds?: string[]; podWinnerId?: string | null }>; isComplete: boolean; phase: string }>
   roundTimeMinutes: number
   currentRound: number
   totalRounds: number
+  podWinPoints?: number
 }
 
 // Clients reach this server via its LAN IP (or localhost while testing), so a
@@ -138,7 +139,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
     const tournament = state?.tournaments[boundTournamentId]
     if (!tournament) { jsonResponse(res, { error: 'not found' }, 404); return }
-    const standings = calculateStandings(tournament.players as never[], tournament.rounds as never[], tournament.game as never)
+    const standings = calculateStandings(tournament.players as never[], tournament.rounds as never[], tournament.game as never, undefined, tournament.podWinPoints)
     jsonResponse(res, { tournament: sanitizeTournament(tournament), standings, timers: getCurrentTimers() })
     return
   }
@@ -305,11 +306,22 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
   if (reportMatch && req.method === 'POST') {
     readBody(req, res, (body) => {
       const { result, reporterName } = body as { result?: string; reporterName?: string }
-      if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
+      // Pod self-reports carry the claimed winner as 'pod:<playerId>' — the
+      // string form keeps the reporter-vs-reporter conflict detection generic.
+      const podWinnerId = result?.startsWith('pod:') ? result.slice(4) : null
+      if (podWinnerId !== null) {
+        const state = getCurrentState() as { tournaments: Record<string, Tournament> } | null
+        const tournament = state?.tournaments[boundTournamentId]
+        const currentRound = tournament?.rounds[tournament.rounds.length - 1]
+        const match = currentRound?.matches.find(m => m.id === reportMatch[1])
+        if (!match?.participantIds?.includes(podWinnerId)) {
+          jsonResponse(res, { error: 'invalid result' }, 400); return
+        }
+      } else if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
         jsonResponse(res, { error: 'invalid result' }, 400); return
       }
       sendMatchReport({ matchId: reportMatch[1], result, reporterName: reporterName ?? '?', tournamentId: boundTournamentId })
-      recordMatchReport(boundTournamentId, reportMatch[1], reporterName ?? '?', result)
+      recordMatchReport(boundTournamentId, reportMatch[1], reporterName ?? '?', result!)
       jsonResponse(res, { ok: true })
     })
     return
@@ -442,8 +454,10 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
   const resultMatch = reqPath.match(/^\/api\/judge\/matches\/([^/]+)\/result$/)
   if (resultMatch && req.method === 'POST') {
     readBody(req, res, (body) => {
-      const { result, player1Games, player2Games, judgeName } = body as { result?: string; player1Games?: unknown; player2Games?: unknown; judgeName?: unknown }
-      if (!result || !['player1_win', 'player2_win', 'draw'].includes(result)) {
+      const { result, winnerId, player1Games, player2Games, judgeName } = body as { result?: string; winnerId?: unknown; player1Games?: unknown; player2Games?: unknown; judgeName?: unknown }
+      // 'pod' marks a multiplayer pod result: the winner travels in winnerId
+      // (null = pod draw), game scores don't exist at a multiplayer table.
+      if (!result || !['player1_win', 'player2_win', 'draw', 'pod'].includes(result)) {
         jsonResponse(res, { error: 'invalid result' }, 400); return
       }
       if (tournament.status !== 'in_progress' && tournament.status !== 'top_cut') {
@@ -456,6 +470,28 @@ function handleJudgeRequest(req: http.IncomingMessage, res: http.ServerResponse,
       const match = currentRound.matches.find(m => m.id === resultMatch[1])
       if (!match) { jsonResponse(res, { error: 'match not in current round' }, 404); return }
       if (match.isBye) { jsonResponse(res, { error: 'bye match' }, 400); return }
+      if (result === 'pod' || match.participantIds) {
+        const podWinner = typeof winnerId === 'string' ? winnerId : null
+        if (result !== 'pod' || !match.participantIds) { jsonResponse(res, { error: 'invalid result' }, 400); return }
+        if (podWinner !== null && !match.participantIds.includes(podWinner)) {
+          jsonResponse(res, { error: 'invalid result' }, 400); return
+        }
+        if (podWinner === null && KO_PHASES.has(currentRound.phase)) {
+          jsonResponse(res, { error: 'draw not allowed in knockout rounds' }, 400); return
+        }
+        const enteredBy = attribution(judgeName)
+        dispatchToRenderer({
+          type: 'SUBMIT_POD_RESULT',
+          payload: {
+            tournamentId: boundTournamentId,
+            matchId: match.id,
+            winnerId: podWinner,
+            ...(enteredBy ? { enteredBy } : {}),
+          },
+        })
+        jsonResponse(res, { ok: true })
+        return
+      }
       // The reducer rejects this silently; fail loudly so the judge sees why.
       if (result === 'draw' && KO_PHASES.has(currentRound.phase)) {
         jsonResponse(res, { error: 'draw not allowed in knockout rounds' }, 400); return

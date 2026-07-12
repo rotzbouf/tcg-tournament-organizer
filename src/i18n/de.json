@@ -32,7 +32,8 @@
       "swiss": "Swiss",
       "swiss_topcut": "Swiss + Top Cut",
       "double_elimination": "Doppelte Eliminierung",
-      "round_robin": "Rundenturnier"
+      "round_robin": "Rundenturnier",
+      "multiplayer_pods": "Commander-Pods (Multiplayer)"
     },
     "topCut": "Top Cut Größe",
     "topCutValue": "Top {{count}}",
@@ -63,8 +64,16 @@
       "mtg": "Offiziell (MTR Anhang E): bis 8 Spieler kein Cut, ab 9 Top 8",
       "pokemon": "Offiziell (Play! Pokémon): bis 8 Spieler kein Cut, 9–20 Top 4, ab 21 Top 8",
       "yugioh": "Offiziell (Konami Policy 2.5): bis 8 Spieler kein Cut, 9–32 Top 4, ab 33 Top 8",
-      "generic": "Üblich: bis 8 Spieler kein Cut, 9–16 Top 4, ab 17 Top 8"
+      "generic": "Üblich: bis 8 Spieler kein Cut, 9–16 Top 4, ab 17 Top 8",
+      "pods": "Üblich (TopDeck): Top 4 = Final-Pod; Top 16 = 4 Pods (Snake-Seeding), die Sieger spielen den Final-Pod"
     },
+    "podWinPoints": "Punkte pro Pod-Sieg",
+    "podWinPointsOptions": {
+      "5": "5 Punkte pro Sieg, 1 pro Unentschieden (TopDeck-Standard)",
+      "7": "7 Punkte pro Sieg, 1 pro Unentschieden (2n−1, Judge-Addendum)"
+    },
+    "podHint": "4er-Pods nach Punkten; statt Freilos gibt es 3er-Pods am Tabellenende. Sitzreihenfolge = Zugreihenfolge.",
+    "minPlayersPods": "Mindestens 3 Spieler benötigt",
     "ageDivisions": "Altersklassen (Junior / Senior / Masters)",
     "ageDivisionsHint": "Spieler werden nach Geburtsjahr in Divisionen eingeteilt und getrennt gepaart",
     "edit": "Turnier bearbeiten",
@@ -125,6 +134,14 @@
     "extraTimeClear": "Extra-Zeit entfernen",
     "enteredBy": "Eingetragen von Judge {{name}}"
   },
+  "pod": {
+    "title": "Pod",
+    "seat": "Sitz {{number}}",
+    "turnOrderHint": "Reihenfolge = Zugreihenfolge",
+    "selectWinner": "Sieger wählen:",
+    "winner": "Sieg {{name}}",
+    "playerCount": "{{count}} Spieler"
+  },
   "deckCheck": {
     "title": "Deck-Check",
     "random": "Deck-Check (Zufallstisch)",
@@ -149,6 +166,8 @@
     "opponentMatchWinPct": "OMW%",
     "gameWinPct": "GW%",
     "opponentGameWinPct": "OGW%",
+    "matchWinPct": "MW%",
+    "avgOppPoints": "Ø Gegner-Pkt",
     "byDivision": "Nach Altersklasse",
     "global": "Gesamt"
   },
