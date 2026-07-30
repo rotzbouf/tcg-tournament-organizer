@@ -1,5 +1,6 @@
 import { AppState } from '@/state/actions'
 import { Tournament, GameType, TournamentStatus } from '@/types/tournament'
+import { GAME_CONFIG } from './gameConfig'
 import { migrateTournament, migrateDatabasePlayer } from './migration'
 
 interface ExportData {
@@ -12,7 +13,9 @@ interface ExportData {
 const CURRENT_VERSION = '1.2.0'
 const APP_NAME = 'TCG Tournament Organizer'
 
-const VALID_GAMES: GameType[] = ['yugioh', 'pokemon', 'star_wars_unlimited', 'riftbound', 'lorcana', 'altered', 'mtg']
+// Derived from the game registry — a hardcoded list here once rejected
+// imports of tournaments in newer games.
+const VALID_GAMES = Object.keys(GAME_CONFIG) as GameType[]
 const VALID_STATUSES: TournamentStatus[] = ['registration', 'in_progress', 'top_cut', 'completed']
 
 // Clears personal data (birthdates, external player IDs) for exports meant to

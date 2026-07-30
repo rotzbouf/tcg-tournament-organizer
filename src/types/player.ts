@@ -15,4 +15,7 @@ export interface Player {
   decklist: DecklistEntry[] | null
   hasBye: boolean
   droppedInRound: number | null
+  // Judge display name when the drop came from a judge device (drop action or
+  // DQ penalty); absent for TO-side drops and player self-drops.
+  droppedBy?: string
 }

@@ -67,7 +67,8 @@ export function TournamentView() {
   const topCutRounds = tournament.rounds.filter(r => r.phase === 'top_cut')
   const isInSwiss = tournament.status === 'in_progress'
   const isInTopCut = tournament.status === 'top_cut'
-  const hasTopCut = tournament.format === 'swiss_topcut' && tournament.topCut > 0
+  const isPods = tournament.format === 'multiplayer_pods'
+  const hasTopCut = (tournament.format === 'swiss_topcut' || isPods) && tournament.topCut > 0
   const isDoubleElim = tournament.format === 'double_elimination'
   const isRoundRobin = tournament.format === 'round_robin'
   const isElimFormat = isInTopCut || isDoubleElim
@@ -115,7 +116,7 @@ export function TournamentView() {
     currentRound?.phase === 'grand_final' ? t('tournament.grandFinal') : null
 
   const roundLabel = isInTopCut
-    ? `${t('tournament.topCutLabel')} — ${t('tournament.topCutRound', { current: topCutRounds.length, total: Math.log2(tournament.topCut) })}`
+    ? `${t('tournament.topCutLabel')} — ${t('tournament.topCutRound', { current: topCutRounds.length, total: isPods ? (tournament.topCut === 16 ? 2 : 1) : Math.log2(tournament.topCut) })}`
     : currentPhaseLabel
       ? `${currentPhaseLabel} — ${t('dashboard.round')} ${tournament.currentRound}`
       : `${t('dashboard.round')} ${tournament.currentRound}/${tournament.totalRounds}`
@@ -124,11 +125,12 @@ export function TournamentView() {
     { key: 'players', label: t('players.title'), show: true },
     { key: 'round', label: t('rounds.title'), show: tournament.status !== 'registration' },
     { key: 'standings', label: t('standings.title'), show: tournament.status !== 'registration' },
-    { key: 'bracket', label: t('bracket.title'), show: tournament.rounds.some(r => r.phase === 'top_cut') },
+    { key: 'bracket', label: t('bracket.title'), show: !isPods && tournament.rounds.some(r => r.phase === 'top_cut') },
     { key: 'history', label: t('rounds.history'), show: tournament.rounds.some(r => r.isComplete) },
     { key: 'decklists', label: t('decklist.title'), show: true },
     { key: 'penalties', label: `${t('penalties.title')}${tournament.penalties.length > 0 ? ` (${tournament.penalties.length})` : ''}`, show: tournament.status !== 'registration' },
-    { key: 'elo', label: t('elo.title'), show: tournament.status === 'completed' },
+    // Pods have no two-player Elo semantics — the panel would only show zeros.
+    { key: 'elo', label: t('elo.title'), show: tournament.status === 'completed' && !isPods },
     { key: 'discord', label: `Discord${tournament.discordWebhookUrl ? ' ✓' : ''}`, show: true },
     { key: 'server', label: t('server.title'), show: true },
   ]
@@ -143,7 +145,7 @@ export function TournamentView() {
               <h2 className="text-2xl font-bold text-foreground">{tournament.name}</h2>
               <p className="text-sm text-muted-foreground">
                 {gameConfig.name} — {t(`tournament.formatOptions.${tournament.format}`)}
-                {tournament.format === 'swiss_topcut' && tournament.topCut > 0 && ` (Top ${tournament.topCut})`}
+                {hasTopCut && ` (Top ${tournament.topCut})`}
                 {tournament.ageDivisionsEnabled && ` — ${t('tournament.ageDivisions')}`}
               </p>
               {hasMultiPhase && (
@@ -177,15 +179,15 @@ export function TournamentView() {
             <>
               <Button
                 onClick={handleStart}
-                disabled={tournament.players.length < 2}
+                disabled={tournament.players.length < (isPods ? 3 : 2)}
               >
                 {t('tournament.start')}
               </Button>
               <Button variant="secondary" size="sm" onClick={() => setShowEditDialog(true)}>
                 {t('tournament.edit')}
               </Button>
-              {tournament.players.length < 2 && (
-                <span className="text-sm text-amber-600">{t('tournament.minPlayers')}</span>
+              {tournament.players.length < (isPods ? 3 : 2) && (
+                <span className="text-sm text-amber-600">{t(isPods ? 'tournament.minPlayersPods' : 'tournament.minPlayers')}</span>
               )}
             </>
           )}
@@ -281,7 +283,7 @@ export function TournamentView() {
             canGenerate={canGenerate}
             isLastRound={isLastRound}
             isTopCut={isElimFormat}
-            showGameScores={gameConfig.tiebreakers.useGameWinPct}
+            showGameScores={gameConfig.tiebreakers.useGameWinPct && !isPods}
           />
         )}
         {activeTab === 'standings' && (
@@ -318,7 +320,7 @@ export function TournamentView() {
                 })}
               </div>
             ) : (
-              <StandingsTable standings={standings} game={tournament.game} />
+              <StandingsTable standings={standings} game={tournament.game} podMode={isPods} />
             )}
             <div className="mt-4 flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => {
@@ -343,7 +345,7 @@ export function TournamentView() {
                   {t('export.standingsPoster')}
                 </Button>
               )}
-              {tournament.rounds.length > 0 && (
+              {tournament.rounds.length > 0 && !isPods && (
                 <Button variant="secondary" size="sm" onClick={() => {
                   const safe = tournament.name.replace(/\s+/g, '-')
                   if (tournament.game === 'pokemon') {

@@ -44,6 +44,7 @@ export function PenaltyList({ tournamentId, penalties, players }: PenaltyListPro
               {t('penalties.issuedInRound', { round: penalty.roundNumber })}
               {penalty.infractionId ? ` — ${t(`penalties.infraction.${penalty.infractionId}`)}` : ''}
               {penalty.reason ? ` — ${penalty.reason}` : ''}
+              {penalty.issuedBy ? ` — ${t('penalties.issuedBy', { name: penalty.issuedBy })}` : ''}
             </p>
           </div>
           <Button

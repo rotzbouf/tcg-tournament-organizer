@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Round } from '@/types/round'
 import { Player } from '@/types/player'
 import { MatchCard } from './MatchCard'
+import { PodCard } from './PodCard'
 import { cn } from '@/lib/utils'
 
 interface RoundHistoryProps {
@@ -48,14 +49,24 @@ export function RoundHistory({ rounds, players, tournamentId, showGameScores = t
           {expandedRound === round.roundNumber && (
             <div id={`round-${round.roundNumber}-panel`} className="space-y-2 border-t border-border p-3">
               {round.matches.map(match => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  players={players}
-                  tournamentId={tournamentId}
-                  readonly
-                  showGameScores={showGameScores}
-                />
+                match.participantIds ? (
+                  <PodCard
+                    key={match.id}
+                    match={match}
+                    players={players}
+                    tournamentId={tournamentId}
+                    readonly
+                  />
+                ) : (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    players={players}
+                    tournamentId={tournamentId}
+                    readonly
+                    showGameScores={showGameScores}
+                  />
+                )
               ))}
             </div>
           )}

@@ -12,5 +12,8 @@ export interface Standing {
   opponentMatchWinPct: number
   gameWinPct: number
   opponentGameWinPct: number
+  // Pod tournaments only: average match points of all pod opponents, the
+  // second tiebreaker after match-win percentage.
+  avgOpponentPoints?: number
   dropped: boolean
 }

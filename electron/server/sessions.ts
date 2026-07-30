@@ -14,6 +14,7 @@ interface Session {
   playerName: string // lowercased; '' for judge sessions
   playerId: string | null // bound lazily on first authorized use
   role: 'player' | 'judge'
+  judgeLabel?: string // TO-chosen display name of the judge this token was issued to
 }
 
 // Insertion-ordered; oldest entries are evicted beyond this cap so register
@@ -62,32 +63,55 @@ export function createPlayerSession(tournamentId: string, playerId: string, play
   return token
 }
 
-// One judge token per tournament, shared by every co-judge who scans the
-// judge QR. Judge sessions carry no player identity; they only prove the
-// holder got the token from the TO. Re-opening the QR hands out the same
-// token; revoking deletes it, so all judge devices lose access at once and
-// the next QR click mints a fresh token.
-const judgeTokens = new Map<string, string>() // tournamentId -> token
+// One token per judge, each labelled by the TO when the QR is issued. Judge
+// sessions carry no player identity; they only prove the holder got the token
+// from the TO. The label is the judge's audit identity — server-side, not
+// device-chosen — and revoking one judge leaves the other tokens working.
+interface JudgeTokenInfo {
+  token: string
+  label: string
+  createdAt: number
+}
 
-export function createJudgeSession(tournamentId: string): string {
-  const existing = judgeTokens.get(tournamentId)
-  if (existing && sessions.get(existing)?.tournamentId === tournamentId) return existing
+const judgeTokens = new Map<string, JudgeTokenInfo[]>() // tournamentId -> issued judge tokens
+
+export function createJudgeSession(tournamentId: string, label = ''): string {
   const token = crypto.randomBytes(24).toString('base64url')
-  sessions.set(token, { tournamentId, playerName: '', playerId: null, role: 'judge' })
-  judgeTokens.set(tournamentId, token)
+  sessions.set(token, { tournamentId, playerName: '', playerId: null, role: 'judge', judgeLabel: label })
+  const list = judgeTokens.get(tournamentId) ?? []
+  list.push({ token, label, createdAt: Date.now() })
+  judgeTokens.set(tournamentId, list)
   return token
 }
 
-export function revokeJudgeSession(tournamentId: string): void {
-  const token = judgeTokens.get(tournamentId)
-  if (token) sessions.delete(token)
-  judgeTokens.delete(tournamentId)
+export function listJudgeSessions(tournamentId: string): JudgeTokenInfo[] {
+  return (judgeTokens.get(tournamentId) ?? []).map(j => ({ ...j }))
+}
+
+// Without a token every judge session of the tournament is revoked at once.
+export function revokeJudgeSession(tournamentId: string, token?: string): void {
+  const list = judgeTokens.get(tournamentId) ?? []
+  for (const j of list) {
+    if (token && j.token !== token) continue
+    sessions.delete(j.token)
+  }
+  const remaining = token ? list.filter(j => j.token !== token) : []
+  if (remaining.length) judgeTokens.set(tournamentId, remaining)
+  else judgeTokens.delete(tournamentId)
 }
 
 export function isJudgeSession(token: string | null, tournamentId: string): boolean {
   if (!token) return false
   const session = sessions.get(token)
   return session !== undefined && session.tournamentId === tournamentId && session.role === 'judge'
+}
+
+// The TO-chosen label of a judge token, '' for unknown or unlabelled tokens.
+export function getJudgeLabel(token: string | null, tournamentId: string): string {
+  if (!token) return ''
+  const session = sessions.get(token)
+  if (!session || session.tournamentId !== tournamentId || session.role !== 'judge') return ''
+  return session.judgeLabel ?? ''
 }
 
 // True if any live session already claims this player: bound sessions count by

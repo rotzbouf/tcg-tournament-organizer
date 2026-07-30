@@ -22,12 +22,16 @@ interface TournamentLike {
 // data from the local session; a player's own decklist comes from the
 // token-gated /api/my-decklist endpoint, and public decklists from
 // /api/decklists — so nothing here may bypass `decklistVisibility`.
-// The deck-check log is a TO-side working record and stays off the wire too.
+// The deck-check log is a TO-side working record and stays off the wire too,
+// as is the penalty list — penalties are between the player, the judge and the
+// TO, not something every phone in the room should see. Judge devices read them
+// via the token-gated /api/judge/penalties instead.
 export function sanitizeTournament(tournament: unknown): unknown {
   const t = tournament as TournamentLike | null
   if (!t || !Array.isArray(t.players)) return tournament
   const clone = { ...t }
   delete clone.deckChecks
+  delete clone.penalties
   return {
     ...clone,
     players: t.players.map(player => {
@@ -35,6 +39,9 @@ export function sanitizeTournament(tournament: unknown): unknown {
       delete playerClone.dateOfBirth
       delete playerClone.playerId
       delete playerClone.decklist
+      // Judge attribution of a drop can stem from a DQ penalty — like the
+      // penalty list itself, it stays off the broadcast.
+      delete playerClone.droppedBy
       return playerClone
     }),
   }

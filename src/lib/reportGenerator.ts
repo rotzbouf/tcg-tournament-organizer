@@ -21,12 +21,14 @@ function resultLabel(tournament: Tournament, matchResult: string, p1Id: string, 
 export function generateTournamentReport(tournament: Tournament, standings: Standing[]): string {
   const config = GAME_CONFIG[tournament.game]
   const tiebreakers = config.tiebreakers
-  const isTcg = tiebreakers.system === 'tcg'
+  const isPods = tournament.format === 'multiplayer_pods'
+  const isTcg = !isPods && tiebreakers.system === 'tcg'
   const date = new Date(tournament.createdAt).toLocaleDateString('de-CH')
   const formatLabel = tournament.format === 'swiss_topcut' && tournament.topCut > 0
     ? `Swiss + Top ${tournament.topCut}`
     : tournament.format === 'swiss' ? 'Swiss'
     : tournament.format === 'double_elimination' ? 'Double Elimination'
+    : isPods ? `Commander-Pods${tournament.topCut > 0 ? ` + Top ${tournament.topCut}` : ''}`
     : 'Rundenturnier'
 
   // Champion and top finishers
@@ -34,15 +36,19 @@ export function generateTournamentReport(tournament: Tournament, standings: Stan
   const champion = top4[0]
 
   // Standings table
-  const tbHead = isTcg
-    ? `<th>OMW%</th>${tiebreakers.useGameWinPct ? '<th>GW%</th><th>OGW%</th>' : ''}`
-    : '<th>Buchholz</th><th>Median-BH</th><th>SB</th>'
+  const tbHead = isPods
+    ? '<th>MW%</th><th>Ø Gegner-Pkt</th><th>OMW%</th>'
+    : isTcg
+      ? `<th>OMW%</th>${tiebreakers.useGameWinPct ? '<th>GW%</th><th>OGW%</th>' : ''}`
+      : '<th>Buchholz</th><th>Median-BH</th><th>SB</th>'
   const tbRow = (s: Standing) => {
     const dropped = s.dropped ? ' style="opacity:.45"' : ''
     const name = s.dropped ? `<s>${esc(s.playerName)}</s>` : esc(s.playerName)
-    const tb = isTcg
-      ? `<td>${(s.opponentMatchWinPct * 100).toFixed(1)}%</td>${tiebreakers.useGameWinPct ? `<td>${(s.gameWinPct * 100).toFixed(1)}%</td><td>${(s.opponentGameWinPct * 100).toFixed(1)}%</td>` : ''}`
-      : `<td>${s.buchholz}</td><td>${s.medianBuchholz}</td><td>${s.sonnebornBerger}</td>`
+    const tb = isPods
+      ? `<td>${(s.gameWinPct * 100).toFixed(1)}%</td><td>${(s.avgOpponentPoints ?? 0).toFixed(2)}</td><td>${(s.opponentMatchWinPct * 100).toFixed(1)}%</td>`
+      : isTcg
+        ? `<td>${(s.opponentMatchWinPct * 100).toFixed(1)}%</td>${tiebreakers.useGameWinPct ? `<td>${(s.gameWinPct * 100).toFixed(1)}%</td><td>${(s.opponentGameWinPct * 100).toFixed(1)}%</td>` : ''}`
+        : `<td>${s.buchholz}</td><td>${s.medianBuchholz}</td><td>${s.sonnebornBerger}</td>`
     return `<tr${dropped}><td>${s.rank}</td><td>${name}</td><td><b>${s.matchPoints}</b></td><td>${s.wins}</td><td>${s.losses}</td><td>${s.draws}</td>${tb}</tr>`
   }
 
@@ -53,6 +59,12 @@ export function generateTournamentReport(tournament: Tournament, standings: Stan
   const renderRound = (rounds: typeof tournament.rounds) =>
     rounds.map(round => {
       const rows = round.matches.map(m => {
+        if (m.participantIds) {
+          const names = m.participantIds.map((id, i) => `${i + 1}. ${esc(getName(tournament, id))}`).join('<br>')
+          const winner = m.result === 'draw' ? 'Unentschieden'
+            : m.result !== 'pending' && m.podWinnerId ? `${esc(getName(tournament, m.podWinnerId))} gewinnt` : '—'
+          return `<tr><td style="color:#94a3b8;text-align:center">${m.tableNumber}</td><td colspan="3">${names}</td><td style="color:#2563eb;font-weight:600">${winner}</td></tr>`
+        }
         if (m.isBye) {
           return `<tr><td style="color:#94a3b8;text-align:center">—</td><td>${esc(getName(tournament, m.player1Id))}</td><td colspan="2" style="color:#94a3b8">Freilos</td></tr>`
         }

@@ -3,6 +3,7 @@ import { Round } from '../types/round'
 import { Standing } from '../types/standing'
 import { GameType } from '../types/tournament'
 import { WIN_POINTS, DRAW_POINTS, BYE_POINTS } from './scoring'
+import { POD_DRAW_POINTS, DEFAULT_POD_WIN_POINTS } from './pods'
 import { GAME_CONFIG, TiebreakerConfig } from '../lib/gameConfig'
 
 // Per-player aggregates collected in a single pass over all completed swiss
@@ -94,7 +95,13 @@ function buildAggregates(rounds: Round[]): { aggregates: Map<string, PlayerAggre
   return { aggregates, headToHead }
 }
 
-export function calculateStandings(players: Player[], rounds: Round[], game?: GameType, playerFilter?: Set<string>): Standing[] {
+export function calculateStandings(players: Player[], rounds: Round[], game?: GameType, playerFilter?: Set<string>, podWinPoints?: number): Standing[] {
+  // Multiplayer pod tournaments never mix with two-player matches; the whole
+  // two-player aggregation below stays byte-identical for them (guarded by
+  // the standingsReference oracle test).
+  if (rounds.some(r => r.matches.some(m => m.participantIds !== undefined))) {
+    return calculatePodStandings(players, rounds, playerFilter, podWinPoints ?? DEFAULT_POD_WIN_POINTS)
+  }
   const filteredPlayers = playerFilter ? players.filter(p => playerFilter.has(p.id)) : players
   const completedRounds = rounds.filter(r => r.isComplete)
 
@@ -209,6 +216,124 @@ export function calculateStandings(players: Player[], rounds: Round[], game?: Ga
   standings.forEach((s, i) => { s.rank = i + 1 })
 
   return standings
+}
+
+// Pod standings per the TopDeck/Addendum consensus: points → match-win % →
+// average opponent points → opponents' match-win %. All podmates count as
+// opponents (three per 4-pod round). gameWinPct carries the player's own
+// match-win percentage — pods have no game scores, and the UI shows it as MW%.
+function calculatePodStandings(players: Player[], rounds: Round[], playerFilter: Set<string> | undefined, winPoints: number): Standing[] {
+  const filteredPlayers = playerFilter ? players.filter(p => playerFilter.has(p.id)) : players
+  const swissRounds = rounds.filter(r => r.isComplete && r.phase === 'swiss')
+  // Unlike points, the cut ranking may use the running round: mid-final the
+  // finalists already are the provisional top 4.
+  const cutRounds = rounds.filter(r => r.phase === 'top_cut')
+
+  interface PodAggregate { points: number; wins: number; losses: number; draws: number; opponents: string[] }
+  const aggregates = new Map<string, PodAggregate>()
+  const aggOf = (id: string): PodAggregate => {
+    let agg = aggregates.get(id)
+    if (!agg) { agg = { points: 0, wins: 0, losses: 0, draws: 0, opponents: [] }; aggregates.set(id, agg) }
+    return agg
+  }
+
+  for (const round of swissRounds) {
+    for (const match of round.matches) {
+      const ids = match.participantIds
+      if (!ids || match.result === 'pending') continue
+      for (const id of ids) {
+        const agg = aggOf(id)
+        for (const other of ids) if (other !== id) agg.opponents.push(other)
+        if (match.result === 'draw') { agg.draws++; agg.points += POD_DRAW_POINTS }
+        else if (match.podWinnerId === id) { agg.wins++; agg.points += winPoints }
+        else { agg.losses++ }
+      }
+    }
+  }
+
+  const matchWinPct = (id: string): number => {
+    const agg = aggregates.get(id)
+    if (!agg) return 0
+    const total = agg.wins + agg.losses + agg.draws
+    return total === 0 ? 0 : agg.wins / total
+  }
+
+  const standings: Standing[] = filteredPlayers.map(player => {
+    const agg = aggregates.get(player.id) ?? { points: 0, wins: 0, losses: 0, draws: 0, opponents: [] }
+    const avgOpponentPoints = agg.opponents.length === 0
+      ? 0
+      : agg.opponents.reduce((sum, oppId) => sum + (aggregates.get(oppId)?.points ?? 0), 0) / agg.opponents.length
+    const opponentMatchWinPct = agg.opponents.length === 0
+      ? 0
+      : agg.opponents.reduce((sum, oppId) => sum + matchWinPct(oppId), 0) / agg.opponents.length
+    return {
+      playerId: player.id,
+      playerName: player.name,
+      rank: 0,
+      matchPoints: agg.points,
+      wins: agg.wins,
+      losses: agg.losses,
+      draws: agg.draws,
+      buchholz: 0,
+      medianBuchholz: 0,
+      sonnebornBerger: 0,
+      opponentMatchWinPct,
+      gameWinPct: matchWinPct(player.id),
+      opponentGameWinPct: 0,
+      avgOpponentPoints,
+      dropped: player.droppedInRound !== null,
+    }
+  })
+
+  standings.sort((a, b) => {
+    if (b.matchPoints !== a.matchPoints) return b.matchPoints - a.matchPoints
+    if (b.gameWinPct !== a.gameWinPct) return b.gameWinPct - a.gameWinPct
+    if ((b.avgOpponentPoints ?? 0) !== (a.avgOpponentPoints ?? 0)) return (b.avgOpponentPoints ?? 0) - (a.avgOpponentPoints ?? 0)
+    return b.opponentMatchWinPct - a.opponentMatchWinPct
+  })
+
+  if (cutRounds.length > 0) {
+    const swissOrder = new Map(standings.map((s, i) => [s.playerId, i]))
+    const ranking = podBracketRanking(cutRounds, swissOrder)
+    const cutPlayerIds = new Set(ranking.map(r => r.playerId))
+    const nonCutStandings = standings.filter(s => !cutPlayerIds.has(s.playerId))
+    const cutStandings = ranking.map(({ playerId, rank }) => {
+      const s = standings.find(s => s.playerId === playerId)!
+      return { ...s, rank }
+    })
+    let nextRank = cutStandings.length + 1
+    nonCutStandings.forEach(s => { s.rank = nextRank++ })
+    return [...cutStandings, ...nonCutStandings]
+  }
+
+  standings.forEach((s, i) => { s.rank = i + 1 })
+  return standings
+}
+
+// Winner of the final pod first, then everyone else by how deep they got,
+// swiss order breaking ties within a stage. Ranks are provisional while the
+// final pod is still playing.
+function podBracketRanking(cutRounds: Round[], swissOrder: Map<string, number>): { playerId: string; rank: number }[] {
+  const stageOf = new Map<string, number>()
+  cutRounds.forEach((round, idx) => {
+    for (const match of round.matches) {
+      for (const id of match.participantIds ?? []) stageOf.set(id, idx)
+    }
+  })
+  const lastRound = cutRounds[cutRounds.length - 1]
+  const winnerId = lastRound.matches.length === 1 && lastRound.isComplete
+    ? lastRound.matches[0].podWinnerId ?? null
+    : null
+
+  const ids = [...stageOf.keys()]
+  ids.sort((a, b) => {
+    if (a === winnerId) return -1
+    if (b === winnerId) return 1
+    const stageDiff = stageOf.get(b)! - stageOf.get(a)!
+    if (stageDiff !== 0) return stageDiff
+    return (swissOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (swissOrder.get(b) ?? Number.MAX_SAFE_INTEGER)
+  })
+  return ids.map((playerId, i) => ({ playerId, rank: i + 1 }))
 }
 
 function calculateBracketRanking(topCutRounds: Round[]): { playerId: string; rank: number }[] {

@@ -18,8 +18,9 @@ interface ElectronAPI {
   stopServer: (tournamentId: string) => Promise<void>
   getServerInfo: (tournamentId: string) => Promise<{ running: boolean; address?: string; port?: number; clientCount?: number }>
   getPlayerToken: (tournamentId: string, playerId: string) => Promise<string | null>
-  getJudgeToken: (tournamentId: string) => Promise<string | null>
-  revokeJudgeToken: (tournamentId: string) => Promise<void>
+  getJudgeToken: (tournamentId: string, label?: string) => Promise<string | null>
+  listJudgeTokens: (tournamentId: string) => Promise<Array<{ token: string; label: string; createdAt: number }>>
+  revokeJudgeToken: (tournamentId: string, token?: string) => Promise<void>
   openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string; hint?: string }) => Promise<void>
   onJudgeCall: (callback: (data: string) => void) => void
   onMatchReport: (callback: (data: string) => void) => void

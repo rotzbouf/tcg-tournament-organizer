@@ -21,8 +21,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopServer: (tournamentId: string) => ipcRenderer.invoke('server:stop', tournamentId),
   getServerInfo: (tournamentId: string) => ipcRenderer.invoke('server:getInfo', tournamentId),
   getPlayerToken: (tournamentId: string, playerId: string) => ipcRenderer.invoke('server:playerToken', tournamentId, playerId),
-  getJudgeToken: (tournamentId: string) => ipcRenderer.invoke('server:judgeToken', tournamentId),
-  revokeJudgeToken: (tournamentId: string) => ipcRenderer.invoke('server:revokeJudgeToken', tournamentId),
+  getJudgeToken: (tournamentId: string, label?: string) => ipcRenderer.invoke('server:judgeToken', tournamentId, label),
+  listJudgeTokens: (tournamentId: string) => ipcRenderer.invoke('server:listJudgeTokens', tournamentId),
+  revokeJudgeToken: (tournamentId: string, token?: string) => ipcRenderer.invoke('server:revokeJudgeToken', tournamentId, token),
   openQrWindow: (opts: { tournamentName: string; url: string; qrSvg: string; hint?: string }) => ipcRenderer.invoke('window:openQr', opts),
   onJudgeCall: (callback: (data: string) => void) => {
     ipcRenderer.on('judge:call', (_event, data: string) => callback(data))

@@ -15,8 +15,8 @@ interface EditTournamentDialogProps {
   tournament: Tournament
 }
 
-const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 80, 90]
-const FORMAT_OPTIONS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin']
+const ROUND_TIME_OPTIONS = [20, 30, 40, 50, 60, 70, 75, 80, 90]
+const FORMAT_OPTIONS: TournamentFormat[] = ['swiss', 'swiss_topcut', 'double_elimination', 'round_robin', 'multiplayer_pods']
 
 export function EditTournamentDialog({ open, onClose, tournament }: EditTournamentDialogProps) {
   const { t } = useTranslation()
@@ -24,6 +24,7 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
   const [name, setName] = useState(tournament.name)
   const [format, setFormat] = useState<TournamentFormat>(tournament.format)
   const [topCut, setTopCut] = useState<TopCutSize>(tournament.topCut)
+  const [podWinPoints, setPodWinPoints] = useState(tournament.podWinPoints ?? 5)
   const [roundTime, setRoundTime] = useState(tournament.roundTimeMinutes)
   const [countForSeason, setCountForSeason] = useState(tournament.countForSeason !== false)
   const gameFormats = GAME_CONFIG[tournament.game].formats
@@ -49,7 +50,8 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
         name: name.trim(),
         format,
         roundTimeMinutes: roundTime,
-        topCut: format === 'swiss_topcut' ? topCut : 0,
+        topCut: format === 'swiss_topcut' || format === 'multiplayer_pods' ? topCut : 0,
+        podWinPoints: format === 'multiplayer_pods' ? podWinPoints : undefined,
         gameFormat: gameFormat || null,
         countForSeason,
       },
@@ -81,8 +83,38 @@ export function EditTournamentDialog({ open, onClose, tournament }: EditTourname
           label={t('tournament.format')}
           options={formatOptions}
           value={format}
-          onChange={e => setFormat(e.target.value as TournamentFormat)}
+          onChange={e => {
+            const newFormat = e.target.value as TournamentFormat
+            setFormat(newFormat)
+            if (newFormat === 'multiplayer_pods' && topCut !== 0 && topCut !== 4 && topCut !== 16) setTopCut(4)
+          }}
         />
+        {format === 'multiplayer_pods' && (
+          <>
+            <Select
+              id="edit-tournament-pod-top-cut"
+              label={t('tournament.topCut')}
+              options={[
+                { value: '0', label: t('tournament.topCutNone') },
+                { value: '4', label: 'Top 4' },
+                { value: '16', label: 'Top 16' },
+              ]}
+              value={String(topCut)}
+              onChange={e => setTopCut(Number(e.target.value) as TopCutSize)}
+            />
+            <p className="text-sm text-muted-foreground">{t('tournament.topCutRule.pods')}</p>
+            <Select
+              id="edit-tournament-pod-points"
+              label={t('tournament.podWinPoints')}
+              options={[
+                { value: '5', label: t('tournament.podWinPointsOptions.5') },
+                { value: '7', label: t('tournament.podWinPointsOptions.7') },
+              ]}
+              value={String(podWinPoints)}
+              onChange={e => setPodWinPoints(Number(e.target.value))}
+            />
+          </>
+        )}
         {format === 'swiss_topcut' && (
           <>
             <Select

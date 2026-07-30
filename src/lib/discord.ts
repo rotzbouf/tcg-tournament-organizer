@@ -38,6 +38,7 @@ export function formatPairingsMessage(tournament: Tournament, round: Round, play
     round.phase === 'top_cut' ? ' (Top Cut)' : ''
 
   const lines = round.matches.map(m => {
+    if (m.participantIds) return `${t('discord.table')} ${m.tableNumber} | ${m.participantIds.map(getName).join(' / ')}`
     if (m.isBye) return `${t('discord.table')} - | ${getName(m.player1Id)} — ${t('discord.bye')}`
     return `${t('discord.table')} ${m.tableNumber} | ${getName(m.player1Id)} vs ${getName(m.player2Id!)}`
   })

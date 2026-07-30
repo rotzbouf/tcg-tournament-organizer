@@ -508,6 +508,86 @@ describe('tournamentReducer', () => {
       expect(getTournament(state).penalties[0].infractionId).toBe('ygo_slow_play')
       expect(state.playerDatabase.db1.penalties[0].infractionId).toBe('ygo_slow_play')
     })
+
+    it('stores the judge attribution on both the tournament and database penalty', () => {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Alice' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'Bob' } })
+      state = {
+        ...state,
+        playerDatabase: {
+          db1: {
+            id: 'db1', name: 'Alice', game: 'yugioh', playerId: null,
+            elo: 1500, matchesPlayed: 0, tournamentsPlayed: 0, history: [], penalties: [], lastUpdated: '2026-01-01',
+          },
+        },
+      }
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      const alice = getTournament(state).players.find(p => p.name === 'Alice')!
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: alice.id, type: 'warning', reason: '', issuedBy: 'Nina' },
+      })
+      expect(getTournament(state).penalties[0].issuedBy).toBe('Nina')
+      expect(state.playerDatabase.db1.penalties[0].issuedBy).toBe('Nina')
+      // a TO-issued penalty carries no attribution
+      state = dispatch(state, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: alice.id, type: 'warning', reason: '' },
+      })
+      expect(getTournament(state).penalties[1].issuedBy).toBeUndefined()
+    })
+
+    it('a judge-issued DQ records the judge on the resulting drop', () => {
+      const { state: started, id } = startedTournament()
+      const dqPlayerId = getTournament(started).rounds[0].matches[0].player1Id
+      const state = dispatch(started, {
+        type: 'ISSUE_PENALTY',
+        payload: { tournamentId: id, playerId: dqPlayerId, type: 'disqualification', reason: 'Cheating', issuedBy: 'Nina' },
+      })
+      const dropped = getTournament(state).players.find(p => p.id === dqPlayerId)
+      expect(dropped?.droppedInRound).toBe(1)
+      expect(dropped?.droppedBy).toBe('Nina')
+    })
+  })
+
+  describe('judge attribution on results and drops', () => {
+    function startedTournament() {
+      let state = createTournament()
+      const id = getTournament(state).id
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'A' } })
+      state = dispatch(state, { type: 'ADD_PLAYER', payload: { tournamentId: id, playerName: 'B' } })
+      state = dispatch(state, { type: 'START_TOURNAMENT', payload: { tournamentId: id } })
+      return { state, id }
+    }
+
+    it('stores enteredBy with a judge result and clears it on a TO correction', () => {
+      const { state: started, id } = startedTournament()
+      const matchId = getTournament(started).rounds[0].matches[0].id
+      let state = dispatch(started, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player1_win', enteredBy: 'Nina' },
+      })
+      expect(getTournament(state).rounds[0].matches[0].resultEnteredBy).toBe('Nina')
+
+      // TO corrects on the desktop (no enteredBy) — stale attribution must go
+      state = dispatch(state, {
+        type: 'SUBMIT_MATCH_RESULT',
+        payload: { tournamentId: id, matchId, result: 'player2_win' },
+      })
+      expect(getTournament(state).rounds[0].matches[0].resultEnteredBy).toBeUndefined()
+    })
+
+    it('stores droppedBy only when the drop names a judge', () => {
+      const { state: started, id } = startedTournament()
+      const [p1, p2] = getTournament(started).players
+      let state = dispatch(started, { type: 'DROP_PLAYER', payload: { tournamentId: id, playerId: p1.id, droppedBy: 'Nina' } })
+      state = dispatch(state, { type: 'DROP_PLAYER', payload: { tournamentId: id, playerId: p2.id } })
+      const after = getTournament(state)
+      expect(after.players.find(p => p.id === p1.id)?.droppedBy).toBe('Nina')
+      expect(after.players.find(p => p.id === p2.id)?.droppedBy).toBeUndefined()
+    })
   })
 
   describe('REMOVE_PENALTY', () => {
@@ -675,6 +755,17 @@ describe('tournamentReducer', () => {
         completedAt: null,
         result: null,
       })
+    })
+
+    it('records the starting judge when the check comes from a judge device', () => {
+      const { state: started, id } = startedFourPlayerTournament()
+      const match = getTournament(started).rounds[0].matches[0]
+      const state = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match.id, startedBy: 'Nina' } })
+      expect(getTournament(state).deckChecks![0].startedBy).toBe('Nina')
+      // TO-started checks carry no attribution
+      const match2 = getTournament(started).rounds[0].matches[1]
+      const toState = dispatch(started, { type: 'START_DECK_CHECK', payload: { tournamentId: id, matchId: match2.id } })
+      expect(getTournament(toState).deckChecks![0].startedBy).toBeUndefined()
     })
 
     it('refuses a second check on the same table in the same round', () => {

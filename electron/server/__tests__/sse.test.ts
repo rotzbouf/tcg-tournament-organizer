@@ -17,8 +17,19 @@ describe('sanitizeTournament', () => {
         playerId: 'K-123',
         droppedInRound: null,
       },
+      {
+        id: 'p2',
+        name: 'Bob',
+        deckName: null,
+        decklist: null,
+        dateOfBirth: null,
+        playerId: null,
+        droppedInRound: 2,
+        droppedBy: 'Judge Nina',
+      },
     ],
     deckChecks: [{ id: 'c1', matchId: 'm1', roundNumber: 1, result: null }],
+    penalties: [{ id: 'pen1', playerId: 'p1', type: 'warning', reason: 'Slow play' }],
   }
 
   it('strips decklist, dateOfBirth and playerId from every player', () => {
@@ -28,10 +39,24 @@ describe('sanitizeTournament', () => {
     expect(result.players[0]).not.toHaveProperty('playerId')
   })
 
+  it('strips the judge attribution of a drop (can stem from a DQ penalty)', () => {
+    const result = sanitizeTournament(tournament) as typeof tournament
+    expect(result.players[1]).not.toHaveProperty('droppedBy')
+    expect(result.players[1].droppedInRound).toBe(2)
+    // original untouched
+    expect((tournament.players[1] as Record<string, unknown>).droppedBy).toBe('Judge Nina')
+  })
+
   it('strips the deck-check log', () => {
     const result = sanitizeTournament(tournament) as typeof tournament
     expect(result).not.toHaveProperty('deckChecks')
     expect(tournament.deckChecks).toHaveLength(1) // original untouched
+  })
+
+  it('strips the penalty list', () => {
+    const result = sanitizeTournament(tournament) as typeof tournament
+    expect(result).not.toHaveProperty('penalties')
+    expect(tournament.penalties).toHaveLength(1) // original untouched
   })
 
   it('keeps the fields the mobile page needs', () => {
