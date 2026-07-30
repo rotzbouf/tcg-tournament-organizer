@@ -33,7 +33,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-i18next": "^17.0.8",
+    "react-i18next": "^17.0.9",
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^2.6.0"
   },
