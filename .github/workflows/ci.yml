@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: rm package-lock.json && npm install
-      - run: npm audit --audit-level=high
+      - run: node .github/scripts/npm-audit-check.mjs
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
