@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.3] - 2026-07-30
+
+### Security
+- **Bekannte Sicherheitslücken in Abhängigkeiten behoben** — postcss (Path Traversal beim automatischen Laden von Source Maps), fast-uri (Host-Confusion durch Backslash im Authority-Teil), tar (DoS durch unkontrollierte Rekursion) und brace-expansion (ReDoS) sind auf gepatchte Versionen angehoben, ohne Breaking Changes. Die Lücke in react-router (GHSA-qwww-vcr4-c8h2) bleibt bewusst offen — der Fix erfordert einen Major-Sprung auf react-router-dom v8
+
 ## [1.7.2] - 2026-07-12
 
 ### Added
