@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.4] - 2026-10-19
+
+### Security
+- **Electron-Mindestversion auf 43.5.0 angehoben** — Das schließt vier Sicherheitslücken in der App-Laufzeit: Fenster aus einem sandboxed Dokument erbten dessen Sandbox-Beschränkungen nicht, File- und HTTP-Protokoll-Handler erlaubten ohne `corsEnabled` Cross-Origin-Lesezugriffe, der Preload-Code-Cache ließ sich von einem kompromittierten Renderer vergiften, und `<webview>` konnte in Web Workern Node.js trotz Einschränkung aktivieren. Die App selbst nutzt weder `<webview>` noch eigene Protokoll-Handler und blockiert neue Fenster, die Anhebung stellt aber sicher, dass die Laufzeit die Korrekturen enthält
+- **Weitere Abhängigkeiten gepatcht** — undici, js-yaml, brace-expansion, source-map-js, fast-uri, http-cache-semantics, vitest/@vitest/mocker und die gesamte Kette um sprintf-js (über `@electron/get` 5 statt 3 unterhalb von electron-builder, weil es für sprintf-js selbst keinen Patch gibt). Betroffen waren ausschließlich Build- und Testwerkzeuge, die nicht mit der App ausgeliefert werden; `npm audit` meldet jetzt keine Schwachstellen mehr, auch nicht in den Entwicklungsabhängigkeiten
+
+### Changed
+- **TypeScript 6** — Die Entwicklungsumgebung nutzt TypeScript 6.0.3. `baseUrl` ist in `tsconfig.json` entfallen (der `@/`-Alias läuft jetzt direkt über `paths`), das funktioniert auch mit älteren TypeScript-Versionen. Der Sprung auf TypeScript 7 folgt, sobald typescript-eslint ihn unterstützt
+- **Weitere Abhängigkeits-Updates** — react-i18next, react-dom, react, xmldom und die Entwicklungs-Gruppe wurden auf aktuelle Patch- und Minor-Versionen gehoben
+
+### Fixed
+- **CI und Release-Builds brachen bei der Installation ab** — `npm install` ohne Lockfile scheiterte mit „Cannot read properties of null (reading 'edgesOut')" (ein Fehler im npm-Auflöser bei den Peer-Abhängigkeiten von vitest). Die Workflows installieren jetzt mit `--legacy-peer-deps`; Entwicklungsumgebungen mit Lockfile waren nicht betroffen
+
+### Added
+- **Community-Dateien und Lizenz** — Die MIT-Lizenz liegt jetzt als `LICENSE` im Repository (README und `package.json` nannten sie bereits), dazu Verhaltenskodex, Beitragshinweise, Vorlagen für Issues und Pull Requests
+
 ## [1.7.3] - 2026-07-30
 
 ### Security
