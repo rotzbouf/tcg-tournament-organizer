@@ -1,0 +1,22 @@
+name: Funktion vorschlagen
+description: Eine Idee oder Verbesserung vorschlagen
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem soll gelöst werden?
+      description: Beschreibe die Situation im Turnierablauf, in der dir etwas fehlt.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Dein Lösungsvorschlag
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Offizielle Regeln
+      description: Bei Regel- oder Format-Themen: Link oder Verweis auf die offiziellen Turnierregeln.
