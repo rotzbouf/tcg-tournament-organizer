@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: rm package-lock.json && npm install
+      - run: rm package-lock.json && npm install --legacy-peer-deps
       - run: node .github/scripts/npm-audit-check.mjs
       - run: npx tsc --noEmit
       - run: npm run lint
