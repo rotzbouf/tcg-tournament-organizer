@@ -34,7 +34,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.20",
-    "react-router-dom": "^7.18.1",
+    "react-router-dom": "^7.18.5",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
